@@ -1,29 +1,30 @@
-#include "extensions/browser/api/read_server/read_server_api.h"
+#include "extensions/browser/api/read_server/read_server_uds_api.h"
 
-#include "base/json/json_reader.h"
-#include "base/json/json_writer.h"
-#include "base/values.h"
-#include "services/network/public/cpp/resource_request.h"
-#include "services/network/public/cpp/simple_url_loader.h"
-#include "url/gurl.h"
-#include "content/public/browser/browser_context.h"
-#include "content/public/browser/storage_partition.h"
-#include "net/traffic_annotation/network_traffic_annotation.h"
-#include "extensions/browser/event_router.h"
+#include <limits>
+#include <vector>
+
+#include "base/containers/fixed_flat_set.h"
+#include "base/containers/span.h"  // For base::span if needed
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "base/json/json_reader.h"
+#include "base/json/json_writer.h"
 #include "base/logging.h"
+#include "base/rand_util.h"
 #include "base/strings/string_number_conversions.h"
-#include "third_party/zlib/google/zip_writer.h"
-#include "third_party/zlib/google/zip_reader.h"
-#include "base/containers/span.h"  // For base::span if needed
-#include "base/containers/fixed_flat_set.h"  
 #include "base/strings/string_util.h"  // For base::FilePath utilities
-#include <vector>
 #include "base/task/thread_pool.h"
+#include "base/values.h"
+#include "content/public/browser/browser_context.h"
 #include "content/public/browser/browser_thread.h"  // Include for content::BrowserThread
-#include "base/rand_util.h"   
-#include <limits>             
+#include "content/public/browser/storage_partition.h"
+#include "extensions/browser/event_router.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
+#include "services/network/public/cpp/resource_request.h"
+#include "services/network/public/cpp/simple_url_loader.h"
+#include "third_party/zlib/google/zip_reader.h"
+#include "third_party/zlib/google/zip_writer.h"
+#include "url/gurl.h"
 
 namespace extensions {
 
@@ -45,7 +46,7 @@ ExtensionFunction::ResponseAction ReadServerReadDataFunction::Run() {
   }
 
   AddRef();
-  
+
   auto resource_request = std::make_unique<network::ResourceRequest>();
   resource_request->url = GURL("http://localhost:5000/data");
   resource_request->method = "GET";
@@ -65,17 +66,21 @@ ExtensionFunction::ResponseAction ReadServerReadDataFunction::Run() {
         }
       )");
 
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), traffic_annotation);
+  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+                                                 traffic_annotation);
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerReadDataFunction::OnJsonLoaded, weak_ptr_factory_.GetWeakPtr()));
+      base::BindOnce(&ReadServerReadDataFunction::OnJsonLoaded,
+                     weak_ptr_factory_.GetWeakPtr()));
 
   return RespondLater();
 }
 
-void ReadServerReadDataFunction::OnJsonLoaded(std::unique_ptr<std::string> response_body) {
+void ReadServerReadDataFunction::OnJsonLoaded(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to load JSON from server"));
     Release();
@@ -148,7 +153,8 @@ ExtensionFunction::ResponseAction ReadServerSendDataFunction::Run() {
 
   url_loader_->AttachStringForUpload(json_data, "application/json");
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
       base::BindOnce(&ReadServerSendDataFunction::OnDataSent,
@@ -158,7 +164,8 @@ ExtensionFunction::ResponseAction ReadServerSendDataFunction::Run() {
   return RespondLater();
 }
 
-void ReadServerSendDataFunction::OnDataSent(std::unique_ptr<std::string> response_body) {
+void ReadServerSendDataFunction::OnDataSent(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to send data to the server"));
     Release();
@@ -173,12 +180,12 @@ void ReadServerSendDataFunction::OnResponded() {
   url_loader_.reset();
 }
 
-
 ReadServerUploadTrainingDataFunction::ReadServerUploadTrainingDataFunction()
     : chunk_size_(1024 * 1024),  // 1 MB
-      offset_(0) {}  // Removed weak_ptr_factory_ initializer
+      offset_(0) {}              // Removed weak_ptr_factory_ initializer
 
-ReadServerUploadTrainingDataFunction::~ReadServerUploadTrainingDataFunction() = default;
+ReadServerUploadTrainingDataFunction::~ReadServerUploadTrainingDataFunction() =
+    default;
 
 ExtensionFunction::ResponseAction ReadServerUploadTrainingDataFunction::Run() {
   // Increment reference count to keep the function alive.
@@ -186,10 +193,10 @@ ExtensionFunction::ResponseAction ReadServerUploadTrainingDataFunction::Run() {
 
   // Start the data generation process on a background thread.
   base::ThreadPool::PostTask(
-      FROM_HERE,
-      {base::MayBlock()},
-      base::BindOnce(&ReadServerUploadTrainingDataFunction::GenerateSyntheticData,
-                     base::Unretained(this)));
+      FROM_HERE, {base::MayBlock()},
+      base::BindOnce(
+          &ReadServerUploadTrainingDataFunction::GenerateSyntheticData,
+          base::Unretained(this)));
 
   return RespondLater();
 }
@@ -208,30 +215,35 @@ void ReadServerUploadTrainingDataFunction::GenerateSyntheticData() {
   // Generate random cluster centers for each label
   std::vector<double> cluster_centers;
   for (size_t i = 0; i < num_clusters; ++i) {
-      cluster_centers.push_back(0.2 + static_cast<double>(std::rand()) / RAND_MAX * 0.6);
+    cluster_centers.push_back(0.2 + static_cast<double>(std::rand()) /
+                                        RAND_MAX * 0.6);
   }
 
   for (size_t i = 0; i < num_records; ++i) {
-      // Assign a label by selecting a random cluster
-      size_t label = i % num_clusters;  // Cycling through clusters
-      double cluster_center = cluster_centers[label];
-      
-      for (size_t j = 0; j < num_features; ++j) {
-          // Generate a value around the cluster center with random variation in range [-0.2, 0.2]
-          double random_variation = static_cast<double>(std::rand()) / RAND_MAX * 0.4 - 0.2;
-          double value = cluster_center + random_variation;
+    // Assign a label by selecting a random cluster
+    size_t label = i % num_clusters;  // Cycling through clusters
+    double cluster_center = cluster_centers[label];
 
-          // Clamp value to [0.0, 1.0]
-          value = std::max(0.0, std::min(1.0, value));
-          oss << value << ",";
-      }
-      // Append the label as the last column
-      oss << label << "\n";
+    for (size_t j = 0; j < num_features; ++j) {
+      // Generate a value around the cluster center with random variation in
+      // range [-0.2, 0.2]
+      double random_variation =
+          static_cast<double>(std::rand()) / RAND_MAX * 0.4 - 0.2;
+      double value = cluster_center + random_variation;
+
+      // Clamp value to [0.0, 1.0]
+      value = std::max(0.0, std::min(1.0, value));
+      oss << value << ",";
+    }
+    // Append the label as the last column
+    oss << label << "\n";
   }
 
   training_data_ = oss.str();
 
-  // Post back to the UI threoverleaf.com/latex/templates/iit-kgp-mtp-thesis-template/hgprtqycxzmbad to start uploading data.
+  // Post back to the UI
+  // threoverleaf.com/latex/templates/iit-kgp-mtp-thesis-template/hgprtqycxzmbad
+  // to start uploading data.
   content::GetUIThreadTaskRunner({})->PostTask(
       FROM_HERE,
       base::BindOnce(&ReadServerUploadTrainingDataFunction::StartUploadingData,
@@ -255,12 +267,15 @@ void ReadServerUploadTrainingDataFunction::UploadNextChunk() {
   std::string chunk = training_data_.substr(offset_, current_chunk_size);
 
   auto resource_request = std::make_unique<network::ResourceRequest>();
-  resource_request->url = GURL("http://localhost:5000/upload_training_data_chunk");
+  resource_request->url =
+      GURL("http://localhost:5000/upload_training_data_chunk");
   resource_request->method = "POST";
 
   // Add headers indicating the offset and total size
-  resource_request->headers.SetHeader("X-Chunk-Offset", base::NumberToString(offset_));
-  resource_request->headers.SetHeader("X-Total-Size", base::NumberToString(training_data_.size()));
+  resource_request->headers.SetHeader("X-Chunk-Offset",
+                                      base::NumberToString(offset_));
+  resource_request->headers.SetHeader(
+      "X-Total-Size", base::NumberToString(training_data_.size()));
 
   net::NetworkTrafficAnnotationTag traffic_annotation =
       net::DefineNetworkTrafficAnnotation("upload_training_data_chunk", R"(
@@ -278,10 +293,12 @@ void ReadServerUploadTrainingDataFunction::UploadNextChunk() {
       )");
 
   // Ensure url_loader_ is declared
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), traffic_annotation);
+  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+                                                 traffic_annotation);
   url_loader_->AttachStringForUpload(chunk, "application/octet-stream");
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
       base::BindOnce(&ReadServerUploadTrainingDataFunction::OnChunkUploaded,
@@ -320,7 +337,6 @@ void ReadServerUploadTrainingDataFunction::RespondWithSuccess() {
   Release();
 }
 
-
 // Training on MNIST
 ReadServerTrainModelFunction::ReadServerTrainModelFunction() = default;
 
@@ -341,7 +357,8 @@ ExtensionFunction::ResponseAction ReadServerTrainModelFunction::Run() {
   resource_request->headers.SetHeader("Content-Type", "application/json");
 
   // In this simple example, no payload is required, so we send an empty JSON.
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+  url_loader_ = network::SimpleURLLoader::Create(
+      std::move(resource_request),
       net::DefineNetworkTrafficAnnotation("train_model", R"(
         semantics {
           sender: "Read Server API"
@@ -357,15 +374,18 @@ ExtensionFunction::ResponseAction ReadServerTrainModelFunction::Run() {
   )"));
   url_loader_->AttachStringForUpload("{}", "application/json");
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerTrainModelFunction::OnTrainModelResponse, base::Unretained(this)));
+      base::BindOnce(&ReadServerTrainModelFunction::OnTrainModelResponse,
+                     base::Unretained(this)));
 
   return RespondLater();
 }
 
-void ReadServerTrainModelFunction::OnTrainModelResponse(std::unique_ptr<std::string> response_body) {
+void ReadServerTrainModelFunction::OnTrainModelResponse(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Training request failed."));
   } else {
@@ -396,7 +416,8 @@ ExtensionFunction::ResponseAction ReadServerInferenceFunction::Run() {
 
   const std::string& features = arg.GetString();
 
-  // Increment reference count to keep the function alive until response is received
+  // Increment reference count to keep the function alive until response is
+  // received
   AddRef();
 
   // Define the request to the /infer endpoint
@@ -409,7 +430,9 @@ ExtensionFunction::ResponseAction ReadServerInferenceFunction::Run() {
   std::string json_data = "{\"features\": \"" + features + "\"}";
 
   // Initialize SimpleURLLoader for sending the request
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), net::DefineNetworkTrafficAnnotation("inference_request", R"(
+  url_loader_ = network::SimpleURLLoader::Create(
+      std::move(resource_request),
+      net::DefineNetworkTrafficAnnotation("inference_request", R"(
     semantics {
       sender: "Read Server API"
       description: "Requests server for inference based on 50 input features."
@@ -424,16 +447,19 @@ ExtensionFunction::ResponseAction ReadServerInferenceFunction::Run() {
   )"));
   url_loader_->AttachStringForUpload(json_data, "application/json");
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferenceFunction::OnInferenceResponse, base::Unretained(this)));
+      base::BindOnce(&ReadServerInferenceFunction::OnInferenceResponse,
+                     base::Unretained(this)));
 
   return RespondLater();
 }
 
 // Callback to handle the response from the /infer endpoint
-void ReadServerInferenceFunction::OnInferenceResponse(std::unique_ptr<std::string> response_body) {
+void ReadServerInferenceFunction::OnInferenceResponse(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to get inference result from the server"));
     Release();  // Decrement reference count
@@ -485,15 +511,19 @@ ExtensionFunction::ResponseAction ReadServerLoadModelBERTFunction::Run() {
         }
       )");
 
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), traffic_annotation);
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+                                                 traffic_annotation);
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerLoadModelBERTFunction::OnResponse, weak_ptr_factory_.GetWeakPtr()));
+      base::BindOnce(&ReadServerLoadModelBERTFunction::OnResponse,
+                     weak_ptr_factory_.GetWeakPtr()));
   return RespondLater();
 }
 
-void ReadServerLoadModelBERTFunction::OnResponse(std::unique_ptr<std::string> response_body) {
+void ReadServerLoadModelBERTFunction::OnResponse(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to load MobileBERT model on server."));
   } else {
@@ -505,7 +535,8 @@ void ReadServerLoadModelBERTFunction::OnResponse(std::unique_ptr<std::string> re
 // -------------------------
 // Single Inference BERT Endpoint
 // -------------------------
-ReadServerInferSingleBERTFunction::ReadServerInferSingleBERTFunction() = default;
+ReadServerInferSingleBERTFunction::ReadServerInferSingleBERTFunction() =
+    default;
 ReadServerInferSingleBERTFunction::~ReadServerInferSingleBERTFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "InferSingleBERT function destroyed without responding";
@@ -525,7 +556,9 @@ ExtensionFunction::ResponseAction ReadServerInferSingleBERTFunction::Run() {
   // Optional: Parse the JSON string to verify it represents a dictionary.
   auto maybe_value = base::JSONReader::Read(json_input);
   if (!maybe_value.has_value() || !maybe_value->is_dict()) {
-    return RespondNow(Error("Input must be a JSON string representing an object with 'question' and 'context'."));
+    return RespondNow(
+        Error("Input must be a JSON string representing an object with "
+              "'question' and 'context'."));
   }
 
   // We assume the input JSON is already in the format the server expects:
@@ -554,19 +587,22 @@ ExtensionFunction::ResponseAction ReadServerInferSingleBERTFunction::Run() {
         }
   )");
 
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), traffic_annotation);
+  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+                                                 traffic_annotation);
   url_loader_->AttachStringForUpload(json_data, "application/json");
 
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferSingleBERTFunction::OnResponse, base::Unretained(this)));
+      base::BindOnce(&ReadServerInferSingleBERTFunction::OnResponse,
+                     base::Unretained(this)));
 
   return RespondLater();
 }
 
-
-void ReadServerInferSingleBERTFunction::OnResponse(std::unique_ptr<std::string> response_body) {
+void ReadServerInferSingleBERTFunction::OnResponse(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Single inference request failed."));
   } else {
@@ -588,26 +624,26 @@ ReadServerInferBatchBERTFunction::~ReadServerInferBatchBERTFunction() {
 
 ExtensionFunction::ResponseAction ReadServerInferBatchBERTFunction::Run() {
   LOG(INFO) << "ReadServerInferBatchBERTFunction::Run() called";
-  
+
   // Validate that input is a list.
   EXTENSION_FUNCTION_VALIDATE(args().size() > 0);
   const base::Value& arg = args()[0];
   if (!arg.is_list()) {
     return RespondNow(Error("Expected a list of question-context objects."));
   }
-  
+
   // Serialize the list to a JSON string.
   std::string json_data;
   if (!base::JSONWriter::Write(arg, &json_data)) {
     return RespondNow(Error("Failed to serialize input JSON."));
   }
-  
+
   AddRef();
   auto resource_request = std::make_unique<network::ResourceRequest>();
   resource_request->url = GURL("http://localhost:5000/infer_batch_bert");
   resource_request->method = "POST";
   resource_request->headers.SetHeader("Content-Type", "application/json");
-  
+
   net::NetworkTrafficAnnotationTag traffic_annotation =
       net::DefineNetworkTrafficAnnotation("infer_batch_bert", R"(
         semantics {
@@ -622,18 +658,22 @@ ExtensionFunction::ResponseAction ReadServerInferBatchBERTFunction::Run() {
           setting: "This request cannot be disabled by settings."
         }
       )");
-  
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request), traffic_annotation);
+
+  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+                                                 traffic_annotation);
   url_loader_->AttachStringForUpload(json_data, "application/json");
-  
-  content::StoragePartition* storage_partition = browser_context()->GetDefaultStoragePartition();
+
+  content::StoragePartition* storage_partition =
+      browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferBatchBERTFunction::OnResponse, base::Unretained(this)));
+      base::BindOnce(&ReadServerInferBatchBERTFunction::OnResponse,
+                     base::Unretained(this)));
   return RespondLater();
 }
 
-void ReadServerInferBatchBERTFunction::OnResponse(std::unique_ptr<std::string> response_body) {
+void ReadServerInferBatchBERTFunction::OnResponse(
+    std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Batch inference request failed."));
   } else {
