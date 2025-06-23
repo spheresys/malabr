@@ -13,12 +13,15 @@
 #include "base/rand_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"  // For base::FilePath utilities
+#include "base/strings/stringprintf.h"
 #include "base/task/thread_pool.h"
 #include "base/values.h"
 #include "content/public/browser/browser_context.h"
 #include "content/public/browser/browser_thread.h"  // Include for content::BrowserThread
 #include "content/public/browser/storage_partition.h"
 #include "extensions/browser/event_router.h"
+#include "net/base/io_buffer.h"
+#include "net/socket/unix_domain_client_socket_posix.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/simple_url_loader.h"
@@ -26,95 +29,162 @@
 #include "third_party/zlib/google/zip_writer.h"
 #include "url/gurl.h"
 
+///tmp/shared-sockets/echo_socket
 namespace extensions {
 
-// Constructor for ReadServerReadDataFunction
-ReadServerReadDataFunction::ReadServerReadDataFunction() = default;
+// -------------------------
+// Read Server Read Data UDS
+// -------------------------
+// Constructor for ReadServerUdsReadDataFunction
+ReadServerUdsReadDataFunction::ReadServerUdsReadDataFunction() = default;
 
-ReadServerReadDataFunction::~ReadServerReadDataFunction() {
+ReadServerUdsReadDataFunction::~ReadServerUdsReadDataFunction() {
   if (!did_respond()) {
-    LOG(ERROR) << "Function was destroyed without responding";
-    Respond(Error("Function was destroyed without responding"));
+    LOG(ERROR) << "ReadServerUdsReadDataFunction: Function was destroyed without responding";
+    Respond(Error("ReadServerUdsReadDataFunction: Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerReadDataFunction::Run() {
-  LOG(INFO) << "ReadServerReadDataFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsReadDataFunction::Run() {
+  LOG(INFO) << "ReadServerUdsReadDataFunction::Run() called";
 
   if (!render_frame_host()) {
-    return RespondNow(Error("Invalid frame"));
+    LOG(INFO) << "ReadServerUdsReadDataFunction::Run: Invalid frame detected";
+    return RespondNow(Error("ReadServerUdsReadDataFunction::Run Invalid frame"));
   }
 
   AddRef();
-
-  auto resource_request = std::make_unique<network::ResourceRequest>();
-  resource_request->url = GURL("http://localhost:5000/data");
-  resource_request->method = "GET";
-
-  net::NetworkTrafficAnnotationTag traffic_annotation =
-      net::DefineNetworkTrafficAnnotation("read_server_read_data", R"(
-        semantics {
-          sender: "Read Server API"
-          description: "Fetches JSON data from a local server."
-          trigger: "User action in the extension."
-          data: "No user overleaf.com/latex/templates/iit-kgp-mtp-thesis-template/hgprtqycxzmbdata is sent."
-          destination: LOCAL
-        }
-        policy {
-          cookies_allowed: NO
-          setting: "This request cannot be disabled by settings."
-        }
-      )");
-
-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
-                                                 traffic_annotation);
-
-  content::StoragePartition* storage_partition =
-      browser_context()->GetDefaultStoragePartition();
-  url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
-      storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerReadDataFunction::OnJsonLoaded,
-                     weak_ptr_factory_.GetWeakPtr()));
-
+  LOG(INFO) << "ReadServerUdsReadDataFunction::Run: Starting UNIX socket connection";
+  ConnectToUnixSocket();
   return RespondLater();
 }
 
-void ReadServerReadDataFunction::OnJsonLoaded(
-    std::unique_ptr<std::string> response_body) {
-  if (!response_body) {
-    Respond(Error("Failed to load JSON from server"));
+void ReadServerUdsReadDataFunction::ConnectToUnixSocket() {
+  base::FilePath socket_path("/tmp/shared-sockets/echo_socket");
+
+  LOG(INFO) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Creating UnixDomainClientSocket to path: " << socket_path.value();
+
+  socket_ = std::make_unique<net::UnixDomainClientSocket>(
+      socket_path, false /* use_abstract_namespace */);
+
+  int result = socket_->Connect(base::BindOnce(
+      &ReadServerUdsReadDataFunction::OnConnected, weak_ptr_factory_.GetWeakPtr()));
+
+  if (result != net::ERR_IO_PENDING && result != net::OK) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Failed to initiate socket connection, error: " << result;
+    Respond(Error("ReadServerUdsReadDataFunction::ConnectToUnixSocket: Failed to initiate socket connection"));
+    Release();
+  } else {
+    LOG(INFO) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Socket connection initiated";
+  }
+}
+
+void ReadServerUdsReadDataFunction::OnConnected(int result) {
+  if (result != net::OK) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnConnected: Socket connection failed with error: " << result;
+    Respond(Error("ReadServerUdsReadDataFunction::OnConnected: Socket connection failed"));
     Release();
     return;
   }
 
-  auto json = base::JSONReader::Read(*response_body);
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Socket connected successfully";
+
+  // Optional: Send a message to server (depends on your protocol)
+  std::string message = "GET /data\n";
+
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Sending message to server: " << message;
+
+  auto send_buffer = base::MakeRefCounted<net::StringIOBuffer>(message);
+
+  int write_result = socket_->Write(
+      send_buffer.get(), message.size(),
+      base::BindOnce(&ReadServerUdsReadDataFunction::OnDataWritten,
+                     weak_ptr_factory_.GetWeakPtr()),
+      nullptr);
+
+  if (write_result != net::ERR_IO_PENDING && write_result != message.size()) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnConnected: Failed to write to socket, result: " << write_result;
+    Respond(Error("ReadServerUdsReadDataFunction::OnConnected: Failed to write to socket"));
+    Release();
+  } else {
+    LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Write to socket started";
+  }
+}
+
+void ReadServerUdsReadDataFunction::OnDataWritten(int result) {
+  if (result <= 0) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataWritten() Failed to write data to socket, result: " << result;
+    Respond(Error("Failed to write to socket"));
+    Release();
+    return;
+  }
+
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataWritten() Data written to socket successfully, bytes: " << result;
+
+  read_buffer_ = base::MakeRefCounted<net::IOBuffer>(4096);
+
+  int read_result = socket_->Read(
+      read_buffer_.get(), 4096,
+      base::BindOnce(&ReadServerUdsReadDataFunction::OnDataRead,
+                     weak_ptr_factory_.GetWeakPtr()));
+
+  if (read_result != net::ERR_IO_PENDING && read_result <= 0) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataWritten() Failed to read from socket, result: " << read_result;
+    Respond(Error("ReadServerUdsReadDataFunction::OnDataWritten() Failed to read from socket"));
+    Release();
+  } else {
+    LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataWritten() Read from socket started";
+  }
+}
+
+void ReadServerUdsReadDataFunction::OnDataRead(int result) {
+  if (result <= 0) {
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataRead() Failed to read data from socket, result: " << result;
+    Respond(Error("ReadServerUdsReadDataFunction::OnDataRead() Failed to read from socket"));
+    Release();
+    return;
+  }
+
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Data read from socket successfully, bytes: " << result;
+
+  std::string response(read_buffer_->data(), result);
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Response data: " << response;
+
+  auto json = base::JSONReader::Read(response);
   if (!json.has_value()) {
-    Respond(Error("Failed to parse JSON response"));
+    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataRead() Failed to parse JSON response";
+    Respond(Error("ReadServerUdsReadDataFunction::OnDataRead() Failed to parse JSON response"));
     Release();
     return;
   }
 
-  Respond(WithArguments(response_body->c_str()));
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Parsed JSON successfully, responding back";
+
+  Respond(WithArguments(std::move(*json)));
   Release();
 }
 
-void ReadServerReadDataFunction::OnResponded() {
-  url_loader_.reset();
+void ReadServerUdsReadDataFunction::OnResponded() {
+  LOG(INFO) << "ReadServerUdsReadDataFunction::OnResponded() Cleaning up socket resources";
+  socket_.reset();
 }
 
-// Constructor for ReadServerSendDataFunction
-ReadServerSendDataFunction::ReadServerSendDataFunction() = default;
+// -------------------------
+// Read Server Send Data UDS
+// -------------------------
+// Constructor for ReadServerUdsSendDataFunction
+ReadServerUdsSendDataFunction::ReadServerUdsSendDataFunction() = default;
 
-// Destructor for ReadServerSendDataFunction
-ReadServerSendDataFunction::~ReadServerSendDataFunction() {
+// Destructor for ReadServerUdsSendDataFunction
+ReadServerUdsSendDataFunction::~ReadServerUdsSendDataFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "Function was destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerSendDataFunction::Run() {
-  LOG(INFO) << "ReadServerSendDataFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsSendDataFunction::Run() {
+  LOG(INFO) << "ReadServerUdsSendDataFunction::Run() called";
 
   // Validate the presence of arguments
   EXTENSION_FUNCTION_VALIDATE(has_args());
@@ -157,14 +227,14 @@ ExtensionFunction::ResponseAction ReadServerSendDataFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerSendDataFunction::OnDataSent,
+      base::BindOnce(&ReadServerUdsSendDataFunction::OnDataSent,
                      weak_ptr_factory_.GetWeakPtr()));
 
-  LOG(INFO) << "ReadServerSendDataFunction::Run() completed, request started";
+  LOG(INFO) << "ReadServerUdsSendDataFunction::Run() completed, request started";
   return RespondLater();
 }
 
-void ReadServerSendDataFunction::OnDataSent(
+void ReadServerUdsSendDataFunction::OnDataSent(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to send data to the server"));
@@ -176,18 +246,18 @@ void ReadServerSendDataFunction::OnDataSent(
   Release();
 }
 
-void ReadServerSendDataFunction::OnResponded() {
+void ReadServerUdsSendDataFunction::OnResponded() {
   url_loader_.reset();
 }
 
-ReadServerUploadTrainingDataFunction::ReadServerUploadTrainingDataFunction()
+ReadServerUdsUploadTrainingDataFunction::ReadServerUdsUploadTrainingDataFunction()
     : chunk_size_(1024 * 1024),  // 1 MB
       offset_(0) {}              // Removed weak_ptr_factory_ initializer
 
-ReadServerUploadTrainingDataFunction::~ReadServerUploadTrainingDataFunction() =
+ReadServerUdsUploadTrainingDataFunction::~ReadServerUdsUploadTrainingDataFunction() =
     default;
 
-ExtensionFunction::ResponseAction ReadServerUploadTrainingDataFunction::Run() {
+ExtensionFunction::ResponseAction ReadServerUdsUploadTrainingDataFunction::Run() {
   // Increment reference count to keep the function alive.
   AddRef();
 
@@ -195,13 +265,13 @@ ExtensionFunction::ResponseAction ReadServerUploadTrainingDataFunction::Run() {
   base::ThreadPool::PostTask(
       FROM_HERE, {base::MayBlock()},
       base::BindOnce(
-          &ReadServerUploadTrainingDataFunction::GenerateSyntheticData,
+          &ReadServerUdsUploadTrainingDataFunction::GenerateSyntheticData,
           base::Unretained(this)));
 
   return RespondLater();
 }
 
-void ReadServerUploadTrainingDataFunction::GenerateSyntheticData() {
+void ReadServerUdsUploadTrainingDataFunction::GenerateSyntheticData() {
   // Generate synthetic training data.
   const size_t num_records = 25000;
   const size_t num_features = 50;
@@ -246,16 +316,16 @@ void ReadServerUploadTrainingDataFunction::GenerateSyntheticData() {
   // to start uploading data.
   content::GetUIThreadTaskRunner({})->PostTask(
       FROM_HERE,
-      base::BindOnce(&ReadServerUploadTrainingDataFunction::StartUploadingData,
+      base::BindOnce(&ReadServerUdsUploadTrainingDataFunction::StartUploadingData,
                      base::Unretained(this)));
 }
 
-void ReadServerUploadTrainingDataFunction::StartUploadingData() {
+void ReadServerUdsUploadTrainingDataFunction::StartUploadingData() {
   offset_ = 0;
   UploadNextChunk();
 }
 
-void ReadServerUploadTrainingDataFunction::UploadNextChunk() {
+void ReadServerUdsUploadTrainingDataFunction::UploadNextChunk() {
   if (offset_ >= training_data_.size()) {
     // All chunks uploaded.
     RespondWithSuccess();
@@ -301,11 +371,11 @@ void ReadServerUploadTrainingDataFunction::UploadNextChunk() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerUploadTrainingDataFunction::OnChunkUploaded,
+      base::BindOnce(&ReadServerUdsUploadTrainingDataFunction::OnChunkUploaded,
                      base::Unretained(this)));
 }
 
-void ReadServerUploadTrainingDataFunction::OnChunkUploaded(
+void ReadServerUdsUploadTrainingDataFunction::OnChunkUploaded(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     RespondWithError("Failed to upload chunk");
@@ -322,7 +392,7 @@ void ReadServerUploadTrainingDataFunction::OnChunkUploaded(
   UploadNextChunk();
 }
 
-void ReadServerUploadTrainingDataFunction::RespondWithError(
+void ReadServerUdsUploadTrainingDataFunction::RespondWithError(
     const std::string& error_message) {
   Respond(Error(error_message));
 
@@ -330,7 +400,7 @@ void ReadServerUploadTrainingDataFunction::RespondWithError(
   Release();
 }
 
-void ReadServerUploadTrainingDataFunction::RespondWithSuccess() {
+void ReadServerUdsUploadTrainingDataFunction::RespondWithSuccess() {
   Respond(WithArguments("Synthetic training data uploaded successfully"));
 
   // Decrement reference count.
@@ -338,17 +408,17 @@ void ReadServerUploadTrainingDataFunction::RespondWithSuccess() {
 }
 
 // Training on MNIST
-ReadServerTrainModelFunction::ReadServerTrainModelFunction() = default;
+ReadServerUdsTrainModelFunction::ReadServerUdsTrainModelFunction() = default;
 
-ReadServerTrainModelFunction::~ReadServerTrainModelFunction() {
+ReadServerUdsTrainModelFunction::~ReadServerUdsTrainModelFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "TrainModel function destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerTrainModelFunction::Run() {
-  LOG(INFO) << "ReadServerTrainModelFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsTrainModelFunction::Run() {
+  LOG(INFO) << "ReadServerUdsTrainModelFunction::Run() called";
   AddRef();
 
   auto resource_request = std::make_unique<network::ResourceRequest>();
@@ -378,13 +448,13 @@ ExtensionFunction::ResponseAction ReadServerTrainModelFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerTrainModelFunction::OnTrainModelResponse,
+      base::BindOnce(&ReadServerUdsTrainModelFunction::OnTrainModelResponse,
                      base::Unretained(this)));
 
   return RespondLater();
 }
 
-void ReadServerTrainModelFunction::OnTrainModelResponse(
+void ReadServerUdsTrainModelFunction::OnTrainModelResponse(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Training request failed."));
@@ -395,10 +465,10 @@ void ReadServerTrainModelFunction::OnTrainModelResponse(
 }
 
 // Constructor
-ReadServerInferenceFunction::ReadServerInferenceFunction() = default;
+ReadServerUdsInferenceFunction::ReadServerUdsInferenceFunction() = default;
 
 // Destructor
-ReadServerInferenceFunction::~ReadServerInferenceFunction() {
+ReadServerUdsInferenceFunction::~ReadServerUdsInferenceFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "Function was destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
@@ -406,8 +476,8 @@ ReadServerInferenceFunction::~ReadServerInferenceFunction() {
 }
 
 // Run method to send POST request to /infer endpoint
-ExtensionFunction::ResponseAction ReadServerInferenceFunction::Run() {
-  LOG(INFO) << "ReadServerInferenceFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsInferenceFunction::Run() {
+  LOG(INFO) << "ReadServerUdsInferenceFunction::Run() called";
 
   // Validate that arguments exist and the first argument is a string
   EXTENSION_FUNCTION_VALIDATE(args().size() > 0);
@@ -451,14 +521,14 @@ ExtensionFunction::ResponseAction ReadServerInferenceFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferenceFunction::OnInferenceResponse,
+      base::BindOnce(&ReadServerUdsInferenceFunction::OnInferenceResponse,
                      base::Unretained(this)));
 
   return RespondLater();
 }
 
 // Callback to handle the response from the /infer endpoint
-void ReadServerInferenceFunction::OnInferenceResponse(
+void ReadServerUdsInferenceFunction::OnInferenceResponse(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to get inference result from the server"));
@@ -480,16 +550,16 @@ void ReadServerInferenceFunction::OnInferenceResponse(
 // -------------------------
 // Load Model BERT Endpoint
 // -------------------------
-ReadServerLoadModelBERTFunction::ReadServerLoadModelBERTFunction() = default;
-ReadServerLoadModelBERTFunction::~ReadServerLoadModelBERTFunction() {
+ReadServerUdsLoadModelBERTFunction::ReadServerUdsLoadModelBERTFunction() = default;
+ReadServerUdsLoadModelBERTFunction::~ReadServerUdsLoadModelBERTFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "LoadModelBERT function destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerLoadModelBERTFunction::Run() {
-  LOG(INFO) << "ReadServerLoadModelBERTFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsLoadModelBERTFunction::Run() {
+  LOG(INFO) << "ReadServerUdsLoadModelBERTFunction::Run() called";
   AddRef();
 
   auto resource_request = std::make_unique<network::ResourceRequest>();
@@ -517,12 +587,12 @@ ExtensionFunction::ResponseAction ReadServerLoadModelBERTFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerLoadModelBERTFunction::OnResponse,
+      base::BindOnce(&ReadServerUdsLoadModelBERTFunction::OnResponse,
                      weak_ptr_factory_.GetWeakPtr()));
   return RespondLater();
 }
 
-void ReadServerLoadModelBERTFunction::OnResponse(
+void ReadServerUdsLoadModelBERTFunction::OnResponse(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Failed to load MobileBERT model on server."));
@@ -535,17 +605,17 @@ void ReadServerLoadModelBERTFunction::OnResponse(
 // -------------------------
 // Single Inference BERT Endpoint
 // -------------------------
-ReadServerInferSingleBERTFunction::ReadServerInferSingleBERTFunction() =
+ReadServerUdsInferSingleBERTFunction::ReadServerUdsInferSingleBERTFunction() =
     default;
-ReadServerInferSingleBERTFunction::~ReadServerInferSingleBERTFunction() {
+ReadServerUdsInferSingleBERTFunction::~ReadServerUdsInferSingleBERTFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "InferSingleBERT function destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerInferSingleBERTFunction::Run() {
-  LOG(INFO) << "ReadServerInferSingleBERTFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
+  LOG(INFO) << "ReadServerUdsInferSingleBERTFunction::Run() called";
 
   // Validate that we have at least one argument.
   EXTENSION_FUNCTION_VALIDATE(args().size() > 0);
@@ -595,13 +665,13 @@ ExtensionFunction::ResponseAction ReadServerInferSingleBERTFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferSingleBERTFunction::OnResponse,
+      base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnResponse,
                      base::Unretained(this)));
 
   return RespondLater();
 }
 
-void ReadServerInferSingleBERTFunction::OnResponse(
+void ReadServerUdsInferSingleBERTFunction::OnResponse(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Single inference request failed."));
@@ -614,16 +684,16 @@ void ReadServerInferSingleBERTFunction::OnResponse(
 // -------------------------
 // Batch Inference BERT Endpoint
 // -------------------------
-ReadServerInferBatchBERTFunction::ReadServerInferBatchBERTFunction() = default;
-ReadServerInferBatchBERTFunction::~ReadServerInferBatchBERTFunction() {
+ReadServerUdsInferBatchBERTFunction::ReadServerUdsInferBatchBERTFunction() = default;
+ReadServerUdsInferBatchBERTFunction::~ReadServerUdsInferBatchBERTFunction() {
   if (!did_respond()) {
     LOG(ERROR) << "InferBatchBERT function destroyed without responding";
     Respond(Error("Function was destroyed without responding"));
   }
 }
 
-ExtensionFunction::ResponseAction ReadServerInferBatchBERTFunction::Run() {
-  LOG(INFO) << "ReadServerInferBatchBERTFunction::Run() called";
+ExtensionFunction::ResponseAction ReadServerUdsInferBatchBERTFunction::Run() {
+  LOG(INFO) << "ReadServerUdsInferBatchBERTFunction::Run() called";
 
   // Validate that input is a list.
   EXTENSION_FUNCTION_VALIDATE(args().size() > 0);
@@ -667,12 +737,12 @@ ExtensionFunction::ResponseAction ReadServerInferBatchBERTFunction::Run() {
       browser_context()->GetDefaultStoragePartition();
   url_loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
       storage_partition->GetURLLoaderFactoryForBrowserProcess().get(),
-      base::BindOnce(&ReadServerInferBatchBERTFunction::OnResponse,
+      base::BindOnce(&ReadServerUdsInferBatchBERTFunction::OnResponse,
                      base::Unretained(this)));
   return RespondLater();
 }
 
-void ReadServerInferBatchBERTFunction::OnResponse(
+void ReadServerUdsInferBatchBERTFunction::OnResponse(
     std::unique_ptr<std::string> response_body) {
   if (!response_body) {
     Respond(Error("Batch inference request failed."));

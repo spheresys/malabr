@@ -8,25 +8,37 @@
 
 namespace extensions {
 
+// send data
 class ReadServerUdsReadDataFunction : public ExtensionFunction {
 public:
-  DECLARE_EXTENSION_FUNCTION("readServerUds.readData", READSERVER_READDATA)
+  DECLARE_EXTENSION_FUNCTION("readServerUds.readData", READSERVERUDS_READDATA)
 
   ReadServerUdsReadDataFunction();
+
 protected:
   ~ReadServerUdsReadDataFunction() override;
+
 private:
   ResponseAction Run() override;
-  void OnJsonLoaded(std::unique_ptr<std::string> response_body);
   void OnResponded() override;
 
-  std::unique_ptr<network::SimpleURLLoader> url_loader_;
+  // Socket handling
+  void ConnectToUnixSocket();
+  void OnConnected(int result);
+  void OnDataWritten(int result);
+  void OnDataRead(int result);
+
+  std::unique_ptr<net::UnixDomainClientSocket> socket_;
+  scoped_refptr<net::IOBuffer> read_buffer_;
   base::WeakPtrFactory<ReadServerUdsReadDataFunction> weak_ptr_factory_{this};
 };
 
+
+
+// send data by chunking
 class ReadServerUdsSendDataFunction : public ExtensionFunction {
 public:
-  DECLARE_EXTENSION_FUNCTION("readServerUds.sendData", READSERVER_SENDDATA)
+  DECLARE_EXTENSION_FUNCTION("readServerUds.sendData", READSERVERUDS_SENDDATA)
 
   ReadServerUdsSendDataFunction();
 protected:
@@ -43,7 +55,7 @@ private:
 class ReadServerUdsUploadTrainingDataFunction : public ExtensionFunction {
  public:
   DECLARE_EXTENSION_FUNCTION("readServerUds.uploadTrainingData",
-                             READSERVER_UPLOADTRAININGDATA)
+                             READSERVERUDS_UPLOADTRAININGDATA)
 
   ReadServerUdsUdsUploadTrainingDataFunction();
 
@@ -74,7 +86,7 @@ class ReadServerUdsUploadTrainingDataFunction : public ExtensionFunction {
 
 class ReadServerUdsTrainModelFunction : public ExtensionFunction {
  public:
-  DECLARE_EXTENSION_FUNCTION("readServerUds.trainModel", READSERVER_TRAINMODEL)
+  DECLARE_EXTENSION_FUNCTION("readServerUds.trainModel", READSERVERUDS_TRAINMODEL)
   
   ReadServerUdsTrainModelFunction();
  protected:
@@ -90,7 +102,7 @@ class ReadServerUdsTrainModelFunction : public ExtensionFunction {
 
 class ReadServerUdsInferenceFunction : public ExtensionFunction {
  public:
-  DECLARE_EXTENSION_FUNCTION("readServerUds.inference", READSERVER_INFERENCE)  
+  DECLARE_EXTENSION_FUNCTION("readServerUds.inference", READSERVERUDS_INFERENCE)
 
   ReadServerUdsInferenceFunction();
  protected:
@@ -106,7 +118,7 @@ class ReadServerUdsInferenceFunction : public ExtensionFunction {
 // New API for loading MobileBERT model.
 class ReadServerUdsLoadModelBERTFunction : public ExtensionFunction {
   public:
-   DECLARE_EXTENSION_FUNCTION("readServerUds.loadModelBERT", READSERVER_LOADMODEL_BERT)
+   DECLARE_EXTENSION_FUNCTION("readServerUds.loadModelBERT", READSERVERUDS_LOADMODEL_BERT)
    ReadServerUdsLoadModelBERTFunction();
   protected:
    ~ReadServerUdsLoadModelBERTFunction() override;
@@ -120,7 +132,7 @@ class ReadServerUdsLoadModelBERTFunction : public ExtensionFunction {
  // New API for single inference.
  class ReadServerUdsInferSingleBERTFunction : public ExtensionFunction {
   public:
-   DECLARE_EXTENSION_FUNCTION("readServerUds.inferSingleBERT", READSERVER_INFER_SINGLE_BERT)
+   DECLARE_EXTENSION_FUNCTION("readServerUds.inferSingleBERT", READSERVERUDS_INFER_SINGLE_BERT)
    ReadServerUdsInferSingleBERTFunction();
   protected:
    ~ReadServerUdsInferSingleBERTFunction() override;
@@ -133,7 +145,7 @@ class ReadServerUdsLoadModelBERTFunction : public ExtensionFunction {
  // New API for batch inference.
  class ReadServerUdsInferBatchBERTFunction : public ExtensionFunction {
   public:
-   DECLARE_EXTENSION_FUNCTION("readServerUds.inferBatchBERT", READSERVER_INFER_BATCH_BERT)
+   DECLARE_EXTENSION_FUNCTION("readServerUds.inferBatchBERT", READSERVERUDS_INFER_BATCH_BERT)
    ReadServerUdsInferBatchBERTFunction();
   protected:
    ~ReadServerUdsInferBatchBERTFunction() override;
