@@ -1,9 +1,15 @@
 #ifndef EXTENSIONS_BROWSER_API_READ_SERVER_UDS_API_H_
 #define EXTENSIONS_BROWSER_API_READ_SERVER_UDS_API_H_
 
+#include "base/memory/weak_ptr.h"
 #include "extensions/browser/extension_function.h"
 #include "services/network/public/cpp/simple_url_loader.h"
+#include "net/base/io_buffer.h"
+#include "net/socket/unix_domain_client_socket_posix.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
+
 #include <memory>
+
 #include <string>
 
 namespace extensions {
@@ -57,7 +63,7 @@ class ReadServerUdsUploadTrainingDataFunction : public ExtensionFunction {
   DECLARE_EXTENSION_FUNCTION("readServerUds.uploadTrainingData",
                              READSERVERUDS_UPLOADTRAININGDATA)
 
-  ReadServerUdsUdsUploadTrainingDataFunction();
+  ReadServerUdsUploadTrainingDataFunction();
 
  protected:
   ~ReadServerUdsUploadTrainingDataFunction() override;
