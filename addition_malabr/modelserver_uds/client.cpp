@@ -7,48 +7,48 @@
 const char SOCKET_PATH[] = "/tmp/shared-sockets/echo_socket";
 
 int main() {
-    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sock < 0) {
+    // Create UNIX domain socket
+    int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd < 0) {
         perror("socket");
         return 1;
     }
 
-    sockaddr_un addr;
-    std::memset(&addr, 0, sizeof(addr));
+    // Setup server address struct
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    std::strcpy(addr.sun_path, SOCKET_PATH);
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    // Connect to server socket
+    if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         perror("connect");
+        close(sockfd);
         return 1;
     }
 
-    // Send client ID (PID)
-    pid_t pid = getpid();
-    std::string client_id = "client_" + std::to_string(pid);
-    send(sock, client_id.c_str(), client_id.size(), 0);
+    // Send command
+    const char* cmd = "GET /data";
+    ssize_t sent = send(sockfd, cmd, strlen(cmd), 0);
+    if (sent == -1) {
+        perror("send");
+        close(sockfd);
+        return 1;
+    }
 
-    std::string message;
+    // Receive response
     char buffer[1024];
+    ssize_t received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+    if (received == -1) {
+        perror("recv");
+        close(sockfd);
+        return 1;
+    }
 
-    // while (true) {
-        std::cout << "Enter message (type 'exit' to quit): ";
-        std::getline(std::cin, message);
+    buffer[received] = '\0'; // Null terminate string
 
-        // if (message == "exit") break;
+    std::cout << "Response from server: " << buffer << std::endl;
 
-        send(sock, message.c_str(), message.size(), 0);
-
-        int len = recv(sock, buffer, sizeof(buffer) - 1, 0);
-        if (len > 0) {
-            buffer[len] = '\0';
-            std::cout << "Response: " << buffer << std::endl;
-        } else {
-            std::cerr << "Server disconnected.\n";
-            // break;
-        }
-    // }
-
-    close(sock);
+    close(sockfd);
     return 0;
 }
