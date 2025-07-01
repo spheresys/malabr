@@ -33,6 +33,9 @@ private:
   void OnConnected(int result);
   void OnDataWritten(int result);
   void OnDataRead(int result);
+  void RespondSuccessOnUI(std::string json_result);
+  void RespondFromIOThread(ResponseValue error_result);
+  void RespondErrorOnUI(base::Value error_result);
 
   std::unique_ptr<net::UnixDomainClientSocket> socket_;
   scoped_refptr<net::IOBuffer> read_buffer_;

@@ -36,83 +36,70 @@ namespace extensions {
 // -------------------------
 // Read Server Read Data UDS
 // -------------------------
-// Constructor for ReadServerUdsReadDataFunction
 ReadServerUdsReadDataFunction::ReadServerUdsReadDataFunction() = default;
 
 ReadServerUdsReadDataFunction::~ReadServerUdsReadDataFunction() {
   if (!did_respond()) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction: Function was destroyed "
-                  "without responding";
-    Respond(
-        Error("ReadServerUdsReadDataFunction: Function was destroyed without "
-              "responding"));
+    LOG(ERROR) << "Function was destroyed without responding";
+    Respond(Error("Function was destroyed without responding"));
   }
 }
 
+// this the base function when the extension api is called
 ExtensionFunction::ResponseAction ReadServerUdsReadDataFunction::Run() {
-  LOG(INFO) << "ReadServerUdsReadDataFunction::Run() called";
-
   if (!render_frame_host()) {
-    LOG(INFO) << "ReadServerUdsReadDataFunction::Run: Invalid frame detected";
-    return RespondNow(
-        Error("ReadServerUdsReadDataFunction::Run Invalid frame"));
+    return RespondNow(Error("Invalid frame"));
   }
 
+  // for async task
   AddRef();
-  LOG(INFO) << "ReadServerUdsReadDataFunction::Run: Starting UNIX socket connection";
-  ConnectToUnixSocket();
+
+  // Post the Connect operation to IO thread
+  content::GetIOThreadTaskRunner({})->PostTask(
+      FROM_HERE,
+      base::BindOnce(&ReadServerUdsReadDataFunction::ConnectToUnixSocket,
+                     weak_ptr_factory_.GetWeakPtr()));
+
   return RespondLater();
 }
 
 void ReadServerUdsReadDataFunction::ConnectToUnixSocket() {
+
   base::FilePath socket_path("/tmp/shared-sockets/echo_socket");
 
-  LOG(INFO) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Creating "
-               "UnixDomainClientSocket to path: "
-            << socket_path.value();
+  LOG(INFO) << "Creating UnixDomainClientSocket to path: " << socket_path.value();
 
   socket_ = std::make_unique<net::UnixDomainClientSocket>(
       socket_path.value(), false /* use_abstract_namespace */);
 
+  // this is uds so connect will be synchronous
   int result = socket_->Connect(
-      base::BindOnce(&ReadServerUdsReadDataFunction::OnConnected,
-                     weak_ptr_factory_.GetWeakPtr()));
+  base::BindOnce(&ReadServerUdsReadDataFunction::OnConnected,
+                  weak_ptr_factory_.GetWeakPtr()));
 
-  if (result != net::ERR_IO_PENDING && result != net::OK) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Failed "
-                  "to initiate socket connection, error: "
-               << result;
-    Respond(
-        Error("ReadServerUdsReadDataFunction::ConnectToUnixSocket: Failed to "
-              "initiate socket connection"));
-    Release();
+  LOG(INFO) << "Connect() returned: " << result;
+  if (result == net::OK) {
+    LOG(INFO) << "OnConnected() synchronously";
+    OnConnected(result);
+  } else if (result == net::ERR_IO_PENDING) {
+    LOG(INFO) << "Connection pending, waiting for callback";
   } else {
-    LOG(INFO) << "ReadServerUdsReadDataFunction::ConnectToUnixSocket: Socket "
-                 "connection initiated";
+    LOG(ERROR) << "Connect failed: " << result;
+    RespondFromIOThread(Error("Connect failed"));
   }
 }
 
 void ReadServerUdsReadDataFunction::OnConnected(int result) {
   if (result != net::OK) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnConnected: Socket "
-                  "connection failed with error: "
-               << result;
-    Respond(
-        Error("ReadServerUdsReadDataFunction::OnConnected: Socket connection "
-              "failed"));
-    Release();
+    LOG(ERROR) << "OnConnected: Socket connection failed: " << result;
+    RespondFromIOThread(Error("Socket connection failed"));
     return;
   }
 
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Socket connected "
-               "successfully";
+  LOG(INFO) << "Socket connected successfully";
 
-  // Optional: Send a message to server (depends on your protocol)
   std::string message = "GET /data\n";
-
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Sending message to "
-               "server: "
-            << message;
+  LOG(INFO) << "Sending message: " << message;
 
   auto send_buffer = base::MakeRefCounted<net::StringIOBuffer>(message);
 
@@ -128,109 +115,115 @@ void ReadServerUdsReadDataFunction::OnConnected(int result) {
       policy {
         cookies_allowed: NO
         setting: "This request cannot be disabled by settings."
-      }
-    )");
+      })");
 
+
+  // the no of byte written return by the write()
+  // describe at net/socket/socket.h:74
   int write_result = socket_->Write(
       send_buffer.get(), message.size(),
       base::BindOnce(&ReadServerUdsReadDataFunction::OnDataWritten,
                      weak_ptr_factory_.GetWeakPtr()),
       traffic_annotation);
-
-  if (write_result == static_cast<int>(message.size())) {
-    LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Data written to "
-                 "socket immediately";
-  } else if (write_result == net::ERR_IO_PENDING) {
-    LOG(INFO) << "ReadServerUdsReadDataFunction::OnConnected: Write to socket "
-                 "pending";
+  
+  if (write_result == static_cast<int>(message.size())) { // synchronous call
+    LOG(INFO) << "OnDataWritten() Synchronous";
+    OnDataWritten(write_result);
+    LOG(INFO) << "Data written to socket immediately";
+  } else if (write_result == net::ERR_IO_PENDING) { // async 
+    LOG(INFO) << "Write to socket pending";
   } else {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnConnected: Failed to write "
-                  "to socket, result: "
-               << write_result;
-    Respond(
-        Error("ReadServerUdsReadDataFunction::OnConnected: Failed to write to "
-              "socket"));
-    Release();
+    LOG(ERROR) << "Failed to write to socket: " << write_result;
+    RespondFromIOThread(Error("Failed to write to socket"));
   }
 }
 
 void ReadServerUdsReadDataFunction::OnDataWritten(int result) {
   if (result <= 0) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataWritten() Failed to "
-                  "write data to socket, result: "
-               << result;
-    Respond(Error("Failed to write to socket"));
-    Release();
+    LOG(ERROR) << "Failed to write data: " << result;
+    RespondFromIOThread(Error("Write failed"));
     return;
   }
 
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataWritten() Data written to "
-               "socket successfully, bytes: "
-            << result;
+  LOG(INFO) << "Data written successfully, bytes: " << result;
 
   read_buffer_ = base::MakeRefCounted<net::IOBufferWithSize>(4096);
 
-  int read_result =
-      socket_->Read(read_buffer_.get(), 4096,
-                    base::BindOnce(&ReadServerUdsReadDataFunction::OnDataRead,
-                                   weak_ptr_factory_.GetWeakPtr()));
+  // refere to the net/socket/socket.h:38
+  int read_result = socket_->Read(
+      read_buffer_.get(), 4096,
+      base::BindOnce(&ReadServerUdsReadDataFunction::OnDataRead,
+                     weak_ptr_factory_.GetWeakPtr()));
 
   if (read_result != net::ERR_IO_PENDING && read_result <= 0) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataWritten() Failed to "
-                  "read from socket, result: "
-               << read_result;
-    Respond(
-        Error("ReadServerUdsReadDataFunction::OnDataWritten() Failed to read "
-              "from socket"));
-    Release();
-  } else {
-    LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataWritten() Read from "
-                 "socket started";
+    LOG(ERROR) << "Read failed: " << read_result;
+    RespondFromIOThread(Error("Read failed"));
+  } else { // 
+    LOG(INFO) << "Read started";
   }
 }
 
 void ReadServerUdsReadDataFunction::OnDataRead(int result) {
   if (result <= 0) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataRead() Failed to read "
-                  "data from socket, result: "
-               << result;
-    Respond(
-        Error("ReadServerUdsReadDataFunction::OnDataRead() Failed to read from "
-              "socket"));
-    Release();
+    LOG(ERROR) << "Failed to read from socket: " << result;
+    RespondFromIOThread(Error("Failed to read from socket"));
     return;
   }
-
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Data read from "
-               "socket successfully, bytes: "
-            << result;
 
   std::string response(read_buffer_->data(), result);
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Response data: "
-            << response;
+  LOG(INFO) << "Response data: " << response;
 
-  auto json = base::JSONReader::Read(response);
-  if (!json.has_value()) {
-    LOG(ERROR) << "ReadServerUdsReadDataFunction::OnDataRead() Failed to parse "
-                  "JSON response";
-    Respond(
-        Error("ReadServerUdsReadDataFunction::OnDataRead() Failed to parse "
-              "JSON response"));
-    Release();
-    return;
-  }
+  DCHECK(content::BrowserThread::CurrentlyOn(content::BrowserThread::IO));
+  LOG(INFO) << "Inside OnDataRead() on IO thread";
 
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnDataRead() Parsed JSON "
-               "successfully, responding back";
+  content::GetUIThreadTaskRunner({})->PostTask(
+    FROM_HERE,
+    base::BindOnce(&ReadServerUdsReadDataFunction::RespondSuccessOnUI,
+                   base::Unretained(this), std::move(response)));
+}
 
-  Respond(WithArguments(std::move(*json)));
+void ReadServerUdsReadDataFunction::RespondSuccessOnUI(std::string result) {
+  DCHECK(content::BrowserThread::CurrentlyOn(content::BrowserThread::UI));
+  LOG(INFO) << "Inside RespondSuccessOnUI() on UI thread";
+
+  Respond(WithArguments(base::Value(result)));
   Release();
 }
 
+void ReadServerUdsReadDataFunction::RespondFromIOThread(ResponseValue result) {
+  DCHECK(content::BrowserThread::CurrentlyOn(content::BrowserThread::IO));
+  LOG(INFO) << "Inside RespondFromIOThread() on IO thread";
+  
+  content::GetUIThreadTaskRunner({})->PostTask(
+      FROM_HERE,
+      base::BindOnce(&ReadServerUdsReadDataFunction::Respond,
+                     base::Unretained(this), std::move(result)));
+}
+
+void ReadServerUdsReadDataFunction::RespondErrorOnUI(base::Value error_result) {
+  if (error_result.is_string()) {
+    Respond(Error(error_result.GetString()));
+  } else {
+    Respond(WithArguments(std::move(error_result)));
+  }
+  Release();
+}
+
+// clean up 
+// called by the extension automatcially when send response
 void ReadServerUdsReadDataFunction::OnResponded() {
-  LOG(INFO) << "ReadServerUdsReadDataFunction::OnResponded() Cleaning up "
-               "socket resources";
-  socket_.reset();
+  LOG(INFO) << "Cleaning up socket";
+
+  // Post socket cleanup to the IO thread
+  if (socket_) {
+    content::GetIOThreadTaskRunner({})->PostTask(
+        FROM_HERE,
+        base::BindOnce(
+            [](std::unique_ptr<net::UnixDomainClientSocket> socket) {
+              // Socket will be destructed here, safely on IO thread
+            },
+            std::move(socket_)));
+  }
 }
 
 // -------------------------
