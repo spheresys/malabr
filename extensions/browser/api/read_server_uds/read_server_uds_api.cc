@@ -38,12 +38,12 @@ namespace extensions {
 constexpr char kMLServerUDSPath[] = "/tmp/shared-sockets/echo_socket";
 
 // ALL lable for ML server function handler
-constexpr char kReadServerUdsReadDataFunctionLable[] = "LABLE_READ_DATA";
-constexpr char kReadServerUdsSendDataFunctionLable[] = "LABLE_SEND_DATA";
+constexpr char kReadServerUdsReadDataFunctionLable[] = "LABEL_READ_DATA";
+constexpr char kReadServerUdsSendDataFunctionLable[] = "LABEL_SEND_DATA";
 constexpr char kReadServerUdsLoadModelBERTFunctionLable[] =
-    "LABLE_LOAD_MODEL_BERT";
+    "LABEL_LOAD_MODEL_BERT";
 constexpr char kReadServerUdsInferSingleBERTFunctionLable[] =
-    "LABLE_INFER_MODEL_BERT";
+    "LABEL_INFER_MODEL_BERT";
 
 // -------------------------
 // Read Server Read Data UDS
@@ -536,6 +536,8 @@ ReadServerUdsInferSingleBERTFunction::~ReadServerUdsInferSingleBERTFunction() {
 ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
   LOG(INFO) << "ReadServerUdsInferSingleBERTFunction::Run() called";
 
+  AddRef();  // async
+
   // Validate the presence of arguments
   EXTENSION_FUNCTION_VALIDATE(has_args());
 
@@ -547,6 +549,8 @@ ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
   EXTENSION_FUNCTION_VALIDATE(arg.is_string());
 
   std::string payload = arg.GetString();
+
+  LOG(INFO) << "Payload " << payload;
 
   auto ml_server = std::make_unique<extensions::MLServerUDS>(
       kMLServerUDSPath, kReadServerUdsInferSingleBERTFunctionLable);
