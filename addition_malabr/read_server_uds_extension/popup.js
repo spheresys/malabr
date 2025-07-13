@@ -95,7 +95,16 @@ loadBertBtnEle.addEventListener('click', () => {
   showLoadBertResponseEle.textContent = '';
   showLoadBertResponseEle.classList.remove('error');
 
+  // show message loading
+  showLoadBertResponseEle.textContent = 'Loading...';
+  showLoadBertResponseEle.classList.add('loading');
+  
   chrome.readServerUds.loadModelBERT((response) => {
+    
+    // removing the loading style
+    showLoadBertResponseEle.textContent = '';
+    showLoadBertResponseEle.classList.remove('loading');
+
     if (chrome.runtime.lastError) {
       showLoadBertResponseEle.textContent = 'Native Error: ' + chrome.runtime.lastError.message;
       showLoadBertResponseEle.classList.add('error');
@@ -105,7 +114,6 @@ loadBertBtnEle.addEventListener('click', () => {
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(response);
-      console.log(response)
     } catch {
       showLoadBertResponseEle.textContent = 'Invalid JSON response.';
       showLoadBertResponseEle.classList.add('error');
@@ -118,7 +126,7 @@ loadBertBtnEle.addEventListener('click', () => {
       return;
     } else {
       showLoadBertResponseEle.textContent = parsedResponse.message || 'Success!';
-      showLoadBertResponseEle.classList.remove('error');
+      showLoadBertResponseEle.classList.remove(['error'])
     }
 
   });
