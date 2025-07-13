@@ -73,14 +73,15 @@ sendDataBtnEle.addEventListener('click', () => {
       return;
     }
 
-    if (!parsedResponse.status) {
+    if (parsedResponse.status == "error") {
       sendDataErrorEle.textContent = parsedResponse.message || 'Server returned an error.';
       sendDataErrorEle.classList.add('error');
       return;
+    } else {
+      showsendDataResponseEle.textContent = parsedResponse.message || 'Success!';
+      // sendDataIptEle.value = '';
     }
 
-    showsendDataResponseEle.textContent = parsedResponse.message || 'Success!';
-    sendDataIptEle.value = '';
   });
 });
 
@@ -104,20 +105,22 @@ loadBertBtnEle.addEventListener('click', () => {
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(response);
+      console.log(response)
     } catch {
       showLoadBertResponseEle.textContent = 'Invalid JSON response.';
       showLoadBertResponseEle.classList.add('error');
       return;
     }
 
-    if (!parsedResponse.status) {
+    if (parsedResponse.status == "error") {
       showLoadBertResponseEle.textContent = parsedResponse.message || 'Server returned an error.';
       showLoadBertResponseEle.classList.add('error');
       return;
+    } else {
+      showLoadBertResponseEle.textContent = parsedResponse.message || 'Success!';
+      showLoadBertResponseEle.classList.remove('error');
     }
 
-    showLoadBertResponseEle.textContent = parsedResponse.message || 'Success!';
-    showLoadBertResponseEle.classList.remove('error');
   });
 });
 
@@ -148,7 +151,7 @@ singleBertInferBtnEle.addEventListener('click', () => {
   const payload = { question: question, context: context };
   const jsonPayload = JSON.stringify(payload);
 
-  console.log("Bert Infer Paylod", jsonPayload);
+  // console.log("Bert Infer Paylod", jsonPayload);
 
   chrome.readServerUds.inferSingleBERT(jsonPayload, (response) => {
     if (chrome.runtime.lastError) {
@@ -160,20 +163,22 @@ singleBertInferBtnEle.addEventListener('click', () => {
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(response);
+      // console.log(parsedResponse)
     } catch {
       bertInputErrorEle.textContent = 'Invalid JSON response.';
       bertInputErrorEle.classList.add('error');
       return;
     }
 
-    if (!parsedResponse.status) {
+    if (parsedResponse.status == "error") {
       bertInputErrorEle.textContent = parsedResponse.message || 'Server returned an error.';
       bertInputErrorEle.classList.add('error');
       return;
+    } else {
+      singleBertInferResponseEle.textContent = parsedResponse.message || 'Success!';
+      // bertQuestionInputEle.value = '';
+      // bertContextInputEle.value = '';
     }
 
-    singleBertInferResponseEle.textContent = parsedResponse.message || 'Success!';
-    bertQuestionInputEle.value = '';
-    bertContextInputEle.value = '';
   });
 });

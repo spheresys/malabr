@@ -1,21 +1,12 @@
-# server.py
 import socket
 import os
 import json
 from typing import Literal, TypedDict
+from transformers import pipeline
 
-# ALL type of request
-# {"label":"LABEL_READ_DATA","method":"SEND","payload":"GET /data\n"}
-# {"status": "ok", "body": message.upper()}
 
-# {"label":"LABEL_SEND_DATA","method":"SEND","payload":"Hello Server"}
-# {"status": "error", "body": message.upper()}
-
-# {"label":"LABEL_LOAD_MODEL_BERT","method":"SEND","payload":"init the bert model\n"}
-# {"status": true, "key": "value", "message": "{\"LABEL\":\"LABEL_LOAD_MODEL_BERT\",\"METHOD\":\"SEND\",\"PAYLOAD\":\"INIT THE BERT MODEL\\N\"}"}
-
-# {"label":"LABEL_INFER_MODEL_BERT","method":"SEND","payload":"{\"question\":\"me\",\"context\":\"you\"}"}
-# {"status": true, "key": "value", "message": "{\"LABEL\":\"LABEL_INFER_MODEL_BERT\",\"METHOD\":\"SEND\",\"PAYLOAD\":\"{\\\"QUESTION\\\":\\\"ME\\\",\\\"CONTEXT\\\":\\\"YOU\\\"}\"}"}
+# Global variable
+qa_pipeline = None
 
 class Payload(TypedDict):
     label: Literal['LABEL_READ_DATA',  'LABEL_SEND_DATA', 'LABEL_LOAD_MODEL_BERT', 'LABEL_INFER_MODEL_BERT']
@@ -39,16 +30,65 @@ def send_data(conn: socket.socket, payload: Payload):
     return
 
 def load_model_bert(conn: socket.socket, payload: Payload):
+    global qa_pipeline
+    try:
+        if qa_pipeline:
+            message = "Bert model already loaded." 
+            print(message)
+            respond_back_string(conn, "error", message)
+            return
 
+        
+        qa_pipeline = pipeline(
+            "question-answering",
+            model="csarron/mobilebert-uncased-squad-v2",
+            tokenizer="csarron/mobilebert-uncased-squad-v2"
+        )
+        message = "Bert model loaded successfully"
+        print(message)
+        respond_back_string(conn, "ok", message)
+    
+    except Exception as e:
+        print("error in loading bert", e)
+        respond_back_string(conn, "error", "error in loading bert")
+        
     return
 
 def infer_model_bert(conn: socket.socket, payload: Payload):
+    try:
+        data = json.loads(payload["payload"])
+    except Exception as e:
+        message = "Error in parsion infer_model_bert data! with message: " + payload["payload"]
+        print(message)
+        respond_back_string(conn, "error", message)
+        return
     
-    return
-
-def wrong_label(conn: socket.socket):
-    respond_back_string(conn, status="error", message="error: unknown label")
-    print("Recived unknown label")
+    if not data or 'question' not in data or 'context' not in data:
+        message = "Payload must contain 'question' and 'context' fields."
+        print(message)
+        respond_back_string(conn, "error", message)
+        return
+    
+    try:
+        if not qa_pipeline:
+            message = "Please load the bert model first!" 
+            print(message)
+            respond_back_string(conn, "error", message)
+            return
+        
+        # it will be string because of single inference
+        prediction = qa_pipeline(
+            question=data['question'],
+            context=data['context']
+        )
+        # print("Model prediction: ", prediction)
+        respond_back_string(conn, "ok", "Answser: " + prediction["answer"])
+        
+    except Exception as e:
+        message = "Inference error in model bert"
+        print(message)
+        respond_back_string(conn, "error", message)
+    
     return
 
 FUNCTION_LABELS = {
@@ -59,10 +99,15 @@ FUNCTION_LABELS = {
 }
 
 def route_to_label(conn: socket.socket, payload: Payload):
-    label_function = FUNCTION_LABELS[payload['label']]
+    label_type = payload['label']
+    medthod_type = payload['method']
+    label_function = FUNCTION_LABELS[label_type]
     if not label_function:
-        wrong_label(conn)
+        message = f"Error: wrong label {label_type}"
+        print(message)
+        respond_back_string(conn, "error", message)
         return
+    print(f"[{medthod_type}:{label_type}]")
     label_function(conn, payload)
     return
 
@@ -92,11 +137,9 @@ try:
                 continue
 
             message = data.decode()
-            print(f"Received: {message}")
-            
+                        
             try:
                 payload: Payload = json.loads(message)
-                print('Pase json message: ', payload)
                 
             except json.JSONDecodeError:
                 respond_back_string(conn, "error", "Malformed JSON")
