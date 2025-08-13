@@ -1,0 +1,29 @@
+namespace QAService.Payloads;
+
+// Union to allow for different request/response types in the future
+union AnyPayload {
+  QARequest,
+  QAResponse
+}
+
+// Request table: client → server
+table QARequest {
+  question: string;
+  context: string;
+}
+
+// Response table: server → client
+table QAResponse {
+  answer: string;
+}
+
+// Root wrapper containing the union
+table Root {
+  payload: AnyPayload;
+}
+
+// 4-byte file identifier for validation
+file_identifier "QASV";
+
+// Root type declaration
+root_type Root;
