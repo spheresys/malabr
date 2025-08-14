@@ -3,9 +3,11 @@ from response import respond
 import json
 import socket
 
+from types_defs import Payload
+
 _qa_pipeline = None
 
-def load_model(conn: socket.socket, payload: str) -> None:
+def load_model(conn: socket.socket, payload: Payload) -> None:
     global _qa_pipeline
     if _qa_pipeline:
         respond(conn, "error", "Model already loaded.")
@@ -17,13 +19,13 @@ def load_model(conn: socket.socket, payload: str) -> None:
     )
     respond(conn, "ok", "BERT model loaded.")
 
-def infer(conn: socket.socket, payload: str) -> None:
+def infer(conn: socket.socket, payload: Payload) -> None:
     global _qa_pipeline
     if not _qa_pipeline:
         respond(conn, "error", "Model not loaded.")
         return
     try:
-        data = json.loads(payload)
+        data = json.loads(payload['payload_bytes'].decode("utf-8"))
         question = data.get("question")
         context = data.get("context")
         if not question or not context:

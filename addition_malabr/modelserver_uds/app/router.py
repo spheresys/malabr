@@ -1,10 +1,15 @@
-from types_defs import Payload
 import socket
+
+from response import respond
+from types_defs import Payload
 from handler import read_data, send_data, qa_model
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def route(conn: socket.socket, payload: Payload):
     label = payload["label"]
-    raw_payload = payload["payload"]
 
     ROUTES = {
         "LABEL_READ_DATA": read_data.handle,
@@ -15,8 +20,8 @@ def route(conn: socket.socket, payload: Payload):
 
     handler = ROUTES.get(label)
     if handler:
-        print(f"[HIT]: {label}")
-        handler(conn, raw_payload)
+        logger.debug(label)
+        handler(conn, payload)
     else:
-        from response import respond
+        logger.error(f"Unknown label: {label}")
         respond(conn, "error", f"Unknown label: {label}")

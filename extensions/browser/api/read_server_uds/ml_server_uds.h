@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BROWSER_API_READ_SERVER_UDS_ML_SERVER_UDS_H_
 #define EXTENSIONS_BROWSER_API_READ_SERVER_UDS_ML_SERVER_UDS_H_
 
+#include <shared_mutex>
 #include <string>
 
 #include "base/memory/weak_ptr.h"
@@ -14,7 +15,9 @@ class MLServerUDS {
   MLServerUDS(const std::string& socket_path, const std::string& label);
   ~MLServerUDS();
 
-  void Send(const std::string& payload,
+  void Send(scoped_refptr<net::IOBuffer> payload,
+            size_t payload_size,
+            std::string fb_file_identifier,
             base::OnceCallback<void(std::string)> success_cb,
             base::OnceCallback<void(std::string)> error_cb);
 
@@ -31,15 +34,19 @@ class MLServerUDS {
 
  private:
   void ConnectToUnixSocket();
+  void OnHeaderSend(int result);
   void OnConnected(int result);
   void OnDataWritten(int result);
   void OnDataRead(int result);
+  std::string GetHeaderPayload();
   std::string CreateJSONStringPayload(const std::string& label,
                                       const std::string& method,
                                       const std::string& payload);
 
   std::string socket_path_;
-  std::string payload_;
+  scoped_refptr<net::IOBuffer> payload_;
+  size_t payload_size_;
+  std::string fb_file_identifier_;
   std::string label_;
   std::string model_name_;
   std::unique_ptr<net::UnixDomainClientSocket> socket_;

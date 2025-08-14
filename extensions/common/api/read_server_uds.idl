@@ -30,6 +30,6 @@ namespace readServerUds {
     static void loadModelBERT(optional LoadModelBERTCallback callback);
 
     // Sends data for inference and gets a label prediction. (BERT)
-    static void inferSingleBERT(InferSingleBERTRequest request, optional InferSingleBERTCallback callback);
+    static void inferSingleBERT(ArrayBuffer payload, optional InferSingleBERTCallback callback);
   };
 };

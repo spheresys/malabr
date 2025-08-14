@@ -7,5 +7,6 @@ class Payload(TypedDict):
         'LABEL_LOAD_MODEL_BERT', 
         'LABEL_INFER_MODEL_BERT'
     ]
-    method: Literal['SEND', 'GET', 'POST']
-    payload: str
+    payload_bytes: bytes
+    payload_size: int
+    fb_id: str

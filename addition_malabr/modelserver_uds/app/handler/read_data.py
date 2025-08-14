@@ -1,5 +1,7 @@
-from response import respond
 import socket
 
-def handle(conn: socket.socket, payload: str):
+from response import respond
+from types_defs import Payload
+
+def handle(conn: socket.socket, payload: Payload):
     respond(conn, "ok", "I am alive!")

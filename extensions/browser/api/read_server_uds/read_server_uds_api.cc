@@ -1,8 +1,8 @@
 #include "extensions/browser/api/read_server_uds/read_server_uds_api.h"
-#include "extensions/common/api/read_server_uds.h"
 
-#include "base/values.h"
 #include "base/json/json_writer.h"
+#include "base/values.h"
+#include "extensions/common/api/read_server_uds.h"
 
 /// tmp/shared-sockets/echo_socket
 namespace extensions {
@@ -37,7 +37,9 @@ ExtensionFunction::ResponseAction ReadServerUdsReadDataFunction::Run() {
 
   std::string payload = "GET /data\n";
 
-  ml_server->Send(payload,
+  auto buffer = base::MakeRefCounted<net::StringIOBuffer>(payload);
+
+  ml_server->Send(buffer.get(), buffer->size(), "fb-read",
                   base::BindOnce(&ReadServerUdsReadDataFunction::OnSuccess,
                                  weak_ptr_factory_.GetWeakPtr()),
                   base::BindOnce(&ReadServerUdsReadDataFunction::OnError,
@@ -87,21 +89,23 @@ ReadServerUdsSendDataFunction::~ReadServerUdsSendDataFunction() {
 ExtensionFunction::ResponseAction ReadServerUdsSendDataFunction::Run() {
   LOG(INFO) << "ReadServerUdsSendDataFunction::Run() called";
 
-    // Validate the presence of arguments
+  // Validate the presence of arguments
   EXTENSION_FUNCTION_VALIDATE(has_args());
   namespace send_data_api = extensions::api::read_server_uds::SendData;
 
   auto maybe_params = send_data_api::Params::Create(args());
   EXTENSION_FUNCTION_VALIDATE(maybe_params);
-  
-  const std::string& payload = maybe_params->data;
+
+  const std::string payload = maybe_params->data;
 
   AddRef();  // async
 
   auto ml_server = std::make_unique<extensions::MLServerUDS>(
       kMLServerUDSPath, kReadServerUdsSendDataFunctionLable);
 
-  ml_server->Send(payload,
+  auto buffer = base::MakeRefCounted<net::StringIOBuffer>(payload);
+
+  ml_server->Send(buffer.get(), buffer->size(), "fb-read",
                   base::BindOnce(&ReadServerUdsSendDataFunction::OnSuccess,
                                  weak_ptr_factory_.GetWeakPtr()),
                   base::BindOnce(&ReadServerUdsSendDataFunction::OnError,
@@ -155,7 +159,9 @@ ExtensionFunction::ResponseAction ReadServerUdsLoadModelBERTFunction::Run() {
 
   std::string payload = "init the bert model\n";
 
-  ml_server->Send(payload,
+  auto buffer = base::MakeRefCounted<net::StringIOBuffer>(payload);
+
+  ml_server->Send(buffer, buffer->size(), "fb-load",
                   base::BindOnce(&ReadServerUdsLoadModelBERTFunction::OnSuccess,
                                  weak_ptr_factory_.GetWeakPtr()),
                   base::BindOnce(&ReadServerUdsLoadModelBERTFunction::OnError,
@@ -204,18 +210,16 @@ ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
   LOG(INFO) << "ReadServerUdsInferSingleBERTFunction::Run() called";
   // Validate the presence of arguments
   EXTENSION_FUNCTION_VALIDATE(has_args());
-  namespace infer_single_bert_api = extensions::api::read_server_uds::InferSingleBERT;
+  namespace infer_single_bert_api =
+      extensions::api::read_server_uds::InferSingleBERT;
 
   auto maybe_params = infer_single_bert_api::Params::Create(args());
-  EXTENSION_FUNCTION_VALIDATE(maybe_params);
+  EXTENSION_FUNCTION_VALIDATE(maybe_params->payload.data());
 
-  std::string payload;
-  bool success = base::JSONWriter::Write(maybe_params->request.ToValue(), &payload);
+  std::string data(reinterpret_cast<const char*>(maybe_params->payload.data()), maybe_params->payload.size());
+  auto payload = base::MakeRefCounted<net::StringIOBuffer>(std::move(data));
 
-  // Optional: handle 
-  if (!success) {
-    LOG(ERROR) << "Failed to serialize context/question to JSON";
-  }
+  size_t payload_size = maybe_params->payload.size();
 
   AddRef();  // async
 
@@ -223,7 +227,7 @@ ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
       kMLServerUDSPath, kReadServerUdsInferSingleBERTFunctionLable);
 
   ml_server->Send(
-      payload,
+      payload, payload_size, "fb-infer",
       base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnSuccess,
                      weak_ptr_factory_.GetWeakPtr()),
       base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnError,
