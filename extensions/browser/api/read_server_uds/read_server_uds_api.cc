@@ -211,23 +211,27 @@ ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
   // Validate the presence of arguments
   EXTENSION_FUNCTION_VALIDATE(has_args());
   namespace infer_single_bert_api =
-      extensions::api::read_server_uds::InferSingleBERT;
-
+  extensions::api::read_server_uds::InferSingleBERT;
+  
   auto maybe_params = infer_single_bert_api::Params::Create(args());
-  EXTENSION_FUNCTION_VALIDATE(maybe_params->payload.data());
-
-  std::string data(reinterpret_cast<const char*>(maybe_params->payload.data()), maybe_params->payload.size());
+  // EXTENSION_FUNCTION_VALIDATE(maybe_params->request.payload.data());
+  
+  auto request_payload = maybe_params->request.payload;
+  std::string fb_id = maybe_params->request.fb_id;
+  size_t payload_size = request_payload.size();
+  
+  LOG(INFO) << fb_id << " hey";
+  
+  std::string data(reinterpret_cast<const char*>(request_payload.data(), payload_size));
   auto payload = base::MakeRefCounted<net::StringIOBuffer>(std::move(data));
-
-  size_t payload_size = maybe_params->payload.size();
-
+  
   AddRef();  // async
-
+  
   auto ml_server = std::make_unique<extensions::MLServerUDS>(
       kMLServerUDSPath, kReadServerUdsInferSingleBERTFunctionLable);
 
   ml_server->Send(
-      payload, payload_size, "fb-infer",
+      payload, payload_size, fb_id,
       base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnSuccess,
                      weak_ptr_factory_.GetWeakPtr()),
       base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnError,

@@ -41,7 +41,7 @@ void MLServerUDS::Clear() {
   LOG(INFO) << "MLServerUDS::Clear() called";
 
   read_buffer_ = nullptr;
-  payload_->Release();
+
   weak_ptr_factory_.InvalidateWeakPtrs();
 
   if (socket_) {

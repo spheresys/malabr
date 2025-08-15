@@ -98,9 +98,9 @@ loadBertBtnEle.addEventListener('click', () => {
   // show message loading
   showLoadBertResponseEle.textContent = 'Loading...';
   showLoadBertResponseEle.classList.add('loading');
-  
+
   chrome.readServerUds.loadModelBERT((response) => {
-    
+
     // removing the loading style
     showLoadBertResponseEle.textContent = '';
     showLoadBertResponseEle.classList.remove('loading');
@@ -186,14 +186,14 @@ singleBertInferBtnEle.addEventListener('click', () => {
   // const flatbufferPayload = createQARequestBuffer(question, context);
 
   // Normal json to uint8array
-  const jsonPayload = JSON.stringify({question, context});
+  const jsonPayload = JSON.stringify({ question, context });
   const encoder = new TextEncoder();
 
   const uint8ArrayPayload = encoder.encode(jsonPayload);
 
   // console.log("Bert Infer Paylod", jsonPayload);
 
-  chrome.readServerUds.inferSingleBERT(uint8ArrayPayload, (response) => {
+  chrome.readServerUds.inferSingleBERT({ payload: uint8ArrayPayload, fb_id: "fb" }, (response) => {
     if (chrome.runtime.lastError) {
       bertInputErrorEle.textContent = 'Native Error: ' + chrome.runtime.lastError.message;
       bertInputErrorEle.classList.add('error');
@@ -217,8 +217,8 @@ singleBertInferBtnEle.addEventListener('click', () => {
 
 
     // Normal JSON on
-    if (response) {
-      singleBertInferResponseEle.textContent = response;
+    if (response.status == "ok") {
+      singleBertInferResponseEle.textContent = response.message;
     } else {
       bertInputErrorEle.textContent = 'Unexpected payload type in response.';
       bertInputErrorEle.classList.add('error');
