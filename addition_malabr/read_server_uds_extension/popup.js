@@ -217,6 +217,7 @@ singleBertInferBtnEle.addEventListener('click', () => {
 
 
     // Normal JSON on
+    response = JSON.parse(response)
     if (response.status == "ok") {
       singleBertInferResponseEle.textContent = response.message;
     } else {
