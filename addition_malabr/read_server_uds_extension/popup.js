@@ -1,3 +1,10 @@
+import { flatbuffers } from './flatbuffers.js';
+import QAService from './qa_schema_generated.js';
+
+console.log('flatbuffers:', flatbuffers);
+console.log('QAService:', QAService);
+console.log('QAService.Payloads:', QAService.Payloads);
+console.log('QAService.Payloads.QARequest:', QAService.Payloads?.QARequest);
 
 // READ DATA
 const readDataBtnEle = document.getElementById('readDataBtn');
@@ -133,31 +140,31 @@ loadBertBtnEle.addEventListener('click', () => {
 });
 
 
-// function createQARequestBuffer(question, context) {
-//   const builder = new flatbuffers.Builder(1024);
+function createQARequestBuffer(question, context) {
+  const builder = new flatbuffers.Builder(1024);
 
-//   // Create strings in buffer
-//   const questionOffset = builder.createString(question);
-//   const contextOffset = builder.createString(context);
+  // Create strings in buffer
+  const questionOffset = builder.createString(question);
+  const contextOffset = builder.createString(context);
 
-//   // Build QARequest
-//   QAService.Payloads.QARequest.startQARequest(builder);
-//   QAService.Payloads.QARequest.addQuestion(builder, questionOffset);
-//   QAService.Payloads.QARequest.addContext(builder, contextOffset);
-//   const qaRequestOffset = QAService.Payloads.QARequest.endQARequest(builder);
+  // Build QARequest
+  QAService.Payloads.QARequest.startQARequest(builder);
+  QAService.Payloads.QARequest.addQuestion(builder, questionOffset);
+  QAService.Payloads.QARequest.addContext(builder, contextOffset);
+  const qaRequestOffset = QAService.Payloads.QARequest.endQARequest(builder);
 
-//   // Wrap in Root table with union type
-//   QAService.Payloads.Root.startRoot(builder);
-//   QAService.Payloads.Root.addPayloadType(builder, QAService.Payloads.AnyPayload.QARequest);
-//   QAService.Payloads.Root.addPayload(builder, qaRequestOffset);
-//   const rootOffset = QAService.Payloads.Root.endRoot(builder);
+  // Wrap in Root table with union type
+  QAService.Payloads.Root.startRoot(builder);
+  QAService.Payloads.Root.addPayloadType(builder, QAService.Payloads.AnyPayload.QARequest);
+  QAService.Payloads.Root.addPayload(builder, qaRequestOffset);
+  const rootOffset = QAService.Payloads.Root.endRoot(builder);
 
-//   // Finish with file identifier
-//   builder.finish(rootOffset, "QASV");
+  // Finish with file identifier
+  builder.finish(rootOffset, "QASV");
 
-//   // Return as Uint8Array
-//   return builder.asUint8Array();
-// }
+  // Return as Uint8Array
+  return builder.asUint8Array();
+}
 
 
 // SINGLE INFERENCE BERT
@@ -183,17 +190,18 @@ singleBertInferBtnEle.addEventListener('click', () => {
   }
 
   // Create FlatBuffer payload
-  // const flatbufferPayload = createQARequestBuffer(question, context);
-
+  console.log("Bert Infer Paylod", question, context);
+  const flatbufferPayload = createQARequestBuffer(question, context);
+  console.log("Flatbuffer Payload", flatbufferPayload);
   // Normal json to uint8array
-  const jsonPayload = JSON.stringify({ question, context });
-  const encoder = new TextEncoder();
+  // const jsonPayload = JSON.stringify({ question, context });
+  // const encoder = new TextEncoder();
 
-  const uint8ArrayPayload = encoder.encode(jsonPayload);
+  // const uint8ArrayPayload = encoder.encode(jsonPayload);
 
   // console.log("Bert Infer Paylod", jsonPayload);
 
-  chrome.readServerUds.inferSingleBERT({ payload: uint8ArrayPayload, fb_id: "fb" }, (response) => {
+  chrome.readServerUds.inferSingleBERT({ payload: flatbufferPayload, fb_id: "QASV"}, (response) => {
     if (chrome.runtime.lastError) {
       bertInputErrorEle.textContent = 'Native Error: ' + chrome.runtime.lastError.message;
       bertInputErrorEle.classList.add('error');
