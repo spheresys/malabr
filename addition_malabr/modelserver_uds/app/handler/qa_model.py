@@ -45,10 +45,10 @@ def infer(conn: socket.socket, payload: Payload) -> None:
         respond(conn, "error", "Model not loaded.")
         return
     try:
-        print(f"Received payload: {payload}")
+        # print(f"Received payload: {payload}")
         question, context = parse_request(payload['payload_bytes'])
-        print(f"Question: {question}")
-        print(f"Context: {context}")
+        # print(f"Question: {question}")
+        # print(f"Context: {context}")
         # data = json.loads(payload['payload_bytes'].decode("utf-8"))
         # question = data.get("question")
         # context = data.get("context")
