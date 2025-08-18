@@ -1,4 +1,5 @@
-from typing import Literal, TypedDict
+import socket
+from typing import Literal, TypedDict, Callable, Dict
 
 class Payload(TypedDict):
     label: Literal[
@@ -10,3 +11,9 @@ class Payload(TypedDict):
     payload_bytes: bytes
     payload_size: int
     fb_id: str
+
+HandlerType = Callable[[socket.socket, Payload], None]
+
+RoutesType = Dict[Payload["label"], HandlerType]
+
+RespondStatus =  Literal["ok", "error"]
