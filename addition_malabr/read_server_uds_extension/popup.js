@@ -190,9 +190,9 @@ singleBertInferBtnEle.addEventListener('click', () => {
   }
 
   // Create FlatBuffer payload
-  console.log("Bert Infer Paylod", question, context);
+  // console.log("Bert Infer Paylod", question, context);
   const flatbufferPayload = createQARequestBuffer(question, context);
-  console.log("Flatbuffer Payload", flatbufferPayload);
+  // console.log("Flatbuffer Payload", flatbufferPayload);
   // Normal json to uint8array
   // const jsonPayload = JSON.stringify({ question, context });
   // const encoder = new TextEncoder();
@@ -228,6 +228,9 @@ singleBertInferBtnEle.addEventListener('click', () => {
     response = JSON.parse(response)
     if (response.status == "ok") {
       singleBertInferResponseEle.textContent = response.message;
+    } else if(response.status == "error") {
+      singleBertInferResponseEle.textContent = response.message;
+      bertInputErrorEle.classList.add('error');
     } else {
       bertInputErrorEle.textContent = 'Unexpected payload type in response.';
       bertInputErrorEle.classList.add('error');
