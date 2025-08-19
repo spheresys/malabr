@@ -2,7 +2,6 @@ import socket
 import threading
 from transformers import pipeline
 from response import respond
-
 from types_defs import Payload
 
 from .QAService.Payloads import Root

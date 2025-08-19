@@ -11,7 +11,7 @@ class Payload(TypedDict):
     payload_bytes: bytes
     payload_size: int
     fb_id: str
-
+      
 HandlerType = Callable[[socket.socket, Payload], None]
 
 RoutesType = Dict[Payload["label"], HandlerType]
