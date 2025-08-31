@@ -37,6 +37,14 @@ class MLServerUDS {
   void OnHeaderSend(int result);
   void OnConnected(int result);
   void OnDataWritten(int result);
+  // Write next 64KB chunk
+  void WriteNextChunk(const net::NetworkTrafficAnnotationTag& annotation);
+
+  // Called when a chunk write completes
+  void OnChunkWritten(scoped_refptr<net::IOBuffer> buf,
+                      size_t expected,
+                      const net::NetworkTrafficAnnotationTag& annotation,
+                      int result);
   void OnDataRead(int result);
   std::string GetHeaderPayload();
   std::string CreateJSONStringPayload(const std::string& label,
@@ -46,6 +54,7 @@ class MLServerUDS {
   std::string socket_path_;
   scoped_refptr<net::IOBuffer> payload_;
   size_t payload_size_;
+  size_t bytes_sent_ = 0;
   std::string fb_file_identifier_;
   std::string label_;
   std::string model_name_;

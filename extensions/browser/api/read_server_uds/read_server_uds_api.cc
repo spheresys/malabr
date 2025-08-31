@@ -1,7 +1,9 @@
 #include "extensions/browser/api/read_server_uds/read_server_uds_api.h"
+#include <cstddef>
 
 #include "base/json/json_writer.h"
 #include "base/values.h"
+#include "extensions/browser/extension_function.h"
 #include "extensions/common/api/read_server_uds.h"
 
 /// tmp/shared-sockets/echo_socket
@@ -237,6 +239,57 @@ ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run() {
 
   return RespondLater();
 }
+
+ExtensionFunction::ResponseAction ReadServerUdsInferSingleBERTFunction::Run1() {
+  // Create MLServerUDS instance
+  auto ml_server = std::make_unique<extensions::MLServerUDS>(
+      kMLServerUDSPath, kReadServerUdsInferSingleBERTFunctionLable);
+
+  // Path to your flatbuffer file
+  base::FilePath fb_file_path = base::FilePath(FILE_PATH_LITERAL("./flatbuffer_data.bin"));
+
+  // Open the file
+  base::File file(fb_file_path,
+                  base::File::FLAG_OPEN | base::File::FLAG_READ);
+  if (!file.IsValid()) {
+    // Handle error case — couldn't open file
+    LOG(ERROR) << "Failed to open flatbuffer file: " << fb_file_path.AsUTF8Unsafe();
+    return RespondNow(Error("Failed to open flatbuffer file."));
+  }
+
+  // Get file size
+  int64_t file_size = file.GetLength();
+  if (file_size <= 0) {
+    LOG(ERROR) << "Flatbuffer file is empty or invalid.";
+    return RespondNow(Error("Flatbuffer file is empty or invalid."));
+  }
+
+  // Read file contents into a std::string
+  std::string data;
+  data.resize(file_size);
+  int bytes_read = file.ReadAtCurrentPos(data.data(), file_size);
+  if (bytes_read != file_size) {
+    LOG(ERROR) << "Failed to read entire flatbuffer file.";
+    return RespondNow(Error("Failed to read entire flatbuffer file."));
+  }
+
+  // Create payload
+  auto payload = base::MakeRefCounted<net::StringIOBuffer>(std::move(data));
+
+  // Send the data to MLServer
+  ml_server->Send(
+      payload, file_size, "QASV",
+      base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnSuccess,
+                     weak_ptr_factory_.GetWeakPtr()),
+      base::BindOnce(&ReadServerUdsInferSingleBERTFunction::OnError,
+                     weak_ptr_factory_.GetWeakPtr()));
+
+  // Hold the instance if needed
+  ml_server_ = std::move(ml_server);
+
+  return RespondLater();
+}
+
 
 void ReadServerUdsInferSingleBERTFunction::OnSuccess(std::string result) {
   Respond(WithArguments(base::Value(result)));

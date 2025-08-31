@@ -88,6 +88,7 @@ class ReadServerUdsInferSingleBERTFunction : public ExtensionFunction {
 
  private:
   ResponseAction Run() override;
+  ResponseAction Run1();
   void OnResponded() override;
 
   // Socket handling

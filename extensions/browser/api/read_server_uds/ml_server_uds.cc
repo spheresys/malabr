@@ -1,7 +1,8 @@
 #include "extensions/browser/api/read_server_uds/ml_server_uds.h"
 
-#include <string>
 #include <arpa/inet.h>
+
+#include <string>
 
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
@@ -23,12 +24,14 @@ MLServerUDS::~MLServerUDS() {
   DCHECK(!socket_) << "Socket must be cleared before destruction!";
 }
 
-void MLServerUDS::Send(scoped_refptr<net::IOBuffer> payload, size_t payload_size, std::string fb_file_identifier,
+void MLServerUDS::Send(scoped_refptr<net::IOBuffer> payload,
+                       size_t payload_size,
+                       std::string fb_file_identifier,
                        base::OnceCallback<void(std::string)> success_cb,
                        base::OnceCallback<void(std::string)> error_cb) {
   payload_ = payload;
   payload_size_ = payload_size;
-  fb_file_identifier_= fb_file_identifier;
+  fb_file_identifier_ = fb_file_identifier;
   success_callback_ = std::move(success_cb);
   error_callback_ = std::move(error_cb);
 
@@ -83,19 +86,20 @@ void MLServerUDS::ConnectToUnixSocket() {
   }
 }
 
-void MLServerUDS::OnHeaderSend(int result){
+void MLServerUDS::OnHeaderSend(int result) {
   if (result != net::OK) {
     LOG(ERROR) << "OnHeaderSend: Socket connection failed: " << result;
     content::GetUIThreadTaskRunner({})->PostTask(
-        FROM_HERE,
-        base::BindOnce(std::move(error_callback_), "OnHeaderSend: Socket connection failed"));
+        FROM_HERE, base::BindOnce(std::move(error_callback_),
+                                  "OnHeaderSend: Socket connection failed"));
     return;
   }
 
   std::string header_payload = GetHeaderPayload();
   LOG(INFO) << "Socket connected, sending the header ";
 
-  auto header_buffer = base::MakeRefCounted<net::StringIOBuffer>(header_payload);
+  auto header_buffer =
+      base::MakeRefCounted<net::StringIOBuffer>(header_payload);
 
   net::NetworkTrafficAnnotationTag annotation =
       net::DefineNetworkTrafficAnnotation("ml_server_uds_sending_header", R"(
@@ -111,11 +115,10 @@ void MLServerUDS::OnHeaderSend(int result){
           setting: "This cannot be disabled in settings."
         })");
 
-  int write_result =
-      socket_->Write(header_buffer.get(), header_buffer->size(),
-                     base::BindOnce(&MLServerUDS::OnConnected,
-                                    weak_ptr_factory_.GetWeakPtr()),
-                     annotation);
+  int write_result = socket_->Write(
+      header_buffer.get(), header_buffer->size(),
+      base::BindOnce(&MLServerUDS::OnConnected, weak_ptr_factory_.GetWeakPtr()),
+      annotation);
 
   if (write_result == static_cast<int>(header_buffer->size())) {
     LOG(INFO) << "OnConnected: Header Write synchronous";
@@ -125,7 +128,8 @@ void MLServerUDS::OnHeaderSend(int result){
   } else {
     LOG(ERROR) << "Header Write failed: " << write_result;
     content::GetUIThreadTaskRunner({})->PostTask(
-        FROM_HERE, base::BindOnce(std::move(error_callback_), "Header Write failed"));
+        FROM_HERE,
+        base::BindOnce(std::move(error_callback_), "Header Write failed"));
   }
 }
 
@@ -138,7 +142,10 @@ void MLServerUDS::OnConnected(int result) {
     return;
   }
 
-  LOG(INFO) << "OnConnected: sending the payload ";
+  LOG(INFO) << "OnConnected: sending the payload in chunks";
+
+  // reset chunk state
+  bytes_sent_ = 0;
 
   net::NetworkTrafficAnnotationTag annotation =
       net::DefineNetworkTrafficAnnotation("ml_server_uds_write", R"(
@@ -154,21 +161,91 @@ void MLServerUDS::OnConnected(int result) {
           setting: "This cannot be disabled in settings."
         })");
 
-  int write_result =
-      socket_->Write(payload_.get(), payload_size_,
-                     base::BindOnce(&MLServerUDS::OnDataWritten,
-                                    weak_ptr_factory_.GetWeakPtr()),
-                     annotation);
+  // kick off first chunk write
+  WriteNextChunk(annotation);
+}
 
-  if (write_result == static_cast<int>(payload_->size())) {
-    LOG(INFO) << "Write synchronous";
-    OnDataWritten(write_result);
+void MLServerUDS::WriteNextChunk(
+    const net::NetworkTrafficAnnotationTag& annotation) {
+  constexpr size_t kChunkSize = 10 * 1024;  // 64 KB
+  size_t remaining = payload_size_ - bytes_sent_;
+  size_t to_send = std::min(kChunkSize, remaining);
+
+  auto buf = base::MakeRefCounted<net::IOBufferWithSize>(to_send);
+  memcpy(buf->data(), payload_->data() + bytes_sent_, to_send);
+
+  // int write_result = socket_->Write(
+  //   header_buffer.get(), header_buffer->size(),
+  //   base::BindOnce(&MLServerUDS::OnConnected,
+  //   weak_ptr_factory_.GetWeakPtr()), annotation);
+  int write_result = socket_->Write(
+      buf.get(), to_send,
+      base::BindOnce(&MLServerUDS::OnChunkWritten,
+                     weak_ptr_factory_.GetWeakPtr(), buf, to_send, annotation),
+      annotation);
+
+  if (write_result == static_cast<int>(to_send)) {
+    LOG(INFO) << "Chunk write synchronous, size=" << to_send;
+    OnChunkWritten(buf, to_send, annotation, write_result);
+  } else if (write_result > 0 && write_result < static_cast<int>(to_send)) {
+    LOG(WARNING) << "Partial write synchronous: " << write_result << " of "
+                 << to_send;
+    OnChunkWritten(buf, to_send, annotation, write_result);
   } else if (write_result == net::ERR_IO_PENDING) {
-    LOG(INFO) << "Write pending";
+    LOG(INFO) << "Chunk write pending, size=" << to_send;
   } else {
     LOG(ERROR) << "Write failed: " << write_result;
     content::GetUIThreadTaskRunner({})->PostTask(
         FROM_HERE, base::BindOnce(std::move(error_callback_), "Write failed"));
+  }
+}
+
+void MLServerUDS::OnChunkWritten(
+    scoped_refptr<net::IOBuffer> buf,
+    size_t expected,
+    const net::NetworkTrafficAnnotationTag& annotation,
+    int result) {
+  if (result < 0) {
+    LOG(ERROR) << "Write failed: " << result;
+    content::GetUIThreadTaskRunner({})->PostTask(
+        FROM_HERE, base::BindOnce(std::move(error_callback_), "Write failed"));
+    return;
+  }
+
+  if (result < static_cast<int>(expected)) {
+    // Partial write: retry the rest
+    LOG(WARNING) << "Partial write: only " << result << " of " << expected
+                 << " bytes written. Retrying remainder.";
+
+    size_t remaining = expected - result;
+
+    // don't advance bytes_sent_ yet, only when full chunk is done
+    auto remainder = base::MakeRefCounted<net::IOBufferWithSize>(remaining);
+    memcpy(remainder->data(), buf->data() + result, remaining);
+
+    int write_result =
+        socket_->Write(remainder.get(), remaining,
+                       base::BindOnce(&MLServerUDS::OnChunkWritten,
+                                      weak_ptr_factory_.GetWeakPtr(), remainder,
+                                      remaining, annotation),
+                       annotation);
+
+    if (write_result >= 0 && write_result < static_cast<int>(remaining)) {
+      // schedule async retry, don't recurse
+      return;
+    }
+    return;
+  }
+
+  // Full chunk successfully written
+  bytes_sent_ += result;
+  LOG(INFO) << "Chunk written: " << result << " bytes, total=" << bytes_sent_;
+
+  if (bytes_sent_ < payload_size_) {
+    WriteNextChunk(annotation);
+  } else {
+    LOG(INFO) << "All payload written (" << bytes_sent_ << " bytes)";
+    OnDataWritten(bytes_sent_);
   }
 }
 
@@ -227,22 +304,24 @@ std::string MLServerUDS::CreateJSONStringPayload(const std::string& label,
 }
 
 std::string MLServerUDS::GetHeaderPayload() {
-    // 1. Construct the header string
-    std::string header = fb_file_identifier_ + "," + label_ + "," + std::to_string(payload_size_);
+  // 1. Construct the header string
+  std::string header =
+      fb_file_identifier_ + "," + label_ + "," + std::to_string(payload_size_);
 
-    // 2. Compute its length
-    uint32_t header_len = static_cast<uint32_t>(header.size());
+  // 2. Compute its length
+  uint32_t header_len = static_cast<uint32_t>(header.size());
 
-    // 3. Convert length to network byte order (big endian)
-    uint32_t header_len_net = htonl(header_len);
+  // 3. Convert length to network byte order (big endian)
+  uint32_t header_len_net = htonl(header_len);
 
-    // 4. Build final output: 4-byte length prefix + header
-    std::string out;
-    out.reserve(sizeof(header_len_net) + header.size());
-    out.append(reinterpret_cast<const char*>(&header_len_net), sizeof(header_len_net));
-    out.append(header);
+  // 4. Build final output: 4-byte length prefix + header
+  std::string out;
+  out.reserve(sizeof(header_len_net) + header.size());
+  out.append(reinterpret_cast<const char*>(&header_len_net),
+             sizeof(header_len_net));
+  out.append(header);
 
-    return out;
+  return out;
 }
 
 }  // namespace extensions

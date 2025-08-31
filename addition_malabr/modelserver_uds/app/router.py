@@ -20,7 +20,7 @@ def route(conn: socket.socket, payload: Payload):
 
     handler = ROUTES.get(label)
     if handler:
-        logger.debug(label)
+        # logger.debug(label)
         handler(conn, payload)
     else:
         logger.error(f"Unknown label: {label}")
