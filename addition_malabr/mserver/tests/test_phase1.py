@@ -1005,6 +1005,8 @@ def t46_gate_uses_worst_observed():
 class _FakeEngine:
     def __init__(self, keys):
         self._keys = list(keys); self.foreground_tab_id = -1; self.cancelled = []
+        self.wakes = 0
+    def wake(self): self.wakes += 1      # ControlReader wakes the idle engine
     def all_keys(self): return list(self._keys)
     def keys_for_tab(self, t): return [k for k in self._keys if k[1] == t]
     def keys_for_extension(self, e): return [k for k in self._keys if k[0] == e]
@@ -1290,6 +1292,90 @@ def t65_engine_survives_a_bad_round():
         eng.Engine._run_round = orig
     record(65, "engine thread survives an unexpected exception in a round",
            alive and calls[0] > 3, f"rounds attempted={calls[0]}, alive={alive}")
+
+
+def t66_idle_engine_blocks_and_wakes():
+    """An idle engine must not spin, and must still start work promptly.
+
+    Both halves matter and they pull against each other: sleeping longer saves
+    idle CPU but delays the next turn. The old loop slept a flat 1 ms, i.e.
+    ~1000 wakeups/s on a server nobody is using.
+    """
+    alloc, e = FIX.new_engine()
+    calls = [0]
+    orig = eng.Engine._run_round
+
+    def counting(self):
+        calls[0] += 1
+        return orig(self)
+
+    eng.Engine._run_round = counting
+    try:
+        e.start()
+        time.sleep(0.4)
+        idle_rounds = calls[0]
+
+        # Now prove the saving did not come at the cost of responsiveness.
+        k = key(tab=1)
+        e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 4)]))
+        before = calls[0]
+        t0 = time.perf_counter()
+        e.submit(k, "hi")
+        while calls[0] == before and time.perf_counter() - t0 < 1.0:
+            time.sleep(0.001)
+        wake_ms = (time.perf_counter() - t0) * 1000
+    finally:
+        e.stop()
+        eng.Engine._run_round = orig
+
+    # 0.4 s of idle at the old 1 ms poll was ~400 rounds; the backstop alone
+    # allows ~16. Anything near the old number means the wait was not taken.
+    ceiling = 0.4 / eng.IDLE_WAIT_SECONDS * 2 + 5
+    record(66, "idle engine blocks on a wake event instead of spinning",
+           idle_rounds < ceiling and wake_ms < 20,
+           f"idle rounds={idle_rounds} (ceiling {ceiling:.0f}), "
+           f"submit->round {wake_ms:.1f}ms")
+
+
+def t67_solo_session_gets_the_larger_round_budget():
+    """One session must not be rationed against sessions that do not exist.
+
+    The 50 ms round budget buys fairness between contenders. With a single
+    contender it buys nothing and costs prefill chunking, so a solo round is
+    allowed SOLO_ROUND_BUDGET_MS -- but the moment a second session wants
+    work, the fair budget must come back.
+    """
+    class S:
+        def __init__(self, tab, ntok):
+            self.key = ("a" * 32, tab, "https://x.test")
+            self.pos = 0
+            self.state = eng.SessionState.PENDING
+            self.cancelled = False
+            self.inbox_tokens = [1] * ntok
+            self.prefill_offset = 0
+            self.prefill_stalls = 0
+            self.rounds_excluded = 0
+
+    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+
+    def first_chunk(sessions):
+        # A chunk smaller than PREFILL_CHUNK_MIN is deliberately stalled for a
+        # few rounds before being admitted anyway, so "the first round" is not
+        # the same as "the first chunk". Drive until something is admitted.
+        for _ in range(eng.MAX_PREFILL_STALLS + 2):
+            _, chunks, _ = eng.build_batch(sessions, curve, foreground_tab_id=1)
+            if chunks:
+                return len(chunks[0][1])
+        return 0
+
+    n_solo = first_chunk([S(tab=1, ntok=4000)])
+    n_pair = first_chunk([S(tab=1, ntok=4000), S(tab=2, ntok=4000)])
+
+    ratio = eng.SOLO_ROUND_BUDGET_MS / eng.ROUND_LATENCY_BUDGET_MS
+    record(67, "a lone session is not held to the multi-session round budget",
+           n_solo > n_pair * (ratio * 0.8) and n_pair > 0,
+           f"solo chunk={n_solo} tok, contended chunk={n_pair} tok "
+           f"({n_solo/max(n_pair,1):.1f}x, budget ratio {ratio:.0f}x)")
 
 
 # ---------------------------------------------------------------------------
