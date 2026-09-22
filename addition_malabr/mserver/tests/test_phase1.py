@@ -1480,6 +1480,18 @@ BROWSER_ONLY = [
 def main():
     global FIX
     print("=== MALABR Phase 1 -- section 12 suite ===\n")
+    _kv = os.getenv("MALABR_KV_TYPE", "f16").lower()
+    if _kv != "f16":
+        # Not a style preference. This suite proves ISOLATION by checking that
+        # a session does NOT recall another session's canary. A lossy KV cache
+        # degrades recall in general, so a session can fail to recall a canary
+        # it legitimately holds -- measured on Qwen3-0.6B under q8_0, where a
+        # session could not reproduce its OWN planted canary while its KV
+        # positions were provably intact. Under that condition a leak test can
+        # pass for the wrong reason, and a passing run is no longer evidence.
+        print(f"  !! MALABR_KV_TYPE={_kv}: canary results are NOT isolation")
+        print( "  !! evidence in this mode -- a lossy cache produces recall")
+        print( "  !! false-negatives. Use f16 for anything you intend to cite.\n")
     FIX = Fixture()
     try:
         for fn in sorted([f for n, f in globals().items()

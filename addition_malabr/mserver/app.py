@@ -15,7 +15,7 @@ import llama_cpp.llama_cpp as C
 from malabr_service import calibration as cal
 from malabr_service import engine as eng
 from malabr_service import runtime as rt
-from malabr_service.config import load_config
+from malabr_service.config import KV_TYPE, load_config
 
 
 def apply_cpu_ceiling(cores):
@@ -108,6 +108,15 @@ def build(cfg, quick_calibration=False):
     cp.n_batch = cfg.n_batch
     cp.n_threads = n_threads
     cp.n_threads_batch = n_threads
+    # KV element type -- see config.KV_TYPE for the fidelity measurement that
+    # justifies the default. Guarded by hasattr so an older llama_cpp that
+    # lacks the enum keeps working at f16 rather than failing to start.
+    _kv = {"f16": "GGML_TYPE_F16", "q8_0": "GGML_TYPE_Q8_0"}[KV_TYPE]
+    if hasattr(C, _kv):
+        cp.type_k = cp.type_v = getattr(C, _kv)
+    else:
+        print(f"malabr: llama_cpp has no {_kv}; KV stays at its default",
+              file=sys.stderr, flush=True)
     if cfg.shared_kv and hasattr(cp, "kv_unified"):
         # One shared pool of n_ctx cells instead of n_seq_max hard slices,...  [notes: app.build]
         cp.kv_unified = True

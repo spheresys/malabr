@@ -7,9 +7,52 @@ import os
 from dataclasses import dataclass, field
 
 
-# Measured on this project's test models: ~107 KB of KV per token of context.
-# Used to turn an available-RAM figure into a context size.
-BYTES_PER_TOKEN = 107 * 1024
+# KV cache element type.
+#
+# f16 is llama.cpp's default. q8_0 stores the same cache in roughly half the
+# bytes (8 bits plus one scale per 32 elements, ~1.06 bytes/element against
+# 2.0), which buys ~2x the resident context for the same RAM -- and resident
+# context is the scarce resource the whole of section 8 exists to ration.
+#
+# MEASURED before adopting (tests/kv_quant_check.py), against the f16
+# distribution at four probes, on BOTH test models:
+#
+#            Qwen3-0.6B              gemma-3-1b (SWA)
+#   q8_0     top-1 4/4  KL 0.0040    top-1 4/4  KL 0.0343
+#   q4_0     top-1 2/4  KL 0.6278    top-1 3/4  KL 0.1421
+#
+# Two conclusions, and the second is why the default below is f16:
+#
+#   1. q4_0 changes the chosen token on a quarter to a half of probes. It is a
+#      footgun, not a tuning option, and is not offered here.
+#   2. **The q8_0 cost is MODEL-DEPENDENT, by an order of magnitude.** On Qwen
+#      it is ~0.004 nats, comparable to what §8 compaction already costs
+#      (0.0017-0.0032 against a ~0.0002 noise floor) -- easy to accept. On
+#      gemma-3 it is ~0.034, roughly ten times compaction's cost. Top-1
+#      agreement held on both, so nothing is broken either way; but a default
+#      that silently moves the output distribution by a model-dependent amount
+#      would also silently move every fidelity and benchmark number measured
+#      afterwards.
+#
+# So q8_0 stays OPT-IN: set MALABR_KV_TYPE=q8_0 to take ~1.9x the resident
+# context per byte, having first run tests/kv_quant_check.py against the model
+# actually being served. Adopting it as the default is a judgement call that
+# belongs to whoever owns the research claims, not to a config file.
+KV_TYPE = os.getenv("MALABR_KV_TYPE", "f16").lower()
+if KV_TYPE not in ("f16", "q8_0"):
+    raise ValueError(f"MALABR_KV_TYPE must be f16 or q8_0, got {KV_TYPE!r}")
+
+# Measured on this project's test models: ~107 KB of KV per token of context
+# at f16. Scaled by the element size for other types, so the sizing in §11
+# tracks the cache actually allocated instead of a stale f16 assumption.
+#
+# NOTE: changing KV_TYPE changes this, and calibration measures real timings
+# against a real cache -- so `calibration.json` MUST be regenerated after a
+# change here, not carried over.
+_BYTES_PER_TOKEN_F16 = 107 * 1024
+_KV_BYTES_PER_ELEMENT = {"f16": 2.0, "q8_0": 34.0 / 32.0}
+BYTES_PER_TOKEN = int(_BYTES_PER_TOKEN_F16
+                      * _KV_BYTES_PER_ELEMENT[KV_TYPE] / 2.0)
 
 # Fraction of USABLE RAM the KV pool may claim  [notes: config.(module)]
 RAM_FRACTION_FOR_KV = 0.5
