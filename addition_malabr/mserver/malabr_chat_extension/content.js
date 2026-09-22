@@ -222,11 +222,17 @@
                    "form,aside,[aria-hidden=true],[role=navigation]," +
                    "[role=banner],[role=complementary]";
 
+  // textContent, NOT innerText, and that is a performance decision rather than
+  // a semantic one. innerText is defined in terms of RENDERED text, so reading
+  // it forces layout; doing that once per scoring candidate on a large page
+  // means thousands of forced reflows, and this function runs synchronously on
+  // the send path. Link density is a ratio, so the small differences between
+  // rendered and raw text wash out.
   function linkDensity(el) {
-    const total = (el.innerText || "").length;
+    const total = (el.textContent || "").length;
     if (!total) return 1;
     let linked = 0;
-    el.querySelectorAll("a").forEach((a) => { linked += (a.innerText || "").length; });
+    el.querySelectorAll("a").forEach((a) => { linked += (a.textContent || "").length; });
     return linked / total;
   }
 
@@ -348,6 +354,18 @@
     }
     for (const s of [...scored].sort((a, b) => b.sc - a.sc)) {
       if (s.sc <= 0 || chosen.has(s.i)) continue;
+      if (used + s.p.length > budget) continue;
+      chosen.add(s.i); used += s.p.length + 2;
+    }
+
+    // Spend whatever the relevance pass left over, in document order. On a
+    // page with many near-identical paragraphs, few of them score above zero
+    // against any one question, and stopping there hands the model a fraction
+    // of the context it could have had -- measured: 817 of 4000 characters on
+    // a 1500-paragraph page. Relevance still decides what is kept FIRST; this
+    // only decides what fills the space relevance did not claim.
+    for (const s of scored) {
+      if (chosen.has(s.i)) continue;
       if (used + s.p.length > budget) continue;
       chosen.add(s.i); used += s.p.length + 2;
     }
