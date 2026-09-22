@@ -429,6 +429,7 @@
     modelSel.disabled = true;
     // The server re-execs on a switch: its sessions and KV caches go with it,
     // so this transcript is stale everywhere. Clear it to match.
+    abandonLive();
     log.innerHTML = ""; transcript = []; save();
     note(log, `switching to ${name} — loading the model, up to ~2 min on first use`, "note");
     try { await meta("switch " + name); } catch (e) { /* the connection drops as it re-execs; expected */ }
@@ -497,6 +498,16 @@
   function flushPaint(s) {
     if (s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
     paint(s);
+  }
+
+  // Both "new chat" and a model switch empty the log, which detaches every
+  // bubble a live request is still writing into. Drop those requests rather
+  // than leaving them in `live`: otherwise a late token schedules a frame
+  // against an element that is no longer in the document, and a late
+  // onComplete appends a note to a turn the user has already dismissed.
+  function abandonLive() {
+    live.forEach((s) => { if (s.raf) cancelAnimationFrame(s.raf); });
+    live.clear();
   }
 
   chrome.malabr.onToken.addListener((id, text) => {
@@ -713,6 +724,7 @@
   // Toggling the checkbox does NOT force a re-read  [notes: content.js clear]
   $(".clear").addEventListener("click", async () => {
     // §3: a real teardown, not a display clear  [notes: content.js STYLES]
+    abandonLive();
     log.innerHTML = ""; transcript = []; save(); pageHash = null;
     inFlight = null; sending = false;
     let acked = false;

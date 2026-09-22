@@ -56,12 +56,6 @@ def run(fix, n_tabs, n_close, cap, reclaim, close_after):
     # Count decode tokens per session, attributed by the engine's own picks.
     stats = {"after_close": 0, "after_close_closed": 0}
     closing_done = {"t": None}
-    orig = eng.Engine._run_round
-
-    def counting_round(self):
-        picks_before = None
-        r = orig(self)
-        return r
 
     # Wrapping _decode_batch is the honest place: it is the call that costs.
     orig_decode = eng.Engine._decode_batch
@@ -82,8 +76,14 @@ def run(fix, n_tabs, n_close, cap, reclaim, close_after):
         t0 = time.perf_counter()
         for i, k in enumerate(keys):
             boxes[k] = e.submit(k, PROMPTS[i % len(PROMPTS)])
+        # Slot -> key is snapshotted ONCE, which is only sound because every
+        # session is created up front and none is torn down before the close.
+        # If a survivor could ever re-acquire a closed session's slot, decode
+        # for the survivor would be billed to the closed tab and the "wasted"
+        # figure would be an overcount. Asserted rather than assumed.
         for k in keys:
             s = e._sessions[k]
+            assert s.slot not in live_owner, "slot reused; attribution unsound"
             live_owner[s.slot] = k
 
         done, survivor_done = {}, {}

@@ -110,15 +110,22 @@ class Probe:
         start = s.pos
         items = [(t, start + i, s.slot, i == len(toks) - 1)
                  for i, t in enumerate(toks)]
-        idx = self.e._decode_batch(items)
-        ptr = C.llama_get_logits_ith(self.e._ctx, idx[-1])
-        arr = ctypes.cast(
-            ptr, ctypes.POINTER(ctypes.c_float * self.n_vocab)).contents
-        logits = list(arr)
-        # Undo the probe: drop its cells and restore pos.
-        C.llama_memory_seq_rm(self.e._alloc._mem, s.slot, start, start + len(toks))
-        s.pos = start
-        return softmax(logits)
+        try:
+            idx = self.e._decode_batch(items)
+            ptr = C.llama_get_logits_ith(self.e._ctx, idx[-1])
+            arr = ctypes.cast(
+                ptr, ctypes.POINTER(ctypes.c_float * self.n_vocab)).contents
+            return softmax(list(arr))
+        finally:
+            # Undo the probe unconditionally. Without the finally, a failed
+            # decode would leave the probe's cells resident and `pos` moved,
+            # and every LATER probe in the run would then measure a context
+            # nobody intended -- quietly, as wrong numbers rather than an
+            # error. The formatter is deliberately NOT touched: the probe must
+            # not become part of the conversation it is measuring.
+            C.llama_memory_seq_rm(self.e._alloc._mem, s.slot,
+                                  start, start + len(toks))
+            s.pos = start
 
 
 def grow(engine, k, turns, budget_stop):
