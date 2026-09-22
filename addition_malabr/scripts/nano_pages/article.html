@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8"><title>Test article</title>
+<header><h1>SiteName</h1><nav><a href=/a>Home</a> <a href=/b>Products</a>
+<a href=/c>Pricing</a> <a href=/d>Blog</a> <a href=/e>About</a> <a href=/f>Careers</a>
+<a href=/g>Contact</a> <a href=/h>Login</a> <a href=/i>Sign up</a></nav></header>
+<aside><h3>Related</h3><ul><li><a href=/1>Ten tips for faster builds</a></li>
+<li><a href=/2>Why we moved to Rust</a></li><li><a href=/3>Hiring engineers</a></li>
+<li><a href=/4>Our Series B</a></li><li><a href=/5>Customer stories</a></li></ul>
+<p>Subscribe to our newsletter for updates, offers, and product news every week.</p></aside>
+<div id=cookie><p>We use cookies to improve your experience, personalise content,
+and analyse traffic. By continuing you agree to our use of cookies and similar
+technologies, as described in our privacy policy and cookie policy.</p></div>
+<article>
+<p>Paged attention is a memory management technique for large language model
+serving, introduced by vLLM, which stores the key-value cache in fixed-size
+blocks rather than one contiguous allocation per sequence.</p>
+<p>The problem it solves is fragmentation. A naive server reserves a contiguous
+buffer sized for the maximum sequence length, so a short conversation wastes
+most of what it reserved, and memory that is free overall cannot be used.</p>
+<p>By splitting the cache into blocks, the serving engine can allocate memory on
+demand as a sequence grows, and blocks belonging to one sequence need not be
+adjacent in physical memory at all.</p>
+<p>Copy-on-write sharing follows naturally. Two sequences that share a prompt
+prefix can point at the same physical blocks until one of them diverges, which
+makes parallel sampling and beam search much cheaper than they would otherwise be.</p>
+<p>The cost is an indirection: every attention kernel must consult a block table
+to find where a logical position actually lives, which complicates the kernels
+and adds a small amount of per-token overhead.</p>
+<p>Eviction policy is where the design gets interesting. When the pool is full,
+the engine must choose which sequence to preempt, and the usual choice is to
+swap out or recompute the most recently arrived request.</p>
+<p>Scheduling interacts with all of this. Continuous batching admits new
+sequences at token boundaries rather than waiting for a whole batch to finish,
+so admission decisions and memory decisions cannot be made independently.</p>
+<p>In practice the combination raises throughput substantially over static
+batching, and most production serving stacks have adopted some version of it.</p>
+</article>
+<footer><p>Copyright 2026 SiteName. All rights reserved. Terms. Privacy.
+Cookies. Accessibility. Modern slavery statement. Sitemap.</p></footer>
