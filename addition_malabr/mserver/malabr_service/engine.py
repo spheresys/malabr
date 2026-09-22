@@ -68,6 +68,13 @@ class Engine:
         # mechanism: if a wake path is ever missed the loop still notices
         # within one round budget rather than hanging.
         self._wake = threading.Event()
+        # "A round scheduled nothing" and "there is nothing to schedule" are
+        # NOT the same state, and blocking on the second when it is really the
+        # first is a latency bug: build_batch deliberately defers a prefill
+        # that cannot afford a whole minimum chunk, for up to
+        # MAX_PREFILL_STALLS rounds. Those rounds must stay cheap, because the
+        # user is already waiting on that prompt. Set by _run_round.
+        self._deferred = False
         self.foreground_tab_id = -1         # section 5f: ONE key, not a per-session flag
         # Section 5f degraded mode  [notes: engine.Engine.__init__]
         self.control_connected = False
@@ -258,7 +265,14 @@ class Engine:
                 time.sleep(0.01)
                 continue
             self.round_errors = 0
-            if not did_work:
+            if not did_work and self._deferred:
+                # Work EXISTS, this round just could not afford it. Nobody is
+                # going to wake us -- the thing that unblocks it is the stall
+                # counter advancing, which only happens by running more rounds.
+                # Keep the original short yield so a deferred prefill still
+                # clears in milliseconds, not in stalls x IDLE_WAIT_SECONDS.
+                time.sleep(0.001)
+            elif not did_work:
                 # Clearing AFTER the wait is what makes this race-free: a
                 # producer that sets its flag and then wakes us at any point
                 # either arrives before the wait (which then returns at once)
@@ -304,7 +318,12 @@ class Engine:
         decode_picks, prefill_chunks, estimated_ms = build_batch(
             sessions, self.cost_curve, self.effective_foreground_tab_id())
         if not decode_picks and not prefill_chunks:
+            # Distinguish "idle" from "deferred" for the caller -- see _run.
+            self._deferred = any(
+                s.state in (SessionState.PENDING, SessionState.GENERATING)
+                and not s.cancelled for s in sessions)
             return False
+        self._deferred = False
 
         # Slots must be provably wiped before ANY token enters them. On the
         # engine thread, which is the whole point of the prepare/acquire split.

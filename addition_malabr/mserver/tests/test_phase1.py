@@ -1378,6 +1378,53 @@ def t67_solo_session_gets_the_larger_round_budget():
            f"({n_solo/max(n_pair,1):.1f}x, budget ratio {ratio:.0f}x)")
 
 
+def t68_deferred_round_is_not_treated_as_idle():
+    """A round that schedules nothing is not necessarily an idle round.
+
+    build_batch DEFERS a prefill that cannot afford a whole minimum chunk, for
+    up to MAX_PREFILL_STALLS rounds. Nothing wakes the engine out of that --
+    the only thing that clears it is running more rounds -- so if those rounds
+    take the idle backstop the user waits stalls x IDLE_WAIT_SECONDS for their
+    first token instead of stalls x 1 ms.
+
+    Caught in audit 3: test 66 only ever exercised a genuinely idle engine, so
+    it passed while contended prefill got 25x slower.
+    """
+    class S:
+        def __init__(self, tab, ntok):
+            self.key = ("a" * 32, tab, "https://x.test"); self.pos = 0
+            self.state = eng.SessionState.PENDING; self.cancelled = False
+            self.inbox_tokens = [1] * ntok; self.prefill_offset = 0
+            self.prefill_stalls = 0; self.rounds_excluded = 0
+            self.budget = 4096          # pos is 0, so compaction never triggers
+
+    alloc, e = FIX.new_engine()
+    e.cost_curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    sessions = [S(1, 4000), S(2, 4000)]          # two contenders, none running
+
+    # Drive _run_round the way the loop does, with the real registry replaced
+    # by our two stalling sessions.
+    e._sessions = {s.key: s for s in sessions}
+    # Stop one short of the round that force-admits a chunk: the rounds under
+    # test are the deferring ones, and driving past them would need a real
+    # slot to decode into.
+    deferred_rounds = 0
+    for _ in range(eng.MAX_PREFILL_STALLS - 1):
+        did = e._run_round()
+        if did:
+            break
+        if e._deferred:
+            deferred_rounds += 1
+
+    expected = eng.MAX_PREFILL_STALLS - 1
+    record(68, "a deferred round is not mistaken for an idle round",
+           deferred_rounds == expected,
+           f"{deferred_rounds}/{expected} rounds marked deferred; treating "
+           f"them as idle would have added "
+           f"{expected * eng.IDLE_WAIT_SECONDS * 1000:.0f}ms before the first "
+           f"prefill chunk (was {expected}ms)")
+
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------
