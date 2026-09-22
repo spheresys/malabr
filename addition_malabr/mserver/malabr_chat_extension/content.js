@@ -1,4 +1,4 @@
-// MALABR Phase 1 chat panel. Rationale: implementation_notes.md, content.js
+// MALABR Phase 1 chat panel. Rationale: NOTES.md, content.js
 
 (function () {
   if (window.top !== window) return;
@@ -198,13 +198,175 @@
     return h;
   }
 
-  function pageText() {
-    const drop = "script,style,noscript,svg,canvas,iframe,nav,footer,header,form";
-    const root = document.querySelector("main,article,[role=main]") || document.body;
-    const c = root.cloneNode(true);
-    c.querySelectorAll(drop).forEach((n) => n.remove());
-    const t = (c.innerText || "").replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim();
-    return t.length > MAX_PAGE_CHARS ? t.slice(0, MAX_PAGE_CHARS) + "\n[...truncated]" : t;
+  // ---- page context: extract, then select ---------------------------------
+  //
+  // This used to be `body.innerText.slice(0, 4000)`. On a real page that keeps
+  // the nav, the cookie banner and the first half of the sidebar, and throws
+  // away the article -- the cap was being spent almost entirely on the wrong
+  // text. Two stages fix it, in this order for a reason:
+  //
+  //   1. EXTRACT (question-independent). Find the element that actually holds
+  //      the article. Deterministic, so the "send the page once per session"
+  //      cache still works: the same page yields the same text every turn.
+  //   2. SELECT (question-dependent, only if step 1 still overflows). Keep the
+  //      paragraphs that bear on what was asked. This DOES vary per question,
+  //      so it is hashed like any other page text and re-attached only when
+  //      the selection actually changes.
+  //
+  // What is deliberately NOT here is any attempt to compress or re-encode the
+  // text. A BPE tokenizer prices anything unlike natural language at several
+  // tokens per word, so "clever" encodings cost more context than they save.
+  // Summarisation is the only real next step, and it costs a generation.
+
+  const DROP_SEL = "script,style,noscript,svg,canvas,iframe,nav,footer,header," +
+                   "form,aside,[aria-hidden=true],[role=navigation]," +
+                   "[role=banner],[role=complementary]";
+
+  function linkDensity(el) {
+    const total = (el.innerText || "").length;
+    if (!total) return 1;
+    let linked = 0;
+    el.querySelectorAll("a").forEach((a) => { linked += (a.innerText || "").length; });
+    return linked / total;
+  }
+
+  // Readability's insight: paragraphs are the evidence, but the thing you want
+  // is their common PARENT. So score each paragraph and propagate the score up,
+  // then pick the best-scoring container rather than the best paragraph.
+  function extractArticle() {
+    const explicit = document.querySelector("article,main,[role=main]");
+    const scores = new Map();
+    const bump = (el, n) => {
+      if (!el || el === document.body || el === document.documentElement) return;
+      scores.set(el, (scores.get(el) || 0) + n);
+    };
+
+    document.querySelectorAll("p,pre,blockquote,li,td").forEach((el) => {
+      const text = (el.innerText || "").trim();
+      if (text.length < 25) return;                 // boilerplate, not prose
+      // Commas are a decent proxy for sentence structure; length is capped so
+      // one enormous block cannot outvote a genuine multi-paragraph article.
+      const score = 1 + (text.match(/,/g) || []).length
+                      + Math.min(Math.floor(text.length / 100), 3);
+      bump(el.parentElement, score);
+      bump(el.parentElement && el.parentElement.parentElement, score / 2);
+    });
+
+    let best = null, bestScore = 0;
+    scores.forEach((score, el) => {
+      const adjusted = score * (1 - linkDensity(el));   // navs are all links
+      if (adjusted > bestScore) { bestScore = adjusted; best = el; }
+    });
+
+    // An explicit <article>/<main> wins ties: the page told us where it is.
+    const root = (explicit && (!best || explicit.contains(best))) ? explicit
+               : (best || document.body);
+    return textFrom(root);
+  }
+
+  const BLOCK_SEL = "p,pre,blockquote,li,td,h1,h2,h3,h4,h5,h6";
+
+  // Read text from the LIVE tree, block by block, rather than cloning and
+  // taking innerText of the clone.
+  //
+  // The clone is the trap: innerText is defined in terms of RENDERED text, and
+  // a detached node has no layout, so on a clone it quietly degrades to
+  // textContent -- which keeps the source file's line wrapping and collapses
+  // no whitespace. The result looks fine until something downstream tries to
+  // split it into paragraphs and gets one block per source line instead.
+  //
+  // Walking live elements also gives real paragraph boundaries for free: each
+  // block contributes one entry, joined by a blank line.
+  function textFrom(root) {
+    const out = [];
+    root.querySelectorAll(BLOCK_SEL).forEach((el) => {
+      if (el.closest(DROP_SEL)) return;            // inside furniture
+      if (el.querySelector(BLOCK_SEL)) return;     // container, not a leaf
+      const t = (el.innerText || "").replace(/[ \t]{2,}/g, " ").trim();
+      if (t) out.push(t);
+    });
+    if (!out.length) {
+      return (root.innerText || "").replace(/\n{3,}/g, "\n\n")
+                                   .replace(/[ \t]{2,}/g, " ").trim();
+    }
+    return out.join("\n\n");
+  }
+
+  const STOPWORDS = new Set(("the a an and or but if of to in on at for with is " +
+    "are was were be been it its this that these those as by from what which who " +
+    "how why when where do does did can could should would will i you he she they " +
+    "we my your about into over than then so not no yes me").split(" "));
+
+  function terms(q) {
+    return [...new Set((q || "").toLowerCase().match(/[a-z0-9]{3,}/g) || [])]
+      .filter((w) => !STOPWORDS.has(w));
+  }
+
+  // Keep the paragraphs that bear on the question, plus the lead -- the opening
+  // of an article names its subject, and a question about "it" is unanswerable
+  // from matched paragraphs alone.
+  // innerText does not promise blank lines between blocks -- Chrome emits a
+  // SINGLE newline between <p> elements on many pages. Splitting only on blank
+  // lines therefore silently yields one giant "paragraph", and every caller
+  // then falls back to the prefix cut this code exists to replace. So: prefer
+  // blank-line boundaries, but fall back to single newlines when the page does
+  // not use them.
+  function paragraphs(text) {
+    let parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length < 2) {
+      parts = text.split(/\n/).map((p) => p.trim()).filter(Boolean);
+    }
+    return parts;
+  }
+
+  function selectRelevant(text, question, budget) {
+    const paras = paragraphs(text);
+    if (paras.length < 2) return text.slice(0, budget);
+    const qt = terms(question);
+    if (!qt.length) return text.slice(0, budget);
+
+    // Rarity weighting, computed over this page only: a term in every
+    // paragraph separates nothing, so it should not decide what is kept.
+    const df = new Map();
+    for (const w of qt) {
+      df.set(w, paras.filter((p) => p.toLowerCase().includes(w)).length || 1);
+    }
+
+    const scored = paras.map((p, i) => {
+      const low = p.toLowerCase();
+      let sc = 0;
+      for (const w of qt) if (low.includes(w)) sc += Math.log(paras.length / df.get(w)) + 1;
+      return { i, p, sc: sc / Math.sqrt(Math.max(p.length, 1)) };
+    });
+
+    const chosen = new Set();
+    let used = 0;
+    for (const s of scored) {                        // the lead, unconditionally
+      if (used + s.p.length > budget * 0.35) break;
+      chosen.add(s.i); used += s.p.length + 2;
+      if (used > budget * 0.2) break;
+    }
+    for (const s of [...scored].sort((a, b) => b.sc - a.sc)) {
+      if (s.sc <= 0 || chosen.has(s.i)) continue;
+      if (used + s.p.length > budget) continue;
+      chosen.add(s.i); used += s.p.length + 2;
+    }
+
+    // Re-emit in DOCUMENT order. Order carries meaning; relevance rank does not.
+    const out = [];
+    let prev = -1;
+    for (const i of [...chosen].sort((a, b) => a - b)) {
+      if (prev !== -1 && i !== prev + 1) out.push("[...]");
+      out.push(paras[i]);
+      prev = i;
+    }
+    return out.join("\n\n");
+  }
+
+  function pageText(question) {
+    const t = extractArticle();
+    if (t.length <= MAX_PAGE_CHARS) return t;
+    return selectRelevant(t, question, MAX_PAGE_CHARS);
   }
 
   // ---- streaming ----------------------------------------------------------
@@ -305,6 +467,38 @@
     return { think, body };
   }
 
+  // Painting is COALESCED PER FRAME, not done per token.
+  //
+  // Every repaint re-scans the whole reply (splitThink), re-parses all of it
+  // as markdown, and replaces the body's innerHTML. Doing that once per token
+  // makes the cost of a reply quadratic in its own length, and at decode rates
+  // most of those frames are never shown anyway -- the tokens arrive faster
+  // than the compositor paints.
+  //
+  // A background tab gets no animation frames at all, so a hidden panel stops
+  // re-rendering entirely. That is the right behaviour and not a lost update:
+  // onComplete flushes synchronously (flushPaint), so the finished reply is
+  // always fully rendered whether or not the tab was ever visible.
+  function paint(s) {
+    const { think, body } = splitThink(s.raw);
+    if (think) {
+      if (!s.thinkEl) { s.thinkEl = thinkBlock(""); s.turn.insertBefore(s.thinkEl, s.bodyEl); }
+      s.thinkEl.querySelector(".inner").textContent = think;
+    }
+    setBody(s.bodyEl, body);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function schedulePaint(s) {
+    if (s.raf) return;                       // one pending frame is enough
+    s.raf = requestAnimationFrame(() => { s.raf = 0; paint(s); });
+  }
+
+  function flushPaint(s) {
+    if (s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
+    paint(s);
+  }
+
   chrome.malabr.onToken.addListener((id, text) => {
     const mr = metaReqs.get(id);
     if (mr) { mr.buf += text; return; }
@@ -316,14 +510,8 @@
       if (!text) return;
     }
     s.raw += text;
-    const { think, body } = splitThink(s.raw);
-    if (think) {
-      if (!s.thinkEl) { s.thinkEl = thinkBlock(""); s.turn.insertBefore(s.thinkEl, s.bodyEl); }
-      s.thinkEl.querySelector(".inner").textContent = think;
-    }
-    setBody(s.bodyEl, body);
     s.bodyEl.classList.add("caret");
-    log.scrollTop = log.scrollHeight;
+    schedulePaint(s);
   });
 
   chrome.malabr.onComplete.addListener((id, error) => {
@@ -337,6 +525,8 @@
     }
     const s = live.get(id);
     if (s) {
+      // Land any frame the coalescer still owes before reading final state.
+      flushPaint(s);
       s.bodyEl.classList.remove("caret");
       const { think, body } = splitThink(s.raw);
       if (error) {
@@ -471,7 +661,7 @@
     let prompt = typed;
     let chip = null;
     if (usePage.checked) {
-      const body = pageText();
+      const body = pageText(typed);
       // Send the page ONCE per session  [notes: content.js clear]
       const h = body ? hashStr(body) : null;
       if (body && h !== pageHash) {
@@ -500,7 +690,8 @@
         note(turn, chrome.runtime.lastError.message, "err");
         inFlight = null; setBusy(false); return;
       }
-      live.set(id, { turn, bodyEl: turn.querySelector(".body"), thinkEl: null, raw: "" });
+      live.set(id, { turn, bodyEl: turn.querySelector(".body"), thinkEl: null,
+                     raw: "", raf: 0 });
       inFlight = id;
     });
   }

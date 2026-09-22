@@ -1,6 +1,6 @@
 """Per-session state, output cap and turn bookkeeping -- sections 6, 6b, 8.
 
-Rationale: implementation_notes.md, session
+Rationale: NOTES.md, session
 """
 
 import queue
@@ -20,7 +20,7 @@ MAX_OUTBOX_TOKENS = 2 * ABSOLUTE_CEILING
 class OutputCap:
     """Position-aware cap on tokens per response (section 8's context-growth fix).
 
-    Rationale: implementation_notes.md, session.OutputCap
+    Rationale: NOTES.md, session.OutputCap
     """
 
     def __init__(self, table=None):
@@ -65,7 +65,7 @@ RESERVED_FOR_RESPONSE = 256
 class Turn:
     """One complete exchange (user delta + generated response) in KV.
 
-    Rationale: implementation_notes.md, session.Turn
+    Rationale: NOTES.md, session.Turn
     """
 
     __slots__ = ("start", "end", "role", "msg_index")
@@ -83,7 +83,7 @@ class Turn:
 class Session:
     """One conversation, pinned to one KV slot.
 
-    Rationale: implementation_notes.md, session.Session
+    Rationale: NOTES.md, session.Session
     """
 
     def __init__(self, key, slot, formatter, output_cap, session_budget=2048):
@@ -137,7 +137,7 @@ class Session:
     def emit(self, frame_type, payload):
         """Queue one frame. Raises OutboxFull if the reader has stalled.
 
-        Rationale: implementation_notes.md, session.Session.emit
+        Rationale: NOTES.md, session.Session.emit
         """
         try:
             self.outbox.put_nowait((frame_type, payload))
@@ -147,7 +147,7 @@ class Session:
     def terminate(self, frame_type, payload=""):
         """Emit the single terminal frame, bypassing the queue bound if needed.
 
-        Rationale: implementation_notes.md, session.Session.terminate
+        Rationale: NOTES.md, session.Session.terminate
         """
         try:
             self.outbox.put_nowait((frame_type, payload))

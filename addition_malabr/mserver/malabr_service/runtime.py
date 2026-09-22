@@ -1,6 +1,6 @@
 """Server bootstrap: UDS listener, request routing, control reader thread.
 
-Rationale: implementation_notes.md, runtime
+Rationale: NOTES.md, runtime
 """
 
 import json
@@ -39,7 +39,7 @@ class SingleInstanceError(RuntimeError):
 class PidLock:
     """Refuse to start if another live instance holds the socket.
 
-    Rationale: implementation_notes.md, runtime.PidLock
+    Rationale: NOTES.md, runtime.PidLock
     """
 
     def __init__(self, path):
@@ -93,7 +93,7 @@ class PidLock:
 class ControlReader:
     """Owns the ONE control connection. Section 5e / 10a.
 
-    Rationale: implementation_notes.md, runtime.ControlReader
+    Rationale: NOTES.md, runtime.ControlReader
     """
 
     def __init__(self, engine):
@@ -104,7 +104,7 @@ class ControlReader:
     def serve(self, conn):
         """Take ownership of a control connection and read it to EOF.
 
-        Rationale: implementation_notes.md, runtime.ControlReader.serve
+        Rationale: NOTES.md, runtime.ControlReader.serve
         """
         old, self._conn = self._conn, conn
         if old is not None:
@@ -144,13 +144,18 @@ class ControlReader:
     def dispatch(self, msg):
         """Apply one control message. Unknown tab/extension is a NO-OP.
 
-        Rationale: implementation_notes.md, runtime.ControlReader.dispatch
+        Rationale: NOTES.md, runtime.ControlReader.dispatch
         """
         eng = self._engine
         if msg.kind == MSG_FOREGROUND:
             # A single attribute write. Atomic under the GIL, no lock needed,
             # and read fresh by build_batch on the very next round (§5f).
             eng.foreground_tab_id = msg.tab_id
+            # A promotion changes ADMISSION, not the amount of work, so a round
+            # that was excluding everything can legitimately report "no work"
+            # and idle-block. Wake it so §12 test 10's "within one round" holds
+            # exactly rather than within the idle backstop.
+            eng.wake()
             print(f"malabr: control FOREGROUND -> tab {msg.tab_id}",
                   file=sys.stderr, flush=True)
             return
@@ -341,7 +346,7 @@ class MalabrServer:
     def _stream(self, conn, session, outbox):
         """Pump frames until exactly ONE terminal frame. Rule 2.
 
-        Rationale: implementation_notes.md, runtime.MalabrServer._stream
+        Rationale: NOTES.md, runtime.MalabrServer._stream
         """
         import queue as _q
         while True:
@@ -421,7 +426,7 @@ class MalabrServer:
     def _reexec_with_model(self, model_path):
         """Replace this process with a fresh server on `model_path`.
 
-        Rationale: implementation_notes.md, runtime.MalabrServer._reexec_with_model
+        Rationale: NOTES.md, runtime.MalabrServer._reexec_with_model
         """
         # Let the acknowledgement frame clear the socket buffer before anything
         # is torn down.

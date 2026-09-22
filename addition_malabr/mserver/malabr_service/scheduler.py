@@ -1,6 +1,6 @@
 """Batch composition by latency budget, and the closed loop -- sections 9a, 9b.
 
-Rationale: implementation_notes.md, scheduler
+Rationale: NOTES.md, scheduler
 """
 
 from .session import SessionState
@@ -19,11 +19,34 @@ STALE_VISIBILITY_TIMEOUT = 10.0
 # survivable; a systematic one should stop rather than spin.
 MAX_CONSECUTIVE_ROUND_ERRORS = 20
 
+# How long an idle engine round blocks waiting to be woken. This is a BACKSTOP:
+# every producer of work wakes the engine explicitly, so in normal operation the
+# wait is cut short and this value never shows up in latency. It bounds the cost
+# of a wake path that is ever missed or added later without a wake -- one round
+# budget late, not a hang. Kept at ROUND_LATENCY_BUDGET_MS/2 so even that worst
+# case stays inside the bound §7 already commits to.
+IDLE_WAIT_SECONDS = (ROUND_LATENCY_BUDGET_MS / 1000.0) / 2
+
+# Round budget when exactly ONE session has work.
+#
+# ROUND_LATENCY_BUDGET_MS exists for a single reason: to stop one session's
+# round from delaying another's. With one contender there is no other session
+# to protect, so the 50 ms cap is pure cost -- a long prompt gets sliced into
+# many chunks and pays the per-call overhead on every one of them, which shows
+# up directly as time-to-first-token for the one user who is waiting.
+#
+# It is not raised to infinity, because the budget has a SECOND effect nobody
+# chose but everyone relies on: it bounds how long the engine can ignore the
+# control channel. A round that runs for seconds is a stop button that does
+# nothing for seconds. 250 ms keeps cancellation comfortably inside what reads
+# as immediate while cutting a solo prefill into ~5x fewer chunks.
+SOLO_ROUND_BUDGET_MS = 250
+
 
 class CostCurve:
     """Per-position cost estimates, with a closed loop on top (§9b part 2).
 
-    Rationale: implementation_notes.md, scheduler.CostCurve
+    Rationale: NOTES.md, scheduler.CostCurve
     """
 
     def __init__(self, decode_table=None, prefill_table=None):
@@ -73,7 +96,7 @@ class CostCurve:
     def prefill_ms(self, n_tokens, pos=0):
         """Prefill cost is NOT decode cost; reusing the decode curve is wrong.
 
-        Rationale: implementation_notes.md, scheduler.CostCurve.prefill_ms
+        Rationale: NOTES.md, scheduler.CostCurve.prefill_ms
         """
         if n_tokens <= 0:
             return 0.0
@@ -102,7 +125,7 @@ class CostCurve:
     def observe_round(self, estimated_ms, observed_ms):
         """Feed the real round time back, so a wrong model degrades not lies.
 
-        Rationale: implementation_notes.md, scheduler.CostCurve.observe_round
+        Rationale: NOTES.md, scheduler.CostCurve.observe_round
         """
         if estimated_ms <= 0 or observed_ms < 0:
             return
@@ -115,15 +138,23 @@ class CostCurve:
 
 
 def build_batch(sessions, cost_curve, foreground_tab_id,
-                budget_ms=ROUND_LATENCY_BUDGET_MS):
+                budget_ms=ROUND_LATENCY_BUDGET_MS,
+                solo_budget_ms=SOLO_ROUND_BUDGET_MS):
     """Compose one round by SPENDING A LATENCY BUDGET, not by filling slots.
 
-    Rationale: implementation_notes.md, scheduler.build_batch
+    Rationale: NOTES.md, scheduler.build_batch
     """
     runnable = [s for s in sessions
                 if s.state == SessionState.GENERATING and not s.cancelled]
     pending = [s for s in sessions
                if s.state == SessionState.PENDING and not s.cancelled]
+
+    # One contender means nobody to be fair to; see SOLO_ROUND_BUDGET_MS.
+    # Counted over sessions with actual work, not over live sessions: eight
+    # idle tabs plus one active one is still a solo round.
+    contenders = len({id(s) for s in runnable} | {id(s) for s in pending})
+    if contenders <= 1:
+        budget_ms = solo_budget_ms
 
     # §5f: foreground is ONE tab id, re-read fresh every round, never cached  [notes: scheduler.build_batch]
     fg = [s for s in runnable if s.key[1] == foreground_tab_id]

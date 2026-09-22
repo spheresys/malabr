@@ -1,6 +1,6 @@
 """Runtime configuration -- see design_doc/phase1_design.md section 11.
 
-Rationale: implementation_notes.md, config
+Rationale: NOTES.md, config
 """
 
 import os
@@ -92,7 +92,7 @@ def compute_n_ctx(n_seq_max=DEFAULT_N_SEQ_MAX, available_bytes=None,
 def compute_n_threads(physical_cores=None):
     """Derived from the SAME quota as the cgroup limit, deliberately.
 
-    Rationale: implementation_notes.md, config.compute_n_threads
+    Rationale: NOTES.md, config.compute_n_threads
     """
     cores = physical_cores if physical_cores is not None else detect_physical_cores()
     return max(1, round(cores * QUOTA_PCT / 100))
@@ -107,7 +107,7 @@ def compute_cpu_max_cores(n_threads=None):
     the duty cycle. This just stops a bug or a pathological model from taking
     the whole machine.
 
-    Rationale: implementation_notes.md, config.compute_cpu_max_cores
+    Rationale: NOTES.md, config.compute_cpu_max_cores
     """
     logical = os.cpu_count() or 2
     nt = n_threads if n_threads is not None else compute_n_threads()
@@ -144,7 +144,7 @@ class ServerConfig:
     def n_ctx_per_session(self):
         """The per-session budget section 8's compaction trigger measures against.
 
-        Rationale: implementation_notes.md, config.ServerConfig.n_ctx_per_session
+        Rationale: NOTES.md, config.ServerConfig.n_ctx_per_session
         """
         if self.shared_kv:
             return max(self.n_ctx // self.n_seq_max,
@@ -155,7 +155,7 @@ class ServerConfig:
 def list_models(model_dir):
     """Every *.gguf in the model directory, by bare name (no extension).
 
-    Rationale: implementation_notes.md, config.list_models
+    Rationale: NOTES.md, config.list_models
     """
     try:
         names = sorted(os.path.splitext(f)[0] for f in os.listdir(model_dir)
@@ -168,7 +168,7 @@ def list_models(model_dir):
 def resolve_model(model_dir, name):
     """Map a bare model name from list_models() back to a full path.
 
-    Rationale: implementation_notes.md, config.resolve_model
+    Rationale: NOTES.md, config.resolve_model
     """
     if name not in list_models(model_dir):
         return None

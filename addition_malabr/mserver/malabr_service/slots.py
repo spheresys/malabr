@@ -1,6 +1,6 @@
 """KV slot allocation with wipe-on-acquire -- design section 7.
 
-Rationale: implementation_notes.md, slots
+Rationale: NOTES.md, slots
 """
 
 import threading
@@ -15,7 +15,7 @@ class SlotWipeError(RuntimeError):
 class SlotAllocator:
     """Hands out llama.cpp sequence ids (slots), guaranteeing each is empty.
 
-    Rationale: implementation_notes.md, slots.SlotAllocator
+    Rationale: NOTES.md, slots.SlotAllocator
     """
 
     def __init__(self, mem, n_seq_max):
@@ -35,7 +35,7 @@ class SlotAllocator:
     def acquire(self):
         """Reserve a slot, or return None if at capacity.
 
-        Rationale: implementation_notes.md, slots.SlotAllocator.acquire
+        Rationale: NOTES.md, slots.SlotAllocator.acquire
         """
         with self._lock:
             if not self._free:
@@ -48,7 +48,7 @@ class SlotAllocator:
     def release(self, slot):
         """Return a slot to the pool. Bookkeeping only; no model call.
 
-        Rationale: implementation_notes.md, slots.SlotAllocator.release
+        Rationale: NOTES.md, slots.SlotAllocator.release
         """
         with self._lock:
             if slot in self._quarantined:
@@ -65,7 +65,7 @@ class SlotAllocator:
     def prepare(self, slot):
         """Wipe a freshly acquired slot and PROVE it is empty.
 
-        Rationale: implementation_notes.md, slots.SlotAllocator.prepare
+        Rationale: NOTES.md, slots.SlotAllocator.prepare
         """
         with self._lock:
             if slot not in self._in_use:
@@ -86,7 +86,7 @@ class SlotAllocator:
     def assert_ready(self, slot):
         """Guard for the decode path: refuse to use a slot that is not wiped.
 
-        Rationale: implementation_notes.md, slots.SlotAllocator.assert_ready
+        Rationale: NOTES.md, slots.SlotAllocator.assert_ready
         """
         with self._lock:
             if slot in self._pending_wipe:

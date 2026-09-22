@@ -1,6 +1,6 @@
 """Startup calibration -- see design_doc/phase1_design.md section 11a.
 
-Rationale: implementation_notes.md, calibration
+Rationale: NOTES.md, calibration
 """
 
 import json
@@ -35,7 +35,7 @@ class CalibrationError(RuntimeError):
 def _decode(ctx, tokens, pos0, seq_ids, want_last_logits=True):
     """Decode `tokens` into every sequence in seq_ids at pos0..
 
-    Rationale: implementation_notes.md, calibration._decode
+    Rationale: NOTES.md, calibration._decode
     """
     n = len(tokens) * len(seq_ids)
     batch = C.llama_batch_init(n, 0, 1)
@@ -103,7 +103,7 @@ def _time_decode_tokens(ctx, vocab, seq, pos, n_tokens):
 def phase_a_threads(model_path, candidates=None, probe_tokens=24, n_ctx=1024):
     """Sweep n_threads and pick the measured optimum.
 
-    Rationale: implementation_notes.md, calibration.phase_a_threads
+    Rationale: NOTES.md, calibration.phase_a_threads
     """
     cores = detect_physical_cores()
     if candidates is None:
@@ -148,7 +148,7 @@ def phase_b_position_curve(ctx, vocab, positions, trials=TRIALS_PER_POINT,
                            probe_tokens=16, seq=0):
     """Decode tok/s at several depths. Emits BOTH statistics.
 
-    Rationale: implementation_notes.md, calibration.phase_b_position_curve
+    Rationale: NOTES.md, calibration.phase_b_position_curve
     """
     rows = []
     mem = C.llama_get_memory(ctx)
@@ -169,7 +169,7 @@ def phase_b_position_curve(ctx, vocab, positions, trials=TRIALS_PER_POINT,
 def phase_b_prefill_curve(ctx, vocab, sizes, depths, trials=2, seq=1):
     """Prompt-processing throughput. A SEPARATE curve, not the decode one.
 
-    Rationale: implementation_notes.md, calibration.phase_b_prefill_curve
+    Rationale: NOTES.md, calibration.phase_b_prefill_curve
     """
     tok = _safe_token(vocab)
     rows = []
@@ -194,7 +194,7 @@ def phase_b_prefill_curve(ctx, vocab, sizes, depths, trials=2, seq=1):
 def phase_c_joint_worst_case(ctx, vocab, n_seq_max, depth, probe_tokens=8):
     """Every slot full, every session at depth, batched, under the real quota.
 
-    Rationale: implementation_notes.md, calibration.phase_c_joint_worst_case
+    Rationale: NOTES.md, calibration.phase_c_joint_worst_case
     """
     seqs = list(range(n_seq_max))
     for s in seqs:
@@ -232,7 +232,7 @@ def derive_output_cap_table(decode_rows, min_cap, absolute_ceiling,
                             breakpoints=None):
     """FINISHED lookup table, not raw tok/s for someone else to interpret.
 
-    Rationale: implementation_notes.md, calibration.derive_output_cap_table
+    Rationale: NOTES.md, calibration.derive_output_cap_table
     """
     if breakpoints is None:
         breakpoints = [r[0] for r in decode_rows]
@@ -285,7 +285,7 @@ def phase_d_assemble(threads, decode_rows, prefill_rows, joint, n_ctx,
 def phase_f_clamp(result, min_cap, absolute_ceiling):
     """Distinct from Phase E, which covers calibration ERRORING.
 
-    Rationale: implementation_notes.md, calibration.phase_f_clamp
+    Rationale: NOTES.md, calibration.phase_f_clamp
     """
     cores = detect_physical_cores()
     result["n_threads"] = max(1, min(int(result.get("n_threads") or 1), cores))
@@ -333,7 +333,7 @@ def phase_f_clamp(result, min_cap, absolute_ceiling):
 def save(result, path):
     """Write via temp file + rename. Atomic on the same filesystem.
 
-    Rationale: implementation_notes.md, calibration.save
+    Rationale: NOTES.md, calibration.save
     """
     tmp = f"{path}.{os.getpid()}.tmp"
     directory = os.path.dirname(path) or "."
@@ -350,7 +350,7 @@ def save(result, path):
 def load(path):
     """Return a stored result, or None.
 
-    Rationale: implementation_notes.md, calibration.load
+    Rationale: NOTES.md, calibration.load
     """
     try:
         with open(path) as fh:
@@ -367,7 +367,7 @@ def load(path):
 def conservative_fallback(n_ctx, n_seq_max, min_cap, absolute_ceiling):
     """Phase E: what to use when calibration itself fails.
 
-    Rationale: implementation_notes.md, calibration.conservative_fallback
+    Rationale: NOTES.md, calibration.conservative_fallback
     """
     return {
         "version": CALIBRATION_VERSION,
@@ -395,7 +395,7 @@ def conservative_fallback(n_ctx, n_seq_max, min_cap, absolute_ceiling):
 def run(cfg, min_cap, absolute_ceiling, quick=False, ctx=None, model=None):
     """Run every phase and return a clamped, ready-to-use result.
 
-    Rationale: implementation_notes.md, calibration.run
+    Rationale: NOTES.md, calibration.run
     """
     budget = cfg.n_ctx_per_session
     if quick:
@@ -477,7 +477,7 @@ def load_or_run(cfg, min_cap, absolute_ceiling, quick=False, force=False):
 def apply_to_engine(result, engine, engine_module):
     """Hand the finished tables to the engine.
 
-    Rationale: implementation_notes.md, calibration.apply_to_engine
+    Rationale: NOTES.md, calibration.apply_to_engine
     """
     engine.cost_curve = engine_module.CostCurve(
         decode_table=result.get("decode_curve") or None,

@@ -1,6 +1,6 @@
 """Chat template application and UTF-8-safe streaming -- sections 6c, 6d.
 
-Rationale: implementation_notes.md, formatter
+Rationale: NOTES.md, formatter
 """
 
 import llama_cpp.llama_cpp as C
@@ -13,7 +13,7 @@ class TemplateError(RuntimeError):
 class ChatFormatter:
     """Builds prompt tokens for a session, one turn at a time (section 6c).
 
-    Rationale: implementation_notes.md, formatter.ChatFormatter
+    Rationale: NOTES.md, formatter.ChatFormatter
     """
 
     def __init__(self, model, vocab, disable_thinking=True):
@@ -32,7 +32,7 @@ class ChatFormatter:
     def _extract_no_think_suffix(tmpl):
         """The text this model's template appends to switch reasoning OFF.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter._extract_no_think_suffix
+        Rationale: NOTES.md, formatter.ChatFormatter._extract_no_think_suffix
         """
         try:
             source = tmpl.decode("utf-8") if isinstance(tmpl, bytes) else tmpl
@@ -110,7 +110,7 @@ class ChatFormatter:
     def assistant_generated(self, text):
         """Record what the model actually produced.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter.assistant_generated
+        Rationale: NOTES.md, formatter.ChatFormatter.assistant_generated
         """
         # The no-think marker is recorded as part of what the assistant sa...  [notes: formatter.ChatFormatter.assistant_generated]
         self._messages.append(("assistant", self._think_suffix + text))
@@ -119,7 +119,7 @@ class ChatFormatter:
     def _expected_render(self):
         """The text that SHOULD currently be in the KV.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter._expected_render
+        Rationale: NOTES.md, formatter.ChatFormatter._expected_render
         """
         if not self._messages:
             # An empty conversation means an empty KV  [notes: formatter.ChatFormatter._expected_render]
@@ -131,7 +131,7 @@ class ChatFormatter:
     def drop_messages(self, start, count):
         """Remove messages that section 8 compaction evicted from the KV.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter.drop_messages
+        Rationale: NOTES.md, formatter.ChatFormatter.drop_messages
         """
         del self._messages[start:start + count]
         self._rendered = self._expected_render()
@@ -141,7 +141,7 @@ class ChatFormatter:
     def checkpoint(self):
         """Capture enough state to undo an abandoned turn.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter.checkpoint
+        Rationale: NOTES.md, formatter.ChatFormatter.checkpoint
         """
         return len(self._messages)
 
@@ -156,7 +156,7 @@ class ChatFormatter:
     def verify_against_full(self):
         """Assert incremental building matches a from-scratch render, in TOKENS.
 
-        Rationale: implementation_notes.md, formatter.ChatFormatter.verify_against_full
+        Rationale: NOTES.md, formatter.ChatFormatter.verify_against_full
         """
         truth = self._tokenize(self._expected_render())
         rebuilt = self._tokenize(self._rendered)
@@ -170,7 +170,7 @@ class ChatFormatter:
 def is_stop_token(vocab, token):
     """True if generation must stop at this token.
 
-    Rationale: implementation_notes.md, formatter.is_stop_token
+    Rationale: NOTES.md, formatter.is_stop_token
     """
     return bool(C.llama_vocab_is_eog(vocab, token))
 
@@ -180,7 +180,7 @@ def is_stop_token(vocab, token):
 class Utf8Streamer:
     """Buffers token bytes so no frame ever splits a UTF-8 character.
 
-    Rationale: implementation_notes.md, formatter.Utf8Streamer
+    Rationale: NOTES.md, formatter.Utf8Streamer
     """
 
     # A UTF-8 character is at most 4 bytes, so a legitimate partial se...  [notes: formatter.Utf8Streamer]
@@ -211,7 +211,7 @@ class Utf8Streamer:
     def flush(self):
         """End of stream: emit whatever is left, lossily if incomplete.
 
-        Rationale: implementation_notes.md, formatter.Utf8Streamer.flush
+        Rationale: NOTES.md, formatter.Utf8Streamer.flush
         """
         if not self._buf:
             return ""

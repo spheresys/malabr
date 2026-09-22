@@ -1,6 +1,6 @@
 """MALABR wire protocol -- see design_doc/phase1_design.md section 10a.
 
-Rationale: implementation_notes.md, protocol
+Rationale: NOTES.md, protocol
 """
 
 import struct
@@ -37,7 +37,7 @@ class ProtocolError(ValueError):
 def recv_full(conn, size):
     """Read exactly `size` bytes, or return None if the peer closed early.
 
-    Rationale: implementation_notes.md, protocol.recv_full
+    Rationale: NOTES.md, protocol.recv_full
     """
     if size < 0:
         raise ProtocolError(f"negative read size {size}")
@@ -57,7 +57,7 @@ def recv_full(conn, size):
 class ClientEnvelope:
     """The 6-field header the browser sends on every connection.
 
-    Rationale: implementation_notes.md, protocol.ClientEnvelope
+    Rationale: NOTES.md, protocol.ClientEnvelope
     """
 
     __slots__ = ("route", "extension_id", "tab_id", "origin", "visibility",
@@ -76,7 +76,7 @@ class ClientEnvelope:
     def session_key(self):
         """Section 5g: origin is PART of the key.
 
-        Rationale: implementation_notes.md, protocol.ClientEnvelope.session_key
+        Rationale: NOTES.md, protocol.ClientEnvelope.session_key
         """
         return (self.extension_id, self.tab_id, self.origin)
 
@@ -84,7 +84,7 @@ class ClientEnvelope:
     def is_foreground_seed(self):
         """Section 6: visibility is a SEED for a new session only.
 
-        Rationale: implementation_notes.md, protocol.ClientEnvelope.is_foreground_seed
+        Rationale: NOTES.md, protocol.ClientEnvelope.is_foreground_seed
         """
         return self.visibility == "foreground"
 
@@ -97,7 +97,7 @@ class ClientEnvelope:
 def unpack_client_envelope(header_bytes):
     """Parse and VALIDATE the 6-field header.
 
-    Rationale: implementation_notes.md, protocol.unpack_client_envelope
+    Rationale: NOTES.md, protocol.unpack_client_envelope
     """
     if not header_bytes:
         raise ProtocolError("empty header")
@@ -199,7 +199,7 @@ class ControlMessage:
 def parse_control_message(raw):
     """Parse one control message.
 
-    Rationale: implementation_notes.md, protocol.parse_control_message
+    Rationale: NOTES.md, protocol.parse_control_message
     """
     if isinstance(raw, bytes):
         if len(raw) > MAX_CONTROL_MSG_LEN:

@@ -1,6 +1,6 @@
 """MALABR inference engine -- the single engine thread. Sections 7-9b.
 
-Rationale: implementation_notes.md, engine
+Rationale: NOTES.md, engine
 """
 
 import queue
@@ -13,11 +13,12 @@ import llama_cpp.llama_cpp as C
 from .formatter import (ChatFormatter, TemplateError, Utf8Streamer,  # noqa: F401
                         is_stop_token)
 from .protocol import FRAME_COMPLETE, FRAME_ERROR, FRAME_TOKEN
-from .scheduler import (CostCurve, MAX_CONSECUTIVE_EXCLUSIONS,  # noqa: F401
+from .scheduler import (CostCurve, IDLE_WAIT_SECONDS,  # noqa: F401
+                        MAX_CONSECUTIVE_EXCLUSIONS,
                         MAX_CONSECUTIVE_ROUND_ERRORS, MAX_CORRECTION,
                         MAX_PREFILL_STALLS, PREFILL_CHUNK_MIN,
-                        ROUND_LATENCY_BUDGET_MS, STALE_VISIBILITY_TIMEOUT,
-                        build_batch)
+                        ROUND_LATENCY_BUDGET_MS, SOLO_ROUND_BUDGET_MS,
+                        STALE_VISIBILITY_TIMEOUT, build_batch)
 from .session import (ABSOLUTE_CEILING, MAX_OUTBOX_TOKENS, MIN_CAP,  # noqa: F401
                       OutboxFull, OutputCap, RESERVED_FOR_RESPONSE, Session,
                       SessionState, Turn)
@@ -31,7 +32,7 @@ SAMPLING_DETERMINISTIC = {"temperature": 0.0}
 class Engine:
     """The single engine thread. Owns the model context; nothing else touches it.
 
-    Rationale: implementation_notes.md, engine.Engine
+    Rationale: NOTES.md, engine.Engine
     """
 
     def __init__(self, ctx, model, vocab, allocator, sampling=None, seed=0,
@@ -60,6 +61,13 @@ class Engine:
         self._reg_lock = threading.Lock()   # guards _sessions only
         self._running = False
         self._thread = None
+        # Idle wake-up. The loop used to sleep a flat 1 ms whenever a round
+        # found nothing to do, so a server with no traffic woke ~1000x/s
+        # forever. Every producer of work now sets this, and the idle branch
+        # blocks on it instead. IDLE_WAIT_SECONDS is a backstop, not the
+        # mechanism: if a wake path is ever missed the loop still notices
+        # within one round budget rather than hanging.
+        self._wake = threading.Event()
         self.foreground_tab_id = -1         # section 5f: ONE key, not a per-session flag
         # Section 5f degraded mode  [notes: engine.Engine.__init__]
         self.control_connected = False
@@ -74,7 +82,7 @@ class Engine:
     def get_or_create(self, key, formatter_factory, output_cap):
         """Look up or create a session. ONE atomic critical section.
 
-        Rationale: implementation_notes.md, engine.Engine.get_or_create
+        Rationale: NOTES.md, engine.Engine.get_or_create
         """
         with self._reg_lock:
             s = self._sessions.get(key)
@@ -92,7 +100,7 @@ class Engine:
         """Section 10a rule 1: creating a session for (ext, tab, origin) tears
         down any session with the same (ext, tab) and a DIFFERENT origin.
 
-        Rationale: implementation_notes.md, engine.Engine.evict_other_origins
+        Rationale: NOTES.md, engine.Engine.evict_other_origins
         """
         with self._reg_lock:
             doomed = [k for k in self._sessions
@@ -104,12 +112,22 @@ class Engine:
     def effective_foreground_tab_id(self):
         """The foreground key the scheduler should actually use.
 
-        Rationale: implementation_notes.md, engine.Engine.effective_foreground_tab_id
+        Rationale: NOTES.md, engine.Engine.effective_foreground_tab_id
         """
         if not self.control_connected and \
                 (time.time() - self.control_lost_at) > STALE_VISIBILITY_TIMEOUT:
             return -1
         return self.foreground_tab_id
+
+    def wake(self):
+        """Wake the engine thread if it is idle-blocked.
+
+        Public because the control reader needs it too: a foreground change
+        alters admission without adding work, so a round can legitimately
+        report "nothing to do" and block right as the decision changes.
+        Always set the flag being signalled BEFORE calling this (see _run).
+        """
+        self._wake.set()
 
     def set_control_connected(self, connected):
         if connected:
@@ -131,7 +149,7 @@ class Engine:
     def keys_for_extension(self, extension_id):
         """Section 10's sweep: tear down EVERY session for one extension.
 
-        Rationale: implementation_notes.md, engine.Engine.keys_for_extension
+        Rationale: NOTES.md, engine.Engine.keys_for_extension
         """
         with self._reg_lock:
             return [k for k, s in self._sessions.items()
@@ -140,7 +158,7 @@ class Engine:
     def wait_for_teardown(self, keys, timeout=2.0):
         """Block until these sessions are actually gone, or the timeout expires.
 
-        Rationale: implementation_notes.md, engine.Engine.wait_for_teardown
+        Rationale: NOTES.md, engine.Engine.wait_for_teardown
         """
         if not keys:
             return True
@@ -160,7 +178,7 @@ class Engine:
     def cancel(self, key, reason):
         """Mark a session for teardown. Safe from any thread: sets flags only.
 
-        Rationale: implementation_notes.md, engine.Engine.cancel
+        Rationale: NOTES.md, engine.Engine.cancel
         """
         with self._reg_lock:
             s = self._sessions.get(key)
@@ -168,12 +186,13 @@ class Engine:
             return False                    # defined no-op (section 10a)
         s.cancelled = True
         s.cancel_reason = reason
+        self.wake()
         return True
 
     def stop_generation(self, key, reason="stopped"):
         """User-initiated stop: end the turn, KEEP the session.
 
-        Rationale: implementation_notes.md, engine.Engine.stop_generation
+        Rationale: NOTES.md, engine.Engine.stop_generation
         """
         with self._reg_lock:
             s = self._sessions.get(key)
@@ -182,12 +201,13 @@ class Engine:
         if s.state not in (SessionState.PENDING, SessionState.GENERATING):
             return False                    # nothing in flight
         s.stop_requested = reason
+        self.wake()
         return True
 
     def submit(self, key, text):
         """Queue a new prompt and return THIS request's outbox.
 
-        Rationale: implementation_notes.md, engine.Engine.submit
+        Rationale: NOTES.md, engine.Engine.submit
         """
         with self._reg_lock:
             s = self._sessions.get(key)
@@ -200,6 +220,8 @@ class Engine:
         # Do NOT touch pos or KV here -- that is engine-thread work. Only the
         # flag is set; the loop performs the rollback at its next top.
         s.pending_replace = text
+        # Flag first, wake second -- never the other way round (see _run).
+        self.wake()
         return outbox
 
     # -- engine thread ------------------------------------------------------
@@ -212,6 +234,7 @@ class Engine:
 
     def stop(self, timeout=5.0):
         self._running = False
+        self.wake()               # do not wait out an idle block to exit
         if self._thread is not None:
             self._thread.join(timeout)
 
@@ -236,7 +259,13 @@ class Engine:
                 continue
             self.round_errors = 0
             if not did_work:
-                time.sleep(0.001)
+                # Clearing AFTER the wait is what makes this race-free: a
+                # producer that sets its flag and then wakes us at any point
+                # either arrives before the wait (which then returns at once)
+                # or after the clear (so the next wait returns at once). The
+                # flag itself is always set before the wake, never after.
+                self._wake.wait(IDLE_WAIT_SECONDS)
+                self._wake.clear()
             elif self._cpu_duty < 1.0:
                 # Cooperative CPU throttle  [notes: engine.Engine._run]
                 busy = time.perf_counter() - t_start
@@ -245,7 +274,7 @@ class Engine:
     def _step(self):
         """One iteration. Returns True if any work was done.
 
-        Rationale: implementation_notes.md, engine.Engine._step
+        Rationale: NOTES.md, engine.Engine._step
         """
         # Control flags FIRST, before anything is dispatched  [notes: engine.Engine._step]
         self._apply_control()
@@ -332,7 +361,7 @@ class Engine:
     def _sample_and_emit(self, s, logits_index):
         """Produce exactly ONE token for this session, then return.
 
-        Rationale: implementation_notes.md, engine.Engine._sample_and_emit
+        Rationale: NOTES.md, engine.Engine._sample_and_emit
         """
         tok = C.llama_sampler_sample(s.sampler, self._ctx, logits_index)
         cap = s.output_cap.for_position(s.pos)
@@ -429,7 +458,7 @@ class Engine:
     def _roll_back_partial(self, s):
         """Undo a turn that did not finish. Engine thread only.
 
-        Rationale: implementation_notes.md, engine.Engine._roll_back_partial
+        Rationale: NOTES.md, engine.Engine._roll_back_partial
         """
         if s.state not in (SessionState.PENDING, SessionState.GENERATING):
             return
@@ -463,7 +492,7 @@ class Engine:
     def _make_sampler(self, s):
         """One sampler PER SESSION, never shared.
 
-        Rationale: implementation_notes.md, engine.Engine._make_sampler
+        Rationale: NOTES.md, engine.Engine._make_sampler
         """
         params = C.llama_sampler_chain_default_params()
         chain = C.llama_sampler_chain_init(params)
@@ -487,7 +516,7 @@ class Engine:
     def _decode_batch(self, items):
         """items: [(token, pos, seq_id, want_logits)] -> batch indices with logits.
 
-        Rationale: implementation_notes.md, engine.Engine._decode_batch
+        Rationale: NOTES.md, engine.Engine._decode_batch
         """
         n = len(items)
         batch = C.llama_batch_init(n, 0, 1)
@@ -572,14 +601,14 @@ class Engine:
     def needs_compaction(self, s):
         """Checked BEFORE a session enters a batch, never after.
 
-        Rationale: implementation_notes.md, engine.Engine.needs_compaction
+        Rationale: NOTES.md, engine.Engine.needs_compaction
         """
         return s.pos >= s.budget * self.COMPACT_TRIGGER
 
     def compact(self, s, keep_recent=True):
         """Drop whole oldest exchanges, shifting EVERY live absolute position.
 
-        Rationale: implementation_notes.md, engine.Engine.compact
+        Rationale: NOTES.md, engine.Engine.compact
         """
         # Keep the anchor (index 0)  [notes: engine.Engine.compact]
         droppable = s.turn_boundaries[1:-1] if keep_recent else s.turn_boundaries[1:]
@@ -632,7 +661,7 @@ class Engine:
     def _relieve_aggregate_pressure(self, sessions):
         """Shared-KV: keep Sigma(live pos) under n_ctx by compacting.
 
-        Rationale: implementation_notes.md, engine.Engine._relieve_aggregate_pressure
+        Rationale: NOTES.md, engine.Engine._relieve_aggregate_pressure
         """
         live = [s for s in sessions if s.state != SessionState.DEAD]
         if not live:
