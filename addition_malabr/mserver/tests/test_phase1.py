@@ -1425,6 +1425,30 @@ def t68_deferred_round_is_not_treated_as_idle():
            f"prefill chunk (was {expected}ms)")
 
 
+def t69_solo_round_bounds_a_new_arrival():
+    """The solo budget is also the worst-case wait for a tab that shows up.
+
+    A batched round cannot be preempted, so whatever a solo round costs is
+    what a second tab pays before it can be admitted. That makes
+    SOLO_ROUND_BUDGET_MS a latency bound on the multi-tab path, not only a
+    throughput knob on the single-tab one -- which is why it is not large.
+    """
+    class S:
+        def __init__(self, tab, ntok):
+            self.key = ("a" * 32, tab, "https://x.test"); self.pos = 0
+            self.state = eng.SessionState.PENDING; self.cancelled = False
+            self.inbox_tokens = [1] * ntok; self.prefill_offset = 0
+            self.prefill_stalls = 0; self.rounds_excluded = 0
+
+    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    _, chunks, spent = eng.build_batch([S(1, 4000)], curve, foreground_tab_id=1)
+    ok = bool(chunks) and spent <= eng.SOLO_ROUND_BUDGET_MS
+    record(69, "a solo round stays inside its budget, bounding a new arrival",
+           ok, f"solo round costs {spent:.0f}ms of "
+               f"{eng.SOLO_ROUND_BUDGET_MS}ms; a tab arriving mid-round waits "
+               f"that long (fair budget is {eng.ROUND_LATENCY_BUDGET_MS}ms)")
+
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------

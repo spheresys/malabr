@@ -35,12 +35,30 @@ IDLE_WAIT_SECONDS = (ROUND_LATENCY_BUDGET_MS / 1000.0) / 2
 # many chunks and pays the per-call overhead on every one of them, which shows
 # up directly as time-to-first-token for the one user who is waiting.
 #
-# It is not raised to infinity, because the budget has a SECOND effect nobody
-# chose but everyone relies on: it bounds how long the engine can ignore the
-# control channel. A round that runs for seconds is a stop button that does
-# nothing for seconds. 250 ms keeps cancellation comfortably inside what reads
-# as immediate while cutting a solo prefill into ~5x fewer chunks.
-SOLO_ROUND_BUDGET_MS = 250
+# It is not raised to infinity, because the budget has TWO other effects that
+# nobody chose but everything relies on:
+#
+#   1. It bounds how long the engine can ignore the control channel. A round
+#      that runs for seconds is a stop button that does nothing for seconds.
+#   2. **It bounds how long a NEWLY ARRIVING session waits.** A batched round
+#      cannot be preempted -- the sequences are fused into the same kernels --
+#      so a second tab that submits while a solo round is in flight cannot be
+#      admitted until that round ends. Measured (audit 3): a solo round admits
+#      69 prefill tokens and costs ~247 ms, so at 250 ms the second tab waits
+#      a quarter of a second, against the 50 ms bound section 7 states.
+#
+# Effect 2 is the binding one, and it argues DOWN: the penalty lands on a tab
+# arriving into a busy machine, which is the exact case this project claims to
+# be good at, while the benefit lands on the single-tab case, which is not what
+# the thesis is about. 150 ms keeps most of the win (3x the fair budget, ~3x
+# fewer prefill chunks) while keeping the worst-case arrival penalty near the
+# threshold where a one-off delay stops being noticeable.
+#
+# ASSUMPTION, flagged for review: 150 is a judgement call on a continuous
+# trade-off, not a measured optimum. The measurement that would settle it is
+# end-to-end TTFT for a second tab arriving at a uniformly random point inside
+# a solo round, swept over this constant.
+SOLO_ROUND_BUDGET_MS = 150
 
 
 class CostCurve:
