@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MALABR inference server entry point.
 
-Rationale: implementation_notes.md, app
+Rationale: NOTES.md, app
 """
 
 import os
@@ -22,7 +22,7 @@ def apply_cpu_ceiling(cores):
     """HARD CPU cap (§11): move THIS process into a transient systemd scope with
     a cpu.max quota, kernel-enforced. `cores` is a float core count; <=0 = off.
 
-    Rationale: implementation_notes.md, app.apply_cpu_ceiling
+    Rationale: NOTES.md, app.apply_cpu_ceiling
     """
     if not cores or cores <= 0:
         return
@@ -61,7 +61,7 @@ def apply_cpu_ceiling(cores):
 def _cpu_max_quota_active():
     """Read back the effective cpu.max after StartTransientUnit succeeds.
 
-    Rationale: implementation_notes.md, app._cpu_max_quota_active
+    Rationale: NOTES.md, app._cpu_max_quota_active
     """
     import time as _t
     for _ in range(15):
