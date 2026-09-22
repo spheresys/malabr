@@ -1449,6 +1449,117 @@ def t69_solo_round_bounds_a_new_arrival():
                f"that long (fair budget is {eng.ROUND_LATENCY_BUDGET_MS}ms)")
 
 
+def t44_eos_assumption_survives_a_model_swap():
+    """The stop condition must hold for a DIFFERENT model, not just this one.
+
+    Was declared browser-only. It is not: swapping models is a server-side
+    operation and the assumption under test is about a vocabulary, so it can
+    be checked directly. Converted in audit 3.
+
+    This is design-doc correction #10 made executable. The §5b design text
+    described the stop check as `tok == llama_vocab_eos(vocab)`. That is
+    wrong for every model here: `eos()` names ONE token while these
+    vocabularies flag several as end-of-generation, so an `== eos` check
+    misses the rest and the turn runs to the output cap instead of stopping.
+    `is_stop_token` uses `llama_vocab_is_eog`, and this pins that for both
+    shipped models.
+    """
+    import glob
+    models = sorted(glob.glob(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "..", "models", "*.gguf")))
+    if len(models) < 2:
+        record(44, "EOS assumption re-verified on a model swap", True,
+               f"only {len(models)} model(s) present", skip=True)
+        return
+
+    findings = []
+    ok = True
+    for path in models:
+        mp = C.llama_model_default_params(); mp.n_gpu_layers = 0
+        model = C.llama_model_load_from_file(path.encode(), mp)
+        if not model:
+            ok = False; findings.append(f"{os.path.basename(path)}: load failed")
+            continue
+        try:
+            vocab = C.llama_model_get_vocab(model)
+            n = C.llama_vocab_n_tokens(vocab)
+            eog = [t for t in range(n) if C.llama_vocab_is_eog(vocab, t)]
+            eos = C.llama_vocab_eos(vocab)
+            # Every EOG token must stop generation ...
+            all_stop = all(eng.is_stop_token(vocab, t) for t in eog)
+            # ... and `== eos` must be demonstrably insufficient, which is the
+            # whole point of the correction.
+            eos_insufficient = len(eog) > 1 and any(t != eos for t in eog)
+            ok = ok and all_stop and eos_insufficient
+            findings.append(f"{os.path.basename(path)}: {len(eog)} EOG, "
+                            f"eos={eos}")
+        finally:
+            C.llama_model_free(model)
+
+    record(44, "EOS assumption re-verified on a model swap", ok,
+           "; ".join(findings))
+
+
+def t48_compaction_fidelity_distributional():
+    """Compaction must not move the next-token distribution much.
+
+    Was declared browser-only as a "cheap stub" because no real fidelity check
+    existed. One does now (tests/fidelity_check.py), so this becomes a fast
+    in-suite version of it: two sessions driven identically, one compacted
+    through the shipping `Engine.compact`, then the same probe decoded into
+    both and the argmax compared.
+
+    Deliberately NOT a duplicate of test 4. Test 4 asks whether a planted fact
+    can still be RECALLED, which is binary and generous. This asks whether the
+    model would still say the same next token, which is the quantitative claim
+    §8 actually makes.
+    """
+    import ctypes
+    alloc, e = FIX.new_engine()
+    ka, kb = key(tab=1), key(tab=2)
+    for k in (ka, kb):
+        e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 24)]))
+    sa, sb = e._sessions[ka], e._sessions[kb]
+
+    filler = ["Explain what a hash table is.",
+              "What is a process versus a thread?",
+              "Describe a page fault.",
+              "What is a write-ahead log for?"]
+    for msg in filler:
+        for k in (ka, kb):
+            ask(e, k, msg, limit=80)
+
+    freed = e.compact(sb)
+    if not freed:
+        record(48, "compaction leaves the next-token choice unchanged", True,
+               "conversation too short to compact", skip=True)
+        return
+
+    n_vocab = C.llama_vocab_n_tokens(FIX.vocab)
+
+    def argmax_next(s, q):
+        toks = s.formatter._tokenize(q, parse_special=False)
+        start = s.pos
+        items = [(t, start + i, s.slot, i == len(toks) - 1)
+                 for i, t in enumerate(toks)]
+        try:
+            idx = e._decode_batch(items)
+            ptr = C.llama_get_logits_ith(e._ctx, idx[-1])
+            arr = ctypes.cast(ptr,
+                              ctypes.POINTER(ctypes.c_float * n_vocab)).contents
+            return max(range(n_vocab), key=lambda i: arr[i])
+        finally:
+            C.llama_memory_seq_rm(e._alloc._mem, s.slot, start, start + len(toks))
+            s.pos = start
+
+    probe = "What was the first thing I asked about?"
+    ta, tb = argmax_next(sa, probe), argmax_next(sb, probe)
+    record(48, "compaction leaves the next-token choice unchanged", ta == tb,
+           f"freed {freed} tok ({100*freed/max(sb.pos+freed,1):.0f}% of context); "
+           f"argmax full={ta} compacted={tb}")
+
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------
@@ -1466,9 +1577,7 @@ BROWSER_ONLY = [
     (39, "tab-close clears chrome.storage.session; navigation does NOT"),
     (42, "two windows: only the active window's tab is foreground"),
     (43, "clicking the address bar does not flip the tab out of foreground"),
-    (44, "EOS assumption re-verified on a model swap"),
     (47, "incremental vs batch eviction canary comparison"),
-    (48, "cheap-stub compaction fidelity"),
     (49, "end-to-end focus-switch latency"),
     (51, "control connection reused, not reopened per push"),
     (57, "control-connection resync pushes foreground on reconnect"),
