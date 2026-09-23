@@ -189,8 +189,17 @@ def main():
         for t in threads: t.start()
         for t in threads: t.join(timeout=1500)
 
+        # TWO measures, because the comparison against MALABR depends on it.
+        #  from_create: t0 before LanguageModel.create() -- what a page feels.
+        #  from_prompt: create() subtracted -- the interval MALABR measures,
+        #               whose harness creates the session BEFORE starting the
+        #               clock. Comparing MALABR against from_create would
+        #               charge Chrome for work MALABR does not count.
         ttfts = {i: r["ttft_ms"] / 1000.0 for i, r in results.items()
                  if isinstance(r, dict) and r.get("ttft_ms") is not None}
+        ttfts_prompt = {i: (r["ttft_ms"] - r.get("create_ms", 0)) / 1000.0
+                        for i, r in results.items()
+                        if isinstance(r, dict) and r.get("ttft_ms") is not None}
         bad = {i: r for i, r in results.items() if i not in ttfts}
         if bad:
             print(f"\n  {len(bad)} of {len(conns)} tabs produced NO token:")
@@ -216,11 +225,20 @@ def main():
         print(f"  median TTFT     : {med:6.2f}s")
         print(f"  p95 TTFT        : {pct(vals,95):6.2f}s")
         print(f"\n  RELATIVE SCORE (foreground / median): {fg_ttft/med:.2f}")
+        pv = list(ttfts_prompt.values())
+        pmed = statistics.median(pv)
+        pfg = ttfts_prompt.get(fg, float("nan"))
+        print(f"  RELATIVE SCORE excluding create(): {pfg/pmed:.2f}"
+              f"   (fg {pfg:.2f}s / median {pmed:.2f}s)")
+        print("  The second line is the one comparable to MALABR, whose")
+        print("  harness creates the session before starting its clock.")
         print("  Below 1.0 means the visible tab is prioritised; about 1.0")
         print("  means the scheduler cannot tell the tabs apart.")
         if a.json:
-            json.dump({"ttft_s": ttfts, "foreground_tab": fg,
-                       "median_s": med, "ratio": fg_ttft / med},
+            json.dump({"ttft_s": ttfts, "ttft_from_prompt_s": ttfts_prompt,
+                       "foreground_tab": fg, "median_s": med,
+                       "ratio": fg_ttft / med,
+                       "ratio_from_prompt": pfg / pmed},
                       open(a.json, "w"), indent=2)
             print(f"\n  wrote {a.json}")
         return 0
