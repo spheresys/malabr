@@ -35,7 +35,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DOCROOT = os.path.join(HERE, "nano_pages")
 CHROME_DIR = os.environ.get(
     "CHROME_DIR", "/media/chaitu/chaitanya/chrome-stable-deb/root/opt/google/chrome")
-PROFILE = os.environ.get("NANO_PROFILE", "/media/chaitu/chaitanya/nano-stable-profile")
+# The CPU profile, deliberately. Chrome reads ~11 GB of "VRAM" from this
+# machine's Intel iGPU, decides the device is GPU-capable, and selects
+# nano_v3_gpu_component -- which never downloads (it sat at 0% for 13 hours).
+# --disable-gpu below makes it select nano_v3_cpu_component, which does. That
+# is also the RIGHT baseline: MALABR is CPU-only, so a GPU-accelerated Nano
+# would confound the scheduler comparison with an accelerator difference.
+PROFILE = os.environ.get("NANO_PROFILE", "/media/chaitu/chaitanya/nano-cpu-profile")
 CDP_PORT = int(os.environ.get("NANO_PORT", "9360"))
 HTTP_PORT = int(os.environ.get("NANO_HTTP_PORT", "8810"))
 
@@ -55,21 +61,26 @@ PROMPTS = [
     "What is a memory barrier for?",
 ]
 
-# Runs in each tab. Resolves with the time to the FIRST streamed chunk, which
-# is what TTFT means; total completion is recorded too but is not the claim.
+# Runs in each tab. Resolves as soon as the FIRST chunk arrives and abandons
+# the rest of the stream.
+#
+# Waiting for completion instead would not measure TTFT, and on CPU-only Nano
+# it does not terminate in any useful time: an early version of this harness
+# ran the stream to the end and three of four background tabs hit a ten-minute
+# timeout having long since produced their first token. Time-to-first-token is
+# the quantity the ratio is built on, so take it and stop.
 RUN_JS = """
 (async (prompt) => {
   const t0 = performance.now();
   const s = await LanguageModel.create();
+  const created = performance.now() - t0;
   const stream = s.promptStreaming(prompt);
-  let first = null, chars = 0;
+  let first = null;
   for await (const chunk of stream) {
-    if (first === null) first = performance.now() - t0;
-    chars += (chunk || "").length;
+    if (chunk && chunk.length) { first = performance.now() - t0; break; }
   }
-  const done = performance.now() - t0;
-  try { s.destroy(); } catch (e) {}
-  return {ttft_ms: first, done_ms: done, chars};
+  try { s.destroy(); } catch (e) {}          // abandons the remaining stream
+  return {ttft_ms: first, create_ms: created};
 })(%s)
 """
 
@@ -84,10 +95,21 @@ def serve():
     return srv
 
 
-def launch():
-    args = [os.path.join(CHROME_DIR, "chrome"),
+def launch(no_throttle=False):
+    extra = []
+    if no_throttle:
+        # A background TAB has its timers and task queues throttled by the
+        # renderer, independently of anything the model scheduler does. If the
+        # foreground advantage survives these flags it is attributable to
+        # model scheduling; if it collapses toward 1.0, it was throttling.
+        extra = ["--disable-background-timer-throttling",
+                 "--disable-renderer-backgrounding",
+                 "--disable-backgrounding-occluded-windows",
+                 "--disable-features=IntensiveWakeUpThrottling"]
+    args = [os.path.join(CHROME_DIR, "chrome"), *extra,
             f"--user-data-dir={PROFILE}", f"--remote-debugging-port={CDP_PORT}",
             f"--enable-features={FEATURES}",
+            "--disable-gpu", "--disable-software-rasterizer",
             "--no-first-run", "--no-default-browser-check",
             "--disable-backgrounding-occluded-windows",
             f"http://localhost:{HTTP_PORT}/"]
@@ -104,11 +126,14 @@ def pct(xs, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tabs", type=int, default=8)
+    ap.add_argument("--no-throttle", action="store_true",
+                    help="disable renderer/timer background throttling, to "
+                         "separate model scheduling from browser throttling")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
 
     serve()
-    proc = launch()
+    proc = launch(a.no_throttle)
     try:
         http_json(CDP_PORT, timeout=120)
         # One tab per client, all on the same origin.
@@ -154,7 +179,7 @@ def main():
         def run(i, ws):
             try:
                 results[i] = ws.evaluate(
-                    RUN_JS % json.dumps(PROMPTS[i % len(PROMPTS)]), timeout=600)
+                    RUN_JS % json.dumps(PROMPTS[i % len(PROMPTS)]), timeout=1200)
             except Exception as e:                      # noqa: BLE001
                 results[i] = {"error": str(e)}
 
@@ -162,18 +187,31 @@ def main():
             t = threading.Thread(target=run, args=(i, ws), daemon=True)
             threads.append(t)
         for t in threads: t.start()
-        for t in threads: t.join(timeout=900)
+        for t in threads: t.join(timeout=1500)
 
         ttfts = {i: r["ttft_ms"] / 1000.0 for i, r in results.items()
                  if isinstance(r, dict) and r.get("ttft_ms") is not None}
+        bad = {i: r for i, r in results.items() if i not in ttfts}
+        if bad:
+            print(f"\n  {len(bad)} of {len(conns)} tabs produced NO token:")
+            for i, r in sorted(bad.items()):
+                print(f"    tab {i}: {str(r)[:150]}")
         if not ttfts:
-            print("no tab produced a token:", results)
+            print("no tab produced a token")
+            return 1
+        # A ratio computed from a handful of survivors is not a measurement of
+        # the scheduler -- it is a measurement of which tabs happened to
+        # survive. Refuse rather than mislead.
+        if len(ttfts) < max(4, len(conns) // 2):
+            print(f"\n  ONLY {len(ttfts)}/{len(conns)} tabs reported a TTFT -- too few to")
+            print("  characterise the scheduler. Not reporting a ratio.")
             return 1
 
         vals = list(ttfts.values())
         med = statistics.median(vals)
         fg_ttft = ttfts.get(fg, float("nan"))
-        print(f"\n=== Chrome built-in Prompt API, {len(vals)} tabs ===")
+        print(f"\n=== Chrome built-in Prompt API, {len(vals)} tabs"
+          f"{', background throttling DISABLED' if a.no_throttle else ''} ===")
         print(f"  foreground TTFT : {fg_ttft:6.2f}s  (tab {fg}, brought to front)")
         print(f"  median TTFT     : {med:6.2f}s")
         print(f"  p95 TTFT        : {pct(vals,95):6.2f}s")
