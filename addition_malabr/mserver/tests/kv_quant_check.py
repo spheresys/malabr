@@ -63,53 +63,57 @@ def js(p, q):
     return 0.5 * kl(p, m) + 0.5 * kl(q, m)
 
 
-def run(kv_type, n_ctx=2048):
-    """Build the same conversation under one KV type; return probe dists."""
-    mp = C.llama_model_default_params(); mp.n_gpu_layers = 0
-    model = C.llama_model_load_from_file(MODEL_PATH.encode(), mp)
-    if not model:
-        raise RuntimeError("model load failed")
+def run(model, kv_type, n_ctx=2048):
+    """Build the same conversation under one KV type; return probe dists.
+
+    The MODEL is owned by the caller and loaded once: it is identical across
+    KV types (only the cache differs), and reloading ~1 GB of weights per type
+    on a machine this size is both slow and a needless way to run out of RAM.
+    The CONTEXT is owned here and freed in a finally -- without that, a single
+    failed decode would leak a whole context per type.
+    """
     cp = C.llama_context_default_params()
     cp.n_ctx, cp.n_seq_max, cp.n_batch, cp.n_threads = n_ctx, 1, 512, 3
     cp.type_k = cp.type_v = kv_type
     ctx = C.llama_init_from_model(model, cp)
     if not ctx:
-        C.llama_model_free(model)
         return None                      # this type is not supported here
-    vocab = C.llama_model_get_vocab(model)
-    n_vocab = C.llama_vocab_n_tokens(vocab)
-    fmt = eng.ChatFormatter(model, vocab)
+    try:
+        vocab = C.llama_model_get_vocab(model)
+        n_vocab = C.llama_vocab_n_tokens(vocab)
+        fmt = eng.ChatFormatter(model, vocab)
 
-    def decode(tokens, pos, want_last=True):
-        b = C.llama_batch_init(len(tokens), 0, 1)
-        try:
-            b.n_tokens = len(tokens)
-            for i, t in enumerate(tokens):
-                b.token[i] = t; b.pos[i] = pos + i
-                b.n_seq_id[i] = 1; b.seq_id[i][0] = 0
-                b.logits[i] = 1 if (want_last and i == len(tokens) - 1) else 0
-            if C.llama_decode(ctx, b) != 0:
-                raise RuntimeError("decode failed")
-            return len(tokens) - 1
-        finally:
-            C.llama_batch_free(b)
+        def decode(tokens, pos, want_last=True):
+            b = C.llama_batch_init(len(tokens), 0, 1)
+            try:
+                b.n_tokens = len(tokens)
+                for i, t in enumerate(tokens):
+                    b.token[i] = t; b.pos[i] = pos + i
+                    b.n_seq_id[i] = 1; b.seq_id[i][0] = 0
+                    b.logits[i] = 1 if (want_last and i == len(tokens) - 1) else 0
+                if C.llama_decode(ctx, b) != 0:
+                    raise RuntimeError("decode failed")
+                return len(tokens) - 1
+            finally:
+                C.llama_batch_free(b)
 
-    pos = 0
-    for msg in CONVO:                    # prefill only: identical across types
-        toks = fmt._tokenize(msg, parse_special=False)
-        decode(toks, pos); pos += len(toks)
+        pos = 0
+        for msg in CONVO:                # prefill only: identical across types
+            toks = fmt._tokenize(msg, parse_special=False)
+            decode(toks, pos); pos += len(toks)
 
-    out = {}
-    for label, q in PROBES:
-        toks = fmt._tokenize(q, parse_special=False)
-        idx = decode(toks, pos)
-        ptr = C.llama_get_logits_ith(ctx, idx)
-        arr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_float * n_vocab)).contents
-        out[label] = softmax(list(arr))
-        mem = C.llama_get_memory(ctx)
-        C.llama_memory_seq_rm(mem, 0, pos, pos + len(toks))
-    C.llama_free(ctx); C.llama_model_free(model)
-    return {"dists": out, "pos": pos}
+        out = {}
+        for label, q in PROBES:
+            toks = fmt._tokenize(q, parse_special=False)
+            idx = decode(toks, pos)
+            ptr = C.llama_get_logits_ith(ctx, idx)
+            arr = ctypes.cast(ptr,
+                              ctypes.POINTER(ctypes.c_float * n_vocab)).contents
+            out[label] = softmax(list(arr))
+            C.llama_memory_seq_rm(C.llama_get_memory(ctx), 0, pos, pos + len(toks))
+        return {"dists": out, "pos": pos}
+    finally:
+        C.llama_free(ctx)
 
 
 def main():
@@ -119,10 +123,16 @@ def main():
     print("=== KV-cache quantization: what 2x context actually costs ===\n")
     C.llama_backend_init()
 
+    mp = C.llama_model_default_params(); mp.n_gpu_layers = 0
+    model = C.llama_model_load_from_file(MODEL_PATH.encode(), mp)
+    if not model:
+        sys.exit(f"cannot load model at {MODEL_PATH}")
+
     ref = None
     rows = []
-    for name, t in KV_TYPES:
-        r = run(t)
+    try:
+      for name, t in KV_TYPES:
+        r = run(model, t)
         if r is None:
             print(f"  {name:<6} unsupported in this build")
             continue
@@ -142,6 +152,8 @@ def main():
         rows.append(row)
         print(f"  {name:<6} top-1 {agree}/{n}   mean KL {kls/n:.4f} nats   "
               f"mean JS {jss/n:.4f}")
+    finally:
+        C.llama_model_free(model)
 
     print("\n--- how to read this ---")
     print("  f16 -> q8_0 halves KV bytes per token: ~2x the resident context in")
