@@ -203,7 +203,7 @@ def experiment_c(conns, runs):
         for r in range(runs):
             if arm.startswith("one greedy"):
                 try:
-                    conns[-1].evaluate(GREEDY_JS % (4000, 60), timeout=1800)
+                    conns[-1].evaluate(GREEDY_JS % (4000, 13), timeout=1800)
                 except Exception as e:                    # noqa: BLE001
                     print(f"    greedy setup failed: {str(e)[:80]}")
             res = {}
@@ -234,6 +234,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tabs", type=int, default=6)
     ap.add_argument("--runs", type=int, default=3)
+    ap.add_argument("--only", choices=["a", "b", "c"], default=None,
+                    help="run one experiment. Chrome with Nano resident is "
+                         "~4.2 GB, so on a 14 GB machine running these one at "
+                         "a time is the difference between finishing and "
+                         "thrashing.")
     a = ap.parse_args()
     serve(); kill_stale()
     proc = launch()
@@ -257,9 +262,15 @@ def main():
         conns = ready
         print(f"  using {len(conns)} usable tab(s)")
         print(f"=== RQ2 vs Chrome: {len(conns)} tabs ===")
-        experiment_a(conns)
-        experiment_b(conns[0])
-        experiment_c(conns, a.runs)
+        if a.only in (None, "a"):
+            experiment_a(conns)
+        if a.only in (None, "b"):
+            experiment_b(conns[0])
+        if a.only in (None, "c"):
+            if len(conns) < 2:
+                print("\n--- C skipped: needs at least 2 usable tabs ---")
+            else:
+                experiment_c(conns, a.runs)
         return 0
     finally:
         proc.terminate()
