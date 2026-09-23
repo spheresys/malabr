@@ -170,6 +170,10 @@ def summarise(arrivals, done, makespan, fg_key):
         "fairness_jain": jain(list(tput.values())),
         "fg_token_share": fg_tokens / total_tokens if total_tokens else float("nan"),
         "tokens_total": total_tokens,
+        # Kept so the fairness index can be explained rather than asserted:
+        # these are the per-session service rates it is computed from.
+        "per_session_tok_s": {str(k[1]): round(v, 2)
+                              for k, v in sorted(tput.items())},
     }
 
 

@@ -134,6 +134,14 @@ def pct(xs, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tabs", type=int, default=8)
+    ap.add_argument("--stagger", type=float, default=0.0,
+                    help="seconds to delay the FOREGROUND tab's request after "
+                         "every background tab has already issued its own. "
+                         "This is the test that separates PRIORITISATION from "
+                         "ORDERING: if Chrome schedules by visibility the late "
+                         "foreground is still served quickly; if it serves "
+                         "first-come-first-served, starting last means "
+                         "waiting behind everyone.")
     ap.add_argument("--no-throttle", action="store_true",
                     help="disable renderer/timer background throttling, to "
                          "separate model scheduling from browser throttling")
@@ -195,7 +203,19 @@ def main():
         for i, ws in enumerate(conns):
             t = threading.Thread(target=run, args=(i, ws), daemon=True)
             threads.append(t)
-        for t in threads: t.start()
+        if a.stagger > 0:
+            # Backgrounds first, foreground last. Each tab still times itself
+            # from its OWN start, so what is compared is how long each waited
+            # after asking -- not who asked first.
+            for i, t in enumerate(threads):
+                if i != fg:
+                    t.start()
+            time.sleep(a.stagger)
+            threads[fg].start()
+            print(f"  (foreground tab {fg} issued {a.stagger:.1f}s AFTER all "
+                  f"{len(threads)-1} background tabs)")
+        else:
+            for t in threads: t.start()
         for t in threads: t.join(timeout=1500)
 
         # TWO measures, because the comparison against MALABR depends on it.
