@@ -45,6 +45,9 @@ PROFILE = os.environ.get("NANO_PROFILE", "/media/chaitu/chaitanya/nano-cpu-profi
 CDP_PORT = int(os.environ.get("NANO_PORT", "9360"))
 HTTP_PORT = int(os.environ.get("NANO_HTTP_PORT", "8810"))
 
+MAX_CHUNKS = int(os.environ.get("NANO_MAX_CHUNKS", "40"))
+STALL_S = 1.0
+
 FEATURES = ",".join([
     "AIPromptAPI", "OptimizationGuideModelExecution",
     "OptimizationGuideOnDeviceModel:compatible_on_device_performance_classes/*",
@@ -70,18 +73,23 @@ PROMPTS = [
 # timeout having long since produced their first token. Time-to-first-token is
 # the quantity the ratio is built on, so take it and stop.
 RUN_JS = """
-(async (prompt) => {
+(async (prompt, maxChunks) => {
   const t0 = performance.now();
   const s = await LanguageModel.create();
   const created = performance.now() - t0;
   const stream = s.promptStreaming(prompt);
-  let first = null;
+  const at = [];            // arrival time of every chunk, ms since t0
+  let chars = 0, n = 0;
   for await (const chunk of stream) {
-    if (chunk && chunk.length) { first = performance.now() - t0; break; }
+    if (!chunk || !chunk.length) continue;
+    at.push(performance.now() - t0);
+    chars += chunk.length;
+    if (++n >= maxChunks) break;     // bounded: CPU Nano is slow to finish
   }
-  try { s.destroy(); } catch (e) {}          // abandons the remaining stream
-  return {ttft_ms: first, create_ms: created};
-})(%s)
+  try { s.destroy(); } catch (e) {}
+  return {ttft_ms: at.length ? at[0] : null, create_ms: created,
+          arrivals_ms: at, chars: chars};
+})(%s, %d)
 """
 
 
@@ -179,7 +187,8 @@ def main():
         def run(i, ws):
             try:
                 results[i] = ws.evaluate(
-                    RUN_JS % json.dumps(PROMPTS[i % len(PROMPTS)]), timeout=1200)
+                    RUN_JS % (json.dumps(PROMPTS[i % len(PROMPTS)]), MAX_CHUNKS),
+                    timeout=1200)
             except Exception as e:                      # noqa: BLE001
                 results[i] = {"error": str(e)}
 
@@ -232,8 +241,38 @@ def main():
               f"   (fg {pfg:.2f}s / median {pmed:.2f}s)")
         print("  The second line is the one comparable to MALABR, whose")
         print("  harness creates the session before starting its clock.")
-        print("  Below 1.0 means the visible tab is prioritised; about 1.0")
-        print("  means the scheduler cannot tell the tabs apart.")
+
+        # ---- whole-pipeline metrics, same definitions as pipeline_bench.py --
+        def gaps(a):
+            return [(b - x) / 1000.0 for x, b in zip(a, a[1:])]
+        allg, fgg, bgg = [], [], []
+        sfg = sbg = 0
+        for i, r in results.items():
+            if not isinstance(r, dict):
+                continue
+            a = r.get("arrivals_ms") or []
+            g = gaps(a)
+            allg += g
+            n = sum(1 for x in g if x > STALL_S)
+            if i == fg: fgg += g; sfg += n
+            else:       bgg += g; sbg += n
+        chars = {i: r.get("chars", 0) for i, r in results.items()
+                 if isinstance(r, dict)}
+        span = max((max(r.get("arrivals_ms") or [0]) for r in results.values()
+                    if isinstance(r, dict)), default=0) / 1000.0
+        rate = {i: (chars[i] / span) for i in chars if span}
+        print(f"\n  inter-chunk p50 (s)       : {statistics.median(allg):.3f}"
+              if allg else "\n  inter-chunk p50           : n/a")
+        print(f"  inter-chunk p95 (s)       : {pct(allg,95):.3f}")
+        print(f"  foreground chunk gap p95  : {pct(fgg,95):.3f}")
+        print(f"  background chunk gap p95  : {pct(bgg,95):.3f}")
+        print(f"  stalls >1s  fg / bg       : {sfg} / {sbg}")
+        print(f"  chars/s aggregate         : {sum(chars.values())/span:.1f}"
+              if span else "  chars/s                   : n/a")
+        print(f"  Jain fairness (chars/s)   : "
+              f"{(sum(rate.values())**2)/(len(rate)*sum(v*v for v in rate.values())):.3f}"
+              if rate and sum(rate.values()) else "  Jain fairness            : n/a")
+        print(f"  (streams capped at {MAX_CHUNKS} chunks; CPU Nano is slow to finish)")
         if a.json:
             json.dump({"ttft_s": ttfts, "ttft_from_prompt_s": ttfts_prompt,
                        "foreground_tab": fg, "median_s": med,
