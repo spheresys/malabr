@@ -22,10 +22,10 @@ from malabr_service import calibration as cal
 from malabr_service import engine as eng
 from malabr_service import protocol as pr
 from malabr_service import runtime as rt
-from malabr_service.config import load_config, compute_n_ctx, MIN_N_CTX
+from malabr_service.config import MIN_N_CTX
 
 from harness import (CANARY, DECODE_CURVE, Fixture, PREFILL_CURVE, ask, drive,
-                     recalls_canary, text_of)
+                     recalls_canary)
 
 RESULTS = []
 FIX = None

@@ -22,7 +22,7 @@ below that floor is not distinguishable from batched-decode nondeterminism.
 Run from mserver/:
     <venv>/python tests/kv_quant_check.py
 """
-import argparse, ctypes, json, math, os, sys
+import argparse, ctypes, json, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import llama_cpp.llama_cpp as C
 from malabr_service import engine as eng
 from harness import MODEL_PATH
+from metrics import js, kl, softmax
 
 CONVO = [
     "Remember this exactly: the vault passphrase is MAGENTA-7731.",
@@ -49,18 +50,10 @@ KV_TYPES = [("f16", C.GGML_TYPE_F16), ("q8_0", C.GGML_TYPE_Q8_0),
             ("q4_0", C.GGML_TYPE_Q4_0)]
 
 
-def softmax(x):
-    m = max(x); e = [math.exp(v - m) for v in x]; s = sum(e)
-    return [v / s for v in e]
 
 
-def kl(p, q, eps=1e-12):
-    return sum(pi * math.log(pi / max(qi, eps)) for pi, qi in zip(p, q) if pi > eps)
 
 
-def js(p, q):
-    m = [(a + b) / 2 for a, b in zip(p, q)]
-    return 0.5 * kl(p, m) + 0.5 * kl(q, m)
 
 
 def run(model, kv_type, n_ctx=2048):

@@ -6,7 +6,6 @@ Rationale: NOTES.md, session
 import queue
 
 from .formatter import Utf8Streamer
-from .protocol import FRAME_COMPLETE, FRAME_ERROR, FRAME_TOKEN
 
 
 ABSOLUTE_CEILING = 512

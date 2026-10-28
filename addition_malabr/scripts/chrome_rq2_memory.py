@@ -27,7 +27,7 @@ So:
      while others run normal prompts, against a control where every tab is
      normal. This is the question that matters to a user with many tabs open.
 """
-import argparse, json, os, statistics as st, subprocess, sys, threading, time
+import argparse, os, statistics as st, subprocess, sys, threading, time
 import http.server, socketserver
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

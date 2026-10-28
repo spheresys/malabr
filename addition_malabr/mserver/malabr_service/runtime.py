@@ -17,7 +17,7 @@ from .config import list_models, load_config, resolve_model
 from .protocol import (
     FRAME_COMPLETE, FRAME_ERROR, FRAME_TOKEN, MAX_HEADER_LEN,
     MSG_EXT_UNLOADED, MSG_FOREGROUND, MSG_LIVE_TABS, MSG_TAB_CLOSED,
-    ProtocolError, ROUTE_CONTROL, ROUTE_GENERATE, ROUTE_STOP,
+    ProtocolError, ROUTE_CONTROL, ROUTE_STOP,
     encode_frame, read_control_message, recv_full, unpack_client_envelope,
 )
 

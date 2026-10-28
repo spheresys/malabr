@@ -620,6 +620,10 @@ class Engine:
         s.produced = 0
         # The turn is committed  [notes: engine.Engine._finish_turn]
         s.pos_before_generation = s.pos_before_request
+        # Its formatter checkpoint is now meaningless too. Nothing reads it
+        # again -- the next _begin_turn overwrites it before any rollback could
+        # -- but leaving it set meant compaction kept shifting a dead value.
+        s.formatter_cp_before_request = None
 
     # -- section 8: compaction ----------------------------------------------
 

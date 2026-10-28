@@ -26,7 +26,7 @@ That is the whole dance this script automates.
   python3 nano_provision.py            # run it; it restarts Chrome itself
   python3 nano_provision.py --wait 900 # allow longer for the download
 """
-import argparse, json, os, shutil, subprocess, sys, time
+import argparse, os, shutil, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nano_cdp import WS, http_json  # noqa: E402

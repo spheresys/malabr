@@ -11,7 +11,7 @@ Checks, in order of what actually went wrong before:
   2. a long page is cut to the budget by RELEVANCE, not by position
   3. extraction is deterministic, so the "send the page once" cache still holds
 """
-import os, re, subprocess, sys, time, http.server, socketserver, threading, json
+import os, re, subprocess, sys, time, http.server, socketserver, threading
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nano_cdp import WS, http_json  # noqa: E402

@@ -29,13 +29,14 @@ Run from mserver/:
     <venv>/python tests/baseline_bench.py --tabs 4
     <venv>/python tests/baseline_bench.py --tabs 8 --json bench.json
 """
-import argparse, json, os, statistics, sys, threading, time
+import argparse, json, os, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from malabr_service import engine as eng
 from harness import Fixture
+from metrics import pct  # noqa: F401  (relative_repeat imports it from here)
 
 PROMPTS = [
     "Explain what a hash table is, in three sentences.",
@@ -49,12 +50,6 @@ PROMPTS = [
 ]
 
 
-def pct(xs, p):
-    if not xs:
-        return float("nan")
-    xs = sorted(xs)
-    k = max(0, min(len(xs) - 1, int(round((p / 100.0) * (len(xs) - 1)))))
-    return xs[k]
 
 
 def run_malabr(fix, n_tabs, cap_tokens, foreground_tab, visibility=True):

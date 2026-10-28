@@ -18,7 +18,7 @@ Two non-obvious requirements, both of which cost a run to discover:
   2. USER GESTURE. create() starts a ~2 GB download and wants a gesture, so
      every evaluate() here runs with userGesture set.
 """
-import argparse, http.server, json, os, shutil, socketserver, subprocess, sys, threading, time
+import argparse, http.server, os, shutil, socketserver, subprocess, sys, threading, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nano_cdp import WS, http_json  # noqa: E402

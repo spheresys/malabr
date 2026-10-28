@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from malabr_service import engine as eng
 from harness import Fixture
+from metrics import pct
 
 PROMPTS = [
     "Explain in detail how a hash table handles collisions.",
@@ -46,12 +47,6 @@ PROMPTS = [
 STALL_S = 1.0          # a gap this long is a visible pause in the text
 
 
-def pct(xs, p):
-    if not xs:
-        return float("nan")
-    xs = sorted(xs)
-    k = max(0, min(len(xs) - 1, int(round((p / 100.0) * (len(xs) - 1)))))
-    return xs[k]
 
 
 def jain(xs):

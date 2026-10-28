@@ -4,7 +4,7 @@ Rationale: NOTES.md, config
 """
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 # KV cache element type.
