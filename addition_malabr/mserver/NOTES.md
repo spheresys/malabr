@@ -1563,6 +1563,35 @@ and both pay for a model load and calibration before one is turned
 away at the socket. And it must precede apply_cpu_ceiling, or the
 rejected start still spins up a systemd scope it will never use.
 
+### bg.js
+
+#### bg.js
+
+---- transcript persistence (section 2) --------------------------------
+chrome.storage.session, NOT storage.local: session storage is memory-backed
+and dies with the browser, which is what section 4's "nothing durable"
+rule requires. storage.local would write conversations to disk.
+
+The display copy must be keyed like the KV session it mirrors. It used to be
+keyed by ORIGIN alone ("malabr:" + location.origin, built in the content
+script), while the server keys by (extension, tab, origin). Two failures
+followed: a second tab on the same site, or a fresh tab, "restored" another
+tab's transcript that its own KV session had never seen -- the very
+display/model desync section 2 exists to prevent; and a CLOSED tab's
+transcript outlived it, reappearing in the next tab on that site even though
+TAB_CLOSED had wiped the conversation server-side.
+
+The content script cannot learn its own tab id, so bg.js builds the key from
+the message's `sender` (tab.id, origin) -- browser-attributed, like
+malabr_api.cc's identity -- and deletes a tab's keys on tabs.onRemoved.
+
+This also let storage.session go back to its default TRUSTED_CONTEXTS. The
+old design opened it to content scripts (setAccessLevel
+TRUSTED_AND_UNTRUSTED_CONTEXTS), so this extension's content script in ANY
+site's renderer could read EVERY site's transcripts; a compromised renderer
+for one site could read all of them. Now a content script can reach only the
+key its own sender maps to.
+
 ### content.js
 
 #### content.js (module)
@@ -1586,23 +1615,11 @@ conversation must all fit. At a worst-case ~3 chars/token that budget is
 ~5300 chars for the WHOLE prompt; 4000 for the page body leaves room for
 the wrapper, the question, and a few turns of history before compaction.
 
-#### content.js sessReady
-
----- transcript persistence (section 2) --------------------------------
-chrome.storage.session, NOT storage.local: session storage is memory-backed
-and dies with the browser, which is what section 4's "nothing durable"
-rule requires. storage.local would write conversations to disk.
-
-chrome.storage.session is gated to TRUSTED_CONTEXTS by default, i.e. NOT
-content scripts. bg.js opens it with setAccessLevel; until that lands the
-namespace is simply absent here, so a content script's first restore() can
-race the service worker's cold start. sessReady() waits for the namespace
-to appear (bounded), then read/write work normally.
-
 #### content.js restore
 
 Last 40 turns only: chrome.storage.session has a ~10MB quota shared by
-the whole extension, and a turn can carry a page-sized reply. Older
+the whole extension, and a turn can carry a page-sized reply. bg.js
+re-applies the cap (MAX_TURNS) so it holds whatever a sender claims. Older
 turns stop persisting across reloads; the server's KV still has them
 until compaction, so nothing the model knows is lost, only the display.
 

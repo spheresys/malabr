@@ -50,39 +50,28 @@
   $(".min").addEventListener("click", () => wrap.classList.add("min"));
   $(".pill").addEventListener("click", () => { wrap.classList.remove("min"); ta.focus(); });
 
-  // ---- transcript persistence (section 2) ------------------------...  [notes: content.js sessReady]
-  const KEY = "malabr:" + location.origin;
+  // ---- transcript persistence (section 2) ------------------------...  [notes: bg.js]
   let transcript = [];
 
-  // chrome.storage.session is gated to TRUSTED_CONTEXTS by default, i.e  [notes: content.js sessReady]
-  function sessReady(cb, tries) {
-    tries = tries || 0;
-    if (chrome.storage && chrome.storage.session) return cb(chrome.storage.session);
-    if (tries < 15) return setTimeout(() => sessReady(cb, tries + 1), 200);
-    console.warn("MALABR: chrome.storage.session never became available "
-                 + "(bg.js / setAccessLevel not applied?)");
-  }
-
+  // Stored by bg.js under a key IT derives from the sender  [notes: bg.js]
   function save() {
-    sessReady((s) => {
+    try {
       // Last 40 turns only  [notes: content.js restore]
-      try { s.set({ [KEY]: transcript.slice(-40) }); } catch (e) {}
-    });
+      chrome.runtime.sendMessage({ malabr: "save", transcript: transcript.slice(-40) },
+                                 () => void chrome.runtime.lastError);
+    } catch (e) {}
   }
   function restore() {
-    sessReady((s) => {
-      try {
-        s.get(KEY, (o) => {
-          if (chrome.runtime.lastError) return;
-          const saved = o && o[KEY];
-          if (!Array.isArray(saved) || !saved.length) return;
-          // The SERVER still holds this conversation after a reload  [notes: content.js esc]
-          saved.forEach((m) => render(m.who, m.text, m.think, m.meta));
-          transcript = saved;
-          note(log.lastElementChild || log, "restored after reload", "note");
-        });
-      } catch (e) {}
-    });
+    try {
+      chrome.runtime.sendMessage({ malabr: "restore" }, (saved) => {
+        if (chrome.runtime.lastError) return;
+        if (!Array.isArray(saved) || !saved.length) return;
+        // The SERVER still holds this conversation after a reload  [notes: content.js esc]
+        saved.forEach((m) => render(m.who, m.text, m.think, m.meta));
+        transcript = saved;
+        note(log.lastElementChild || log, "restored after reload", "note");
+      });
+    } catch (e) {}
   }
 
   // ---- markdown (small, injection-safe) --------------------------...  [notes: content.js esc]
