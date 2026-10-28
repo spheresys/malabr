@@ -37,10 +37,9 @@ declare -A TUNABLES=(
   # measured (phase1_design.md 14).
   [frame_read_timeout_seconds]="${FRAME_READ_TIMEOUT_SECONDS:-60}"
 
-  # --- future tunables, uncomment as the FeatureParams are added ---
-  # [round_latency_budget_ms]="${ROUND_LATENCY_BUDGET_MS:-50}"
-  # [max_consecutive_exclusions]="${MAX_CONSECUTIVE_EXCLUSIONS:-5}"
-  # [stale_visibility_timeout_ms]="${STALE_VISIBILITY_TIMEOUT_MS:-2000}"
+  # Scheduler constants (round budget, exclusion bound, stale-visibility
+  # timeout) are NOT FeatureParams: they live in mserver/malabr_service/
+  # scheduler.py, because the server owns scheduling. Edit them there.
 )
 
 FEATURE_NAME="MalabrTunables"
@@ -217,8 +216,15 @@ MALABR_SOURCES=(
   "${REPO_ROOT}/extensions/browser/api/malabr"
   "${REPO_ROOT}/extensions/common/api/malabr.idl"
   "${REPO_ROOT}/extensions/common/extension_features.cc"
+  "${REPO_ROOT}/extensions/common/extension_features.h"
+  "${REPO_ROOT}/extensions/common/api/_api_features.json"
+  "${REPO_ROOT}/extensions/common/api/_permission_features.json"
   "${REPO_ROOT}/chrome/browser/malabr_manager.cc"
   "${REPO_ROOT}/chrome/browser/malabr_manager.h"
+  # Where the manager is started/stopped, and where MalabrFeature is defined.
+  "${REPO_ROOT}/chrome/browser/chrome_browser_main.cc"
+  "${REPO_ROOT}/chrome/common/chrome_features.cc"
+  "${REPO_ROOT}/chrome/common/chrome_features.h"
 )
 newest_src=0
 for path in "${MALABR_SOURCES[@]}"; do
@@ -240,11 +246,15 @@ if (( newest_src > chrome_ts )); then
 fi
 
 # One line per run, so a measurement can always be traced back to its config.
+# The MALABR_* environment is recorded too: since the scheduler moved into the
+# server, most of the config that shapes a run is Python-side env, not
+# FeatureParams, and logging --enable-features alone would not reproduce it.
 {
-  printf '%s\t%s\t%s\n' \
+  printf '%s\t%s\t%s\t%s\n' \
     "$(date -Is)" \
     "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo nogit)" \
-    "${ENABLE_FEATURES}"
+    "${ENABLE_FEATURES}" \
+    "$(env | grep '^MALABR_' | sort | tr '\n' ' ')"
 } >> "$RUN_LOG"
 
 echo "recorded to ${RUN_LOG}"
