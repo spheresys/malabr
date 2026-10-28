@@ -542,6 +542,40 @@ prompt, rescued only after MAX_PREFILL_STALLS rounds by the aging
 path. One minimum chunk per round is the honest conservative
 behaviour, and matches what prefill_ms() charges.
 
+#### scheduler.SOLO_ROUND_BUDGET_MS
+
+Round budget when exactly ONE session has work.
+
+ROUND_LATENCY_BUDGET_MS exists for a single reason: to stop one session's
+round from delaying another's. With one contender there is no other session
+to protect, so the 50 ms cap is pure cost -- a long prompt gets sliced into
+many chunks and pays the per-call overhead on every one of them, which shows
+up directly as time-to-first-token for the one user who is waiting.
+
+It is not raised to infinity, because the budget has TWO other effects that
+nobody chose but everything relies on:
+
+  1. It bounds how long the engine can ignore the control channel. A round
+     that runs for seconds is a stop button that does nothing for seconds.
+  2. **It bounds how long a NEWLY ARRIVING session waits.** A batched round
+     cannot be preempted -- the sequences are fused into the same kernels --
+     so a second tab that submits while a solo round is in flight cannot be
+     admitted until that round ends. Measured (audit 3): a solo round admits
+     69 prefill tokens and costs ~247 ms, so at 250 ms the second tab waits
+     a quarter of a second, against the 50 ms bound section 7 states.
+
+Effect 2 is the binding one, and it argues DOWN: the penalty lands on a tab
+arriving into a busy machine, which is the exact case this project claims to
+be good at, while the benefit lands on the single-tab case, which is not what
+the thesis is about. 150 ms keeps most of the win (3x the fair budget, ~3x
+fewer prefill chunks) while keeping the worst-case arrival penalty near the
+threshold where a one-off delay stops being noticeable.
+
+ASSUMPTION, flagged for review: 150 is a judgement call on a continuous
+trade-off, not a measured optimum. The measurement that would settle it is
+end-to-end TTFT for a second tab arriving at a uniformly random point inside
+a solo round, swept over this constant.
+
 ### engine
 
 #### engine.(module)
@@ -887,6 +921,16 @@ shared-KV aggregate guard compacts IDLE sessions too, so its
 compact(keep_recent=False) last resort would drop that exchange and
 trip compact()'s corruption assert. Pin it back to the request
 boundary; _begin_turn / prefill completion set it afresh next turn.
+
+msg_index is the index of this turn's USER message, and getting it
+right is load-bearing: compaction deletes exactly two messages
+starting here. At this point `user_turn` has already appended the
+user message and `assistant_generated` below has NOT yet appended
+the reply, so the user message is the LAST element -- len()-1, not
+len(). With len() the deletion was offset by one and removed this
+turn's assistant reply plus the NEXT turn's user question, leaving a
+question paired with the wrong answer. Token counts still matched,
+which is why the length-based checks never caught it.
 
 ### runtime
 
@@ -1250,6 +1294,42 @@ computed value agrees with the document on reference hardware instead of
 exceeding it by 4x; raise it deliberately via MALABR_N_CTX on a machine with
 real headroom.
 
+#### config.KV_TYPE
+
+Why the KV cache defaults to f16 although q8_0 is available and buys ~1.9x the
+resident context per byte (56.8 KB/token vs 107 KB at f16). Recorded here
+because this is the only TRACKED place for it: `design_doc/` is untracked by
+design, so without this entry the measurement behind the default would survive
+on a fresh clone only as the comment above `KV_TYPE`.
+
+Measured with `tests/kv_quant_check.py` against the f16 next-token distribution
+at four probes, on both test models:
+
+               Qwen3-0.6B              gemma-3-1b (sliding-window attention)
+    q8_0       top-1 4/4  KL 0.0040    top-1 4/4  KL 0.0343
+    q4_0       top-1 2/4  KL 0.6278    top-1 3/4  KL 0.1421
+
+For scale, section 8 compaction costs KL 0.0017-0.0032 against a noise floor of
+~0.0002 (`tests/fidelity_check.py`).
+
+Three conclusions:
+  1. q4_0 changes the chosen token on a quarter to a half of probes. Not
+     offered: it is a footgun, not a tuning option.
+  2. The q8_0 cost is MODEL-DEPENDENT by about 10x -- comparable to one
+     compaction on Qwen, ten times that on gemma-3. A default that moves the
+     output distribution by a model-dependent amount would silently move every
+     fidelity and benchmark number measured afterwards.
+  3. q8_0 produces canary RECALL FALSE-NEGATIVES. Running the section 12 suite
+     under q8_0 failed test 28 -- not on isolation (KV positions were provably
+     intact) but because the session could not reproduce its OWN planted
+     canary. The suite proves isolation by checking a session does NOT recall
+     another's canary, so a lossy cache can make a leak test pass for the wrong
+     reason. The suite prints a warning banner when MALABR_KV_TYPE != f16.
+
+So q8_0 is opt-in (MALABR_KV_TYPE=q8_0), to be adopted per model only after
+running kv_quant_check.py against the model actually served, and never for runs
+that produce isolation evidence.
+
 #### config.compute_n_threads
 
 Setting one without the other is the nonlinear-loss regime measured in
@@ -1596,6 +1676,57 @@ content) or the conversation was cleared.
 Toggling the checkbox does NOT force a re-read: the page is already in the
 server's context, and only a real change to the page text (hashed in ask())
 or a "New chat" re-attaches it.
+
+#### content.js pageText
+
+---- page context: extract, then select ---------------------------------
+
+This used to be `body.innerText.slice(0, 4000)`. On a real page that keeps
+the nav, the cookie banner and the first half of the sidebar, and throws
+away the article -- the cap was being spent almost entirely on the wrong
+text. Two stages fix it, in this order for a reason:
+
+  1. EXTRACT (question-independent). Find the element that actually holds
+     the article. Deterministic, so the "send the page once per session"
+     cache still works: the same page yields the same text every turn.
+  2. SELECT (question-dependent, only if step 1 still overflows). Keep the
+     paragraphs that bear on what was asked. This DOES vary per question,
+     so it is hashed like any other page text and re-attached only when
+     the selection actually changes.
+
+What is deliberately NOT here is any attempt to compress or re-encode the
+text. A BPE tokenizer prices anything unlike natural language at several
+tokens per word, so "clever" encodings cost more context than they save.
+Summarisation is the only real next step, and it costs a generation.
+
+#### content.js textFrom
+
+Read text from the LIVE tree, block by block, rather than cloning and
+taking innerText of the clone.
+
+The clone is the trap: innerText is defined in terms of RENDERED text, and
+a detached node has no layout, so on a clone it quietly degrades to
+textContent -- which keeps the source file's line wrapping and collapses
+no whitespace. The result looks fine until something downstream tries to
+split it into paragraphs and gets one block per source line instead.
+
+Walking live elements also gives real paragraph boundaries for free: each
+block contributes one entry, joined by a blank line.
+
+#### content.js paint
+
+Painting is COALESCED PER FRAME, not done per token.
+
+Every repaint re-scans the whole reply (splitThink), re-parses all of it
+as markdown, and replaces the body's innerHTML. Doing that once per token
+makes the cost of a reply quadratic in its own length, and at decode rates
+most of those frames are never shown anyway -- the tokens arrive faster
+than the compositor paints.
+
+A background tab gets no animation frames at all, so a hidden panel stops
+re-rendering entirely. That is the right behaviour and not a lost update:
+onComplete flushes synchronously (flushPaint), so the finished reply is
+always fully rendered whether or not the tab was ever visible.
 
 #### content.js STYLES
 

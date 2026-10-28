@@ -198,25 +198,7 @@
     return h;
   }
 
-  // ---- page context: extract, then select ---------------------------------
-  //
-  // This used to be `body.innerText.slice(0, 4000)`. On a real page that keeps
-  // the nav, the cookie banner and the first half of the sidebar, and throws
-  // away the article -- the cap was being spent almost entirely on the wrong
-  // text. Two stages fix it, in this order for a reason:
-  //
-  //   1. EXTRACT (question-independent). Find the element that actually holds
-  //      the article. Deterministic, so the "send the page once per session"
-  //      cache still works: the same page yields the same text every turn.
-  //   2. SELECT (question-dependent, only if step 1 still overflows). Keep the
-  //      paragraphs that bear on what was asked. This DOES vary per question,
-  //      so it is hashed like any other page text and re-attached only when
-  //      the selection actually changes.
-  //
-  // What is deliberately NOT here is any attempt to compress or re-encode the
-  // text. A BPE tokenizer prices anything unlike natural language at several
-  // tokens per word, so "clever" encodings cost more context than they save.
-  // Summarisation is the only real next step, and it costs a generation.
+  // ---- page context: extract (question-independent), then select ----  [notes: content.js pageText]
 
   const DROP_SEL = "script,style,noscript,svg,canvas,iframe,nav,footer,header," +
                    "form,aside,[aria-hidden=true],[role=navigation]," +
@@ -272,17 +254,7 @@
 
   const BLOCK_SEL = "p,pre,blockquote,li,td,h1,h2,h3,h4,h5,h6";
 
-  // Read text from the LIVE tree, block by block, rather than cloning and
-  // taking innerText of the clone.
-  //
-  // The clone is the trap: innerText is defined in terms of RENDERED text, and
-  // a detached node has no layout, so on a clone it quietly degrades to
-  // textContent -- which keeps the source file's line wrapping and collapses
-  // no whitespace. The result looks fine until something downstream tries to
-  // split it into paragraphs and gets one block per source line instead.
-  //
-  // Walking live elements also gives real paragraph boundaries for free: each
-  // block contributes one entry, joined by a blank line.
+  // Read text from the LIVE tree; innerText on a detached clone has no layout.  [notes: content.js textFrom]
   function textFrom(root) {
     const out = [];
     root.querySelectorAll(BLOCK_SEL).forEach((el) => {
@@ -486,18 +458,7 @@
     return { think, body };
   }
 
-  // Painting is COALESCED PER FRAME, not done per token.
-  //
-  // Every repaint re-scans the whole reply (splitThink), re-parses all of it
-  // as markdown, and replaces the body's innerHTML. Doing that once per token
-  // makes the cost of a reply quadratic in its own length, and at decode rates
-  // most of those frames are never shown anyway -- the tokens arrive faster
-  // than the compositor paints.
-  //
-  // A background tab gets no animation frames at all, so a hidden panel stops
-  // re-rendering entirely. That is the right behaviour and not a lost update:
-  // onComplete flushes synchronously (flushPaint), so the finished reply is
-  // always fully rendered whether or not the tab was ever visible.
+  // Painting is coalesced per animation frame, not done per token.  [notes: content.js paint]
   function paint(s) {
     const { think, body } = splitThink(s.raw);
     if (think) {

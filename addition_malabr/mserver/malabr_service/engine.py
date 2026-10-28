@@ -588,15 +588,7 @@ class Engine:
                 reply = stripped
 
         # BOOKKEEPING FIRST -- before any emit that can raise OutboxFull o...  [notes: engine.Engine._finish_turn]
-        # msg_index is the index of this turn's USER message, and getting it
-        # right is load-bearing: compaction deletes exactly two messages
-        # starting here. At this point `user_turn` has already appended the
-        # user message and `assistant_generated` below has NOT yet appended
-        # the reply, so the user message is the LAST element -- len()-1, not
-        # len(). With len() the deletion was offset by one and removed this
-        # turn's assistant reply plus the NEXT turn's user question, leaving a
-        # question paired with the wrong answer. Token counts still matched,
-        # which is why the length-based checks never caught it.
+        # msg_index is this turn's USER message: len()-1, not len()  [notes: engine.Engine._finish_turn]
         s.turn_boundaries.append(
             Turn(s.pos_before_request, s.pos, "exchange",
                  len(s.formatter._messages) - 1))

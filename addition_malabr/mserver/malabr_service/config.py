@@ -7,37 +7,9 @@ import os
 from dataclasses import dataclass
 
 
-# KV cache element type.
-#
-# f16 is llama.cpp's default. q8_0 stores the same cache in roughly half the
-# bytes (8 bits plus one scale per 32 elements, ~1.06 bytes/element against
-# 2.0), which buys ~2x the resident context for the same RAM -- and resident
-# context is the scarce resource the whole of section 8 exists to ration.
-#
-# MEASURED before adopting (tests/kv_quant_check.py), against the f16
-# distribution at four probes, on BOTH test models:
-#
-#            Qwen3-0.6B              gemma-3-1b (SWA)
-#   q8_0     top-1 4/4  KL 0.0040    top-1 4/4  KL 0.0343
-#   q4_0     top-1 2/4  KL 0.6278    top-1 3/4  KL 0.1421
-#
-# Two conclusions, and the second is why the default below is f16:
-#
-#   1. q4_0 changes the chosen token on a quarter to a half of probes. It is a
-#      footgun, not a tuning option, and is not offered here.
-#   2. **The q8_0 cost is MODEL-DEPENDENT, by an order of magnitude.** On Qwen
-#      it is ~0.004 nats, comparable to what §8 compaction already costs
-#      (0.0017-0.0032 against a ~0.0002 noise floor) -- easy to accept. On
-#      gemma-3 it is ~0.034, roughly ten times compaction's cost. Top-1
-#      agreement held on both, so nothing is broken either way; but a default
-#      that silently moves the output distribution by a model-dependent amount
-#      would also silently move every fidelity and benchmark number measured
-#      afterwards.
-#
-# So q8_0 stays OPT-IN: set MALABR_KV_TYPE=q8_0 to take ~1.9x the resident
-# context per byte, having first run tests/kv_quant_check.py against the model
-# actually being served. Adopting it as the default is a judgement call that
-# belongs to whoever owns the research claims, not to a config file.
+# KV cache element type. f16 by default; q8_0 is opt-in (~1.9x context per
+# byte) because its fidelity cost is model-dependent by ~10x and it causes canary
+# recall false-negatives. q4_0 is not offered.  [notes: config.KV_TYPE]
 KV_TYPE = os.getenv("MALABR_KV_TYPE", "f16").lower()
 if KV_TYPE not in ("f16", "q8_0"):
     raise ValueError(f"MALABR_KV_TYPE must be f16 or q8_0, got {KV_TYPE!r}")
