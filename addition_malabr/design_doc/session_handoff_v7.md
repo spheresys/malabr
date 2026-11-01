@@ -159,7 +159,7 @@ There are three layers, and each owns one thing:
 - **Extension:** `addition_malabr/mserver/malabr_chat_extension/`
   (`content.js` is the panel; `bg.js` stores transcripts).
 - **Tests:**
-  - `mserver/tests/test_phase1.py` is the §12 suite, 68 tests. Run it in both
+  - `mserver/tests/test_phase1.py` is the §12 suite, 70 tests. Run it in both
     modes with `/home/chaitu/Desktop/vscode/malabr/bin/python`.
   - Measurement scripts: `fidelity_check.py`, `kv_quant_check.py`,
     `baseline_bench.py`, `pipeline_bench.py`, with shared maths in `metrics.py`.
@@ -169,6 +169,39 @@ There are three layers, and each owns one thing:
   - `test_page_context*.py` and `test_transcript_keys.py` are the browser tests.
 - **Launch:** `EXTENSION_DIR=addition_malabr/mserver/malabr_chat_extension
   addition_malabr/scripts/run_malabr.sh`
+
+### 2f. When a conversation ends
+
+Each conversation exists twice: the panel's transcript (what the user sees, in
+`chrome.storage.session`) and the model's memory (the KV session). They must
+end together. When they disagree, the server wins: the panel asks it
+(`status`) before redrawing a transcript.
+
+| What happens | Result | Status |
+|---|---|---|
+| Tab closed | both deleted | done (`TAB_CLOSED`; `bg.js` on `tabs.onRemoved`) |
+| Reload, or navigation within the same origin | both kept | done |
+| Tab hidden or frozen | both kept; lower scheduling priority | done |
+| Pass through another origin on the same site (a login at `accounts.bank.com`) | nothing deleted | done: deletion waits for a chat turn |
+| Leave for another site | both deleted at the navigation | rebuild (`TAB_NAVIGATED`). Today: deleted when you chat on the new site |
+| Chat on any other origin, same site or not | the tab's previous conversation is replaced | done (rule 1; `bg.js` mirrors it) |
+| Back/forward cache return | panel re-asks the server and clears if it's gone | done |
+| Server restart, crash or model switch | transcript dropped on the next load | done. Not noticed while the page stays open |
+| Tab discarded by the browser | model memory dropped, rebuilt from the transcript on return | rebuild, plus a re-prefill feature |
+
+- **Origin owns a conversation; site decides when you've left.** Origin is the
+  web's own security boundary and what the C++ already derives, so a sibling
+  origin never reads another's conversation. Site-level leaving avoids wiping
+  the chat on same-site login bounces. Chromium already has the public suffix
+  list (`net::SchemefulSite`), so the site check costs nothing in C++; the
+  extension never needs its own copy, because the transcript follows the
+  server through `status`.
+- **Known cost:** a login hosted on another site (Google, Microsoft, Okta)
+  counts as leaving and will wipe the conversation after the rebuild. Accepted
+  rather than a grace period or an allow-list of login providers.
+- **The back/forward-cache check stays after the rebuild.** `TAB_NAVIGATED`
+  clears the server and storage, not a frozen page's memory, which comes back
+  with the old chat still drawn.
 
 ---
 
@@ -249,16 +282,32 @@ trade-off.
   4. Scope `EXT_UNLOADED` to its profile.
   5. Check the socket peer's uid (`SO_PEERCRED`) before sending. For now the
      launcher's private socket directory and the server's check cover it.
+  6. `TAB_NAVIGATED`: delete both copies when a tab leaves for another site
+     (§2f).
+  7. Discarded tabs: drop the model memory, rebuild it from the transcript on
+     return (§2f). Also needs a server re-prefill feature.
+- **`a34926a`: socket moved to a private per-user directory** (finding 4 in
+  the audit). The launcher uses `$XDG_RUNTIME_DIR`; the server refuses shared
+  directories. Test 71.
+- **`a7ad62e`: transcript and model memory kept in step (§2f).**
+  - A `status` meta command: does the model still hold this tab's
+    conversation? Read-only. Test 03d.
+  - The panel redraws a saved transcript only on "yes", and asks again on a
+    back/forward-cache return.
+  - `bg.js` mirrors rule 1: a chat turn on a new origin deletes the tab's
+    other-origin transcripts, the same moment the server evicts them.
+    `test_transcript_keys.py` passes 13/13; the two new mirror checks fail
+    against the old `bg.js`.
 
 ---
 
 ## 5. Open items
 
 **Yours to do:**
-- **Push.** HEAD `e6ca683` has about 30 local commits; both remotes are still
-  at `06f636f`.
-- **Back up `design_doc/`.** It is gitignored and lives only on the flaky
-  external SSD.
+- **Push.** Both remotes are at `c0b16d4`; the commits after it are local
+  only.
+- `design_doc/` is tracked (force-added; still in `.gitignore`) and pushed,
+  except the conversation log, which stays local.
 - Add `usb-storage.quirks=152d:0578:u` to the kernel command line.
 - Run `fsck -f` on the SSD.
 

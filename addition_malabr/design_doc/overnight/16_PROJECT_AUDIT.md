@@ -184,7 +184,21 @@ needs an 8–9 h rebuild before it can be verified.
      `SO_PEERCRED` before sending.
 5. **`EXT_UNLOADED` isn't profile-scoped.** Disabling the extension in one
    profile also ends its sessions in another profile. Harmless, but imprecise.
-6. **Cosmetic:**
+6. **Transcript and model memory drift apart (fixed for now, 2026-11-01).**
+   - The panel assumed the server still held a conversation whenever it
+     redrew a saved transcript. It didn't after Back to an origin that rule 1
+     had evicted, after a back/forward-cache return, or after a server
+     restart, crash or model switch. The panel then showed a conversation the
+     model had forgotten.
+   - **Fixed without a rebuild:** a read-only `status` meta command; the
+     panel redraws only if the server holds the session, and re-asks on a
+     back/forward-cache return; `bg.js` mirrors rule 1 on chat turns. Tests
+     03d and `test_transcript_keys.py` (13/13).
+   - **Complete fix (rebuild):** `TAB_NAVIGATED`, so leaving for another site
+     deletes both copies at once; and discard handling that rebuilds model
+     memory from the transcript. The policy table is in
+     `session_handoff_v7.md` §2f.
+7. **Cosmetic:**
    - `mserver_uds.cc:292-294` still says opaque origins are sent as "null"
      (they are refused: design-doc correction #9).
    - The socket default is still named `malabr_v3.sck`.
