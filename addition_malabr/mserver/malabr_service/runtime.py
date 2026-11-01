@@ -421,6 +421,14 @@ class MalabrServer:
                                     "available": list_models(model_dir)})
             return
 
+        if command == "status":
+            # Does the model still hold this caller's conversation? Read-only,
+            # and handled here, before rule 1, so asking never evicts or
+            # creates anything.  [notes: runtime.MalabrServer._handle_meta]
+            self._reply_json(conn, {"ok": True,
+                                    "session": self._engine.has_session(env.session_key)})
+            return
+
         if command == "new":
             # §3: "New chat" is a FULL teardown -- KV cache, session object, a...  [notes: runtime.MalabrServer._handle_meta]
             ended = self._engine.cancel(env.session_key, "new chat")

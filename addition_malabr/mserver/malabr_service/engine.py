@@ -143,6 +143,13 @@ class Engine:
             self.control_connected = False
             self.control_lost_at = time.time()
 
+    def has_session(self, key):
+        """Whether `key` has a live session. Looks only: never creates one,
+        never touches another key.  [notes: runtime.MalabrServer._handle_meta]"""
+        with self._reg_lock:
+            s = self._sessions.get(key)
+            return s is not None and s.state != SessionState.DEAD
+
     def all_keys(self):
         with self._reg_lock:
             return [k for k, s in self._sessions.items()

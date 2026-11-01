@@ -1107,6 +1107,16 @@ only, §7); wait_for_teardown() then blocks this pool thread until
 the slot is actually released, so the panel's next generate()
 cannot be handed the old session -- and its context -- back.
 
+"status" answers one question: does this caller's (ext, tab, origin)
+still have a live session? It exists so the panel can stop guessing. A
+saved transcript says what the user SAW; only the server knows what the
+model still HOLDS, and the two part ways whenever the server drops a
+session without the panel watching -- rule 1 after the tab chatted on
+another origin, LIVE_TABS cleanup, a restart or crash, a model switch. The panel asks before redrawing a transcript and drops it if the
+answer is no. Read-only by construction: meta commands are dispatched
+before rule 1 and get_or_create, so asking never evicts or creates a
+session (engine.has_session only looks).
+
 Acknowledge BEFORE re-execing, so the panel gets a reply on this
 connection. The exec then replaces this whole process -- every
 session and its KV cache goes with it, which is the accepted cost
@@ -1612,6 +1622,18 @@ site's renderer could read EVERY site's transcripts; a compromised renderer
 for one site could read all of them. Now a content script can reach only the
 key its own sender maps to.
 
+Rule 1, mirrored. The server tears down a tab's other-origin sessions on the
+new origin's first CHAT request (engine.evict_other_origins), lazily, not on
+navigation. bg.js deletes the same tab's other-origin transcripts at the same
+moment: the save that accompanies a chat turn carries evictOtherOrigins. Other
+saves do not -- "New chat" and a dropped stale copy send no chat request, so
+the server evicts nothing and neither may the transcript store, or Back would
+show an empty panel over a conversation the model still holds (the reverse
+desync). Lazy on both sides is also what keeps a pass-through origin (a login
+bounce via accounts.example.com) from wiping anything. /bench sends chat
+requests without saving; the status check in content.js restore covers that
+and any other path the mirror misses.
+
 ### content.js
 
 #### content.js (module)
@@ -1643,12 +1665,27 @@ re-applies the cap (MAX_TURNS) so it holds whatever a sender claims. Older
 turns stop persisting across reloads; the server's KV still has them
 until compaction, so nothing the model knows is lost, only the display.
 
-#### content.js esc
+The server is the source of truth. A saved transcript is redrawn only after
+meta("status") says the model still holds this (ext, tab, origin) session;
+on "no" the copy is dropped. Before this the panel assumed the session
+survived any reload because its key does not change, and redrew transcripts
+the model had lost: after Back to an origin that rule 1 had since evicted,
+after a server restart or crash, after a model switch in another tab.
+  - no answer (server down, old server without "status"): redraw, marked
+    unconfirmed -- dropping on a transient failure would lose the display
+    for nothing.
+  - `restoring` holds off a send until the answer lands, so a new turn is
+    never drawn above the restored ones; "New chat" cancels a pending
+    restore.
+  - Back/forward cache: the page returns with this script's memory, panel
+    included, and restore() does not run. pageshow(persisted) asks again.
+    This stays needed after the TAB_NAVIGATED rebuild: that clears the
+    server and storage, not a frozen page's memory.
+Known gap: a server restart while the page stays open is not noticed until
+the next load or cache return; the next turn starts a fresh session under
+the old display.
 
-The SERVER still holds this conversation after a reload: the
-session key is (extension, tab, origin) and none of those change.
-Without restoring the display the model would remember what the
-user cannot see -- the desync section 2 exists to prevent.
+#### content.js esc
 
 ---- markdown (small, injection-safe) --------------------------------
 The model emits markdown heavily. This renders the common subset and

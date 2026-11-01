@@ -54,22 +54,45 @@
   let transcript = [];
 
   // Stored by bg.js under a key IT derives from the sender  [notes: bg.js]
-  function save() {
+  // evictOtherOrigins: only on a chat turn, the moment rule 1 runs on the server  [notes: bg.js]
+  function save(evictOtherOrigins) {
     try {
       // Last 40 turns only  [notes: content.js restore]
-      chrome.runtime.sendMessage({ malabr: "save", transcript: transcript.slice(-40) },
+      chrome.runtime.sendMessage({ malabr: "save", transcript: transcript.slice(-40),
+                                   evictOtherOrigins: !!evictOtherOrigins },
                                  () => void chrome.runtime.lastError);
     } catch (e) {}
   }
+
+  // true / false, or null when the server did not answer  [notes: content.js restore]
+  async function serverHolds() {
+    try { const r = await meta("status"); return r && r.ok ? !!r.session : null; }
+    catch (e) { return null; }
+  }
+
+  // The server is the source of truth: show a saved transcript only if the
+  // model still holds that conversation  [notes: content.js restore]
+  let restoring = false;
   function restore() {
     try {
-      chrome.runtime.sendMessage({ malabr: "restore" }, (saved) => {
+      chrome.runtime.sendMessage({ malabr: "restore" }, async (saved) => {
         if (chrome.runtime.lastError) return;
         if (!Array.isArray(saved) || !saved.length) return;
-        // The SERVER still holds this conversation after a reload  [notes: content.js esc]
+        restoring = true;
+        const held = await serverHolds();
+        if (!restoring) return;              // "New chat" was pressed meanwhile
+        restoring = false;
+        if (held === false) {
+          save();                            // drop the stale copy
+          note(log, "the previous conversation ended on the server, so it was not restored", "note");
+          return;
+        }
         saved.forEach((m) => render(m.who, m.text, m.think, m.meta));
         transcript = saved;
-        note(log.lastElementChild || log, "restored after reload", "note");
+        note(log.lastElementChild || log, held
+          ? "restored after reload"
+          : "restored, but the server did not answer — the model may not remember this",
+          held ? "note" : "err");
       });
     } catch (e) {}
   }
@@ -610,7 +633,7 @@
 
   function ask() {
     const typed = ta.value.trim();
-    if (!typed) return;
+    if (!typed || restoring) return;         // keep the text; restore lands first
     if (/^\/bench\b/.test(typed)) {
       // Same single-generation rule as a normal turn  [notes: content.js clear]
       if (inFlight || sending) return;
@@ -659,7 +682,7 @@
       c.className = "chip"; c.textContent = chip;
       you.insertBefore(c, you.firstChild);
     }
-    transcript.push({ who: "you", text: typed }); save();
+    transcript.push({ who: "you", text: typed }); save(true);
 
     const turn = render("malabr", "");
     setBusy(true);
@@ -694,7 +717,7 @@
     // §3: a real teardown, not a display clear  [notes: content.js STYLES]
     abandonLive();
     log.innerHTML = ""; transcript = []; save(); pageHash = null;
-    inFlight = null; sending = false;
+    inFlight = null; sending = false; restoring = false;
     let acked = false;
     try { const r = await meta("new"); acked = !!(r && r.ok); } catch (e) {}
     note(log, acked
@@ -704,6 +727,16 @@
   });
 
   restore();
+  // Back/forward cache: the page returns with this script's memory, panel
+  // included, and restore() does not run again  [notes: content.js restore]
+  window.addEventListener("pageshow", async (e) => {
+    if (!e.persisted || !transcript.length) return;
+    if (await serverHolds() !== false) return;
+    abandonLive();
+    log.innerHTML = ""; transcript = []; save(); pageHash = null;
+    inFlight = null; sending = false; setBusy(false);
+    note(log, "this conversation ended on the server while you were away", "note");
+  });
   // The server may still be loading its model when the panel appears...  [notes: content.js STYLES]
   (async function primeModels(tries) {
     for (let i = 0; i < tries; i++) {

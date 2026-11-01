@@ -15,6 +15,9 @@ actually wrong before (an origin-only key, opened to content scripts):
   3. another origin does not get it
   4. a reload does get it back
   5. closing the tab deletes it, and leaves other tabs' transcripts alone
+  6. rule 1, mirrored: passing through another origin deletes nothing; a
+     chat turn on another origin deletes the tab's old transcript, and only
+     that tab's (a save that is not a chat turn deletes nothing)
 """
 import http.server, json, os, shutil, socketserver, subprocess, sys, threading, time, urllib.request
 
@@ -95,12 +98,28 @@ class Tab:
             raise RuntimeError((d.get("exception") or {}).get("description") or d.get("text"))
         return r["result"].get("value")
 
-    def save(self, turns):
+    def save(self, turns, chat_turn=False):
+        evict = "true" if chat_turn else "false"
         return self.ev("new Promise(r => chrome.runtime.sendMessage("
-                       f"{{malabr: 'save', transcript: {json.dumps(turns)}}}, r))")
+                       f"{{malabr: 'save', transcript: {json.dumps(turns)}, "
+                       f"evictOtherOrigins: {evict}}}, r))")
+
+    def go(self, url):
+        self.ws.call("Page.navigate", {"url": url}); time.sleep(2.0)
+        self.ctx = self.find_ctx()
+        return self.ctx is not None
 
     def restore(self):
         return self.ev("new Promise(r => chrome.runtime.sendMessage({malabr: 'restore'}, r))")
+
+
+def sw_keys():
+    """Every transcript key, read from inside the service worker."""
+    sw = [x for x in jget("/json/list") if x["type"] == "service_worker"]
+    if not sw:
+        return None
+    return WS(sw[0]["webSocketDebuggerUrl"]).evaluate(
+        "chrome.storage.session.get(null).then(o => Object.keys(o))")
 
 
 def main():
@@ -150,13 +169,37 @@ def main():
         check("tab1 restores after reload",
               t1.ctx is not None and (t1.restore() or [{}])[0].get("text") == "t1 secret")
 
+        # Rule 1, mirrored, in a tab of its own (t4). The server evicts lazily,
+        # on the new origin's first chat turn; the transcript must too.
+        def count(origin_tail):
+            return len([k for k in (sw_keys() or []) if k.endswith(origin_tail)])
+        a_tail, b_tail = f"localhost:{HTTP}", f"127.0.0.1:{HTTP}"
+        t4 = Tab(b, A)
+        t4.save([{"who": "you", "text": "t4 on A"}], chat_turn=True)
+        check("chat turn with no other origin keeps the own key",
+              (t4.restore() or [{}])[0].get("text") == "t4 on A")
+        a_before, b_before = count(a_tail), count(b_tail)
+        nav = t4.go(B) and t4.go(A)
+        check("passing through another origin deletes nothing",
+              nav and (t4.restore() or [{}])[0].get("text") == "t4 on A")
+        t4.go(B)
+        t4.save([])                                   # e.g. "New chat": not a chat turn
+        check("a save that is not a chat turn evicts nothing",
+              count(a_tail) == a_before, f"{count(a_tail)} vs {a_before}")
+        t4.save([{"who": "you", "text": "t4 on B"}], chat_turn=True)
+        check("a chat turn on B deletes this tab's A transcript, no other tab's",
+              count(a_tail) == a_before - 1 and count(b_tail) == b_before + 1
+              and t2.restore() == [{"who": "you", "text": "t2 own"}],
+              f"A {a_before}->{count(a_tail)}, B {b_before}->{count(b_tail)}")
+        t4.go(A)
+        check("back on A, nothing to restore", t4.restore() is None)
+        b.call("Target.closeTarget", {"targetId": t4.tid}); time.sleep(1.0)
+
         b.call("Target.closeTarget", {"targetId": t1.tid}); time.sleep(1.5)
-        sw = [x for x in jget("/json/list") if x["type"] == "service_worker"]
-        if not sw:
+        keys = sw_keys()
+        if keys is None:
             check("service worker reachable to inspect keys", False)
             return 1
-        keys = WS(sw[0]["webSocketDebuggerUrl"]).evaluate(
-            "chrome.storage.session.get(null).then(o => Object.keys(o))")
         # Two localhost keys existed before the close (tab1, tab2).
         local = [k for k in keys if k.endswith(f"localhost:{HTTP}")]
         check("closing tab1 deleted its transcript", len(local) == 1, repr(keys))
