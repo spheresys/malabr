@@ -950,6 +950,26 @@ How long a handler waits for one frame before checking whether its session
 died underneath it. Bounds the "session torn down by another thread" case;
 the terminal frame normally arrives long before this.
 
+#### runtime.check_socket_dir
+
+The socket's chmod 0600 protects the SERVER's socket, but the browser connects
+to whatever is at MALABR_SOCKET_PATH without checking who is listening. The
+compiled-in default is /tmp/malabr_v3.sck, and /tmp is shared by every user. So
+another account could get there first: create a listening socket at that path
+(our unlink then fails on /tmp's sticky bit), or plant the pidfile with any
+live pid (PidLock counts a foreign pid as alive, so we exit 3). Either way the
+browser would send that account prompts and page text.
+
+Refusing any directory not owned by this user, or writable by group/other,
+closes both, because then only this user can create entries there. lstat, not
+stat, so a symlink to a private directory does not pass. It runs BEFORE the
+pidfile is read, or a planted pidfile would win first. run_malabr.sh points
+MALABR_SOCKET_PATH at $XDG_RUNTIME_DIR (/run/user/<uid>, 0700). A launch that
+leaves the /tmp default now fails closed (exit 4) instead of serving.
+
+The complete fix is browser-side: check the peer's uid with SO_PEERCRED before
+sending anything. That is C++, so it waits for a rebuild.
+
 #### runtime.PidLock
 
 The inherited code deleted a stale socket file before binding. That is safe

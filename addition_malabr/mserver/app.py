@@ -157,6 +157,8 @@ def main():
     model = ctx = engine = None
     lock = rt.PidLock(cfg.socket_path + ".pid")
     try:
+        # Before the pidfile is read: in a shared directory it may be planted.
+        rt.check_socket_dir(cfg.socket_path)
         # Take the single-instance lock FOR REAL, first thing  [notes: app.main]
         lock.acquire()
         apply_cpu_ceiling(cfg.cpu_max_cores)   # before anything heavy, calibration included
@@ -169,6 +171,11 @@ def main():
     except rt.SingleInstanceError as exc:
         print(f"malabr: {exc}; exiting", file=sys.stderr, flush=True)
         return 3
+    except rt.InsecureSocketDirError as exc:
+        print(f"malabr: {exc}; refusing to serve. Set MALABR_SOCKET_PATH to a "
+              f"path in a private directory (run_malabr.sh uses "
+              f"$XDG_RUNTIME_DIR).", file=sys.stderr, flush=True)
+        return 4
     finally:
         if engine is not None:
             engine.stop()

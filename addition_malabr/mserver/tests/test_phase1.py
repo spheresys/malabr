@@ -1686,6 +1686,60 @@ def t70_compaction_drops_whole_exchanges_not_halves():
                f"{[u[:14] for u in users]}")
 
 
+def t71_socket_dir_must_be_private():
+    """The server refuses a socket directory other users can write.
+
+    In a shared directory (/tmp) another account can create the socket or the
+    pidfile first; the browser does not check who listens, so it would hand
+    that account prompts and page text. The check must also run BEFORE the
+    pidfile is read: a planted live pidfile must yield "refuse" (4), not
+    "another instance is running" (3).
+    """
+    import tempfile
+    import subprocess
+    import app as _app
+
+    def refused(path):
+        try:
+            rt.check_socket_dir(path)
+            return False
+        except rt.InsecureSocketDirError:
+            return True
+
+    private = tempfile.mkdtemp()                      # 0700, ours
+    shared = tempfile.mkdtemp(); os.chmod(shared, 0o1777)
+    link = private + "-link"; os.symlink(private, link)
+    cases = {
+        "private dir accepted": not refused(os.path.join(private, "m.sock")),
+        "/tmp refused": refused("/tmp/malabr_v3.sck"),
+        "other-writable dir refused": refused(os.path.join(shared, "m.sock")),
+        "symlinked dir refused": refused(os.path.join(link, "m.sock")),
+        "missing dir refused": refused(os.path.join(private, "nope", "m.sock")),
+    }
+
+    sock = os.path.join(shared, "m.sock")
+    other = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+
+    class Cfg:
+        socket_path = sock
+        cpu_max_cores = 1.0
+    orig_cfg = _app.load_config
+    _app.load_config = lambda: Cfg()
+    try:
+        with open(sock + ".pid", "w") as fh:
+            fh.write(str(other.pid))                  # planted, live
+        rc = _app.main()
+    finally:
+        _app.load_config = orig_cfg
+        other.terminate(); other.wait()
+        os.unlink(link)
+    cases["main() refuses before reading a planted pidfile"] = rc == 4
+
+    bad = [k for k, v in cases.items() if not v]
+    record(71, "socket directory must not be writable by other users",
+           not bad, f"failed: {bad}" if bad else f"{len(cases)} cases")
+
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------

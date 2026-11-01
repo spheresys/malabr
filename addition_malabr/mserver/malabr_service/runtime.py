@@ -7,6 +7,7 @@ import json
 import os
 import signal
 import socket
+import stat
 import struct
 import sys
 import threading
@@ -34,6 +35,31 @@ OUTBOX_POLL_SECONDS = 0.25
 
 class SingleInstanceError(RuntimeError):
     pass
+
+
+class InsecureSocketDirError(RuntimeError):
+    pass
+
+
+def check_socket_dir(socket_path):
+    """Refuse a socket directory another user could plant files in.
+
+    Rationale: NOTES.md, runtime.check_socket_dir
+    """
+    d = os.path.dirname(os.path.abspath(socket_path))
+    try:
+        st = os.lstat(d)
+    except OSError as exc:
+        raise InsecureSocketDirError(f"socket directory {d}: {exc}") from exc
+    if not stat.S_ISDIR(st.st_mode):
+        raise InsecureSocketDirError(f"socket directory {d} is not a real directory")
+    if st.st_uid != os.getuid():
+        raise InsecureSocketDirError(
+            f"socket directory {d} is owned by uid {st.st_uid}, not this user")
+    if st.st_mode & 0o022:
+        raise InsecureSocketDirError(
+            f"socket directory {d} is writable by other users "
+            f"(mode {stat.S_IMODE(st.st_mode):o})")
 
 
 class PidLock:
@@ -207,6 +233,7 @@ class MalabrServer:
     # -- lifecycle ---------------------------------------------------------
 
     def start(self):
+        check_socket_dir(self._cfg.socket_path)   # before the pidfile is trusted
         self._lock.acquire()                # raises if another instance lives
         # Only now is it safe to clear the socket  [notes: runtime.MalabrServer.start]
         if os.path.exists(self._cfg.socket_path):

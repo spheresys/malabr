@@ -222,6 +222,8 @@ def load_config(base_dir=None):
         cpu_max_cores = float(cpu_max_env)
 
     return ServerConfig(
+        # Default matches the browser's compiled-in one, and is REFUSED by
+        # check_socket_dir (/tmp is shared)  [notes: runtime.check_socket_dir]
         socket_path=os.getenv("MALABR_SOCKET_PATH", "/tmp/malabr_v3.sck"),
         base_dir=root,
         model_dir=model_dir,

@@ -77,6 +77,25 @@ export MALABR_CPU_DUTY
 MALABR_CPU_MAX="${MALABR_CPU_MAX:-}"
 export MALABR_CPU_MAX
 
+# Socket location. NOT /tmp (the compiled-in default): /tmp is shared by every
+# user, so another account could create the socket or its pidfile first, and
+# the browser -- which does not check who is listening -- would send it prompts
+# and page text. $XDG_RUNTIME_DIR (/run/user/<uid>, mode 0700) only this user
+# can enter. Both the browser and the server read MALABR_SOCKET_PATH, and the
+# server refuses a directory other users can write (runtime.check_socket_dir).
+# No fallback to /tmp if the private directory is missing: that would quietly
+# reopen the hole.
+if [[ -z "${MALABR_SOCKET_PATH:-}" ]]; then
+  if [[ -z "${XDG_RUNTIME_DIR:-}" || ! -d "$XDG_RUNTIME_DIR" || ! -O "$XDG_RUNTIME_DIR" ]]; then
+    echo "ERROR: XDG_RUNTIME_DIR is unset, missing, or not owned by you" >&2
+    echo "       (got '${XDG_RUNTIME_DIR:-}'). Set MALABR_SOCKET_PATH to a file in" >&2
+    echo "       a directory only you can write, e.g. a 0700 directory in \$HOME." >&2
+    exit 1
+  fi
+  MALABR_SOCKET_PATH="${XDG_RUNTIME_DIR}/malabr.sck"
+fi
+export MALABR_SOCKET_PATH
+
 # Separate profile so experiments never disturb a real browsing profile, and
 # so a run can be reset by deleting one directory.
 USER_DATA_DIR="${USER_DATA_DIR:-/tmp/malabr-profile}"
@@ -152,6 +171,7 @@ CHROME_ARGS+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
 echo "MALABR launch config"
 echo "  chrome      : ${CHROME_BIN}"
 echo "  profile     : ${USER_DATA_DIR}"
+echo "  socket      : ${MALABR_SOCKET_PATH}"
 echo "  tunables    :"
 for key in "${!TUNABLES[@]}"; do
   printf '      %-32s = %s\n' "$key" "${TUNABLES[$key]}"
