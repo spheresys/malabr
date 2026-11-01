@@ -141,7 +141,7 @@ There are three layers, and each owns one thing:
 | A reused slot carries nothing over | Wipe-on-acquire (`seq_rm` then check `pos_max == -1`, else `SlotWipeError`) |
 | A closed tab's conversation is gone | `TAB_CLOSED`, with `LIVE_TABS` as backstop; since `e6ca683` the panel's copy too (§4) |
 | Nothing reaches disk | RAM only (KV cache, `chrome.storage.session`). The one exception is `calibration.json`, which holds timings, not text |
-| Other users on the machine | Socket is `chmod 0600` |
+| Other users on the machine | Socket in `$XDG_RUNTIME_DIR` (0700), `chmod 0600`; the server refuses a directory other users can write. The browser doesn't yet check who is listening (`SO_PEERCRED`, rebuild). |
 
 ### 2e. Code map
 
@@ -247,6 +247,8 @@ trade-off.
   2. Raise the abandon flag earlier, during prefill.
   3. Recompute foreground when a window is hidden or occluded.
   4. Scope `EXT_UNLOADED` to its profile.
+  5. Check the socket peer's uid (`SO_PEERCRED`) before sending. For now the
+     launcher's private socket directory and the server's check cover it.
 
 ---
 

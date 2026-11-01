@@ -139,7 +139,8 @@ needs an 8–9 h rebuild before it can be verified.
   - The duplicate-suppression after a handshake can't drop a real change,
     because messages are sequenced.
   - Moving a tab to another window is not treated as a close.
-- **Socket:** `chmod 0600`, and bound under a pid lock.
+- **Socket:** `chmod 0600`, and bound under a pid lock. But see finding 4:
+  that protects the server's socket, not the browser's choice of server.
 
 **Findings, ranked (all one-liners, but all need a rebuild):**
 1. **The server outlives a crashed browser.**
@@ -167,9 +168,23 @@ needs an 8–9 h rebuild before it can be verified.
    minimized without an activation change. The foreground tab can then stay
    "foreground" while hidden. Fix: a `WebContentsObserver::OnVisibilityChanged`
    on the active tab.
-4. **`EXT_UNLOADED` isn't profile-scoped.** Disabling the extension in one
+4. **No check of who is listening on the socket (fixed for now, 2026-11-01).**
+   - The browser connects to whatever is at `MALABR_SOCKET_PATH`, and the
+     default is `/tmp/malabr_v3.sck`. `/tmp` is shared by every user, so
+     another account could create the socket or its pidfile first. The browser
+     would then send that account prompts and page text.
+   - **Fixed without a rebuild:**
+     - `run_malabr.sh` puts the socket in `$XDG_RUNTIME_DIR` (0700) and stops
+       with an error rather than falling back to `/tmp`.
+     - The server refuses any socket directory that isn't its own or that
+       other users can write (`runtime.check_socket_dir`, checked before the
+       pidfile is read; exit 4). Test 71 covers it.
+     - Nothing else in the repo connects to the socket.
+   - **Complete fix (rebuild):** the browser checks the peer's uid with
+     `SO_PEERCRED` before sending.
+5. **`EXT_UNLOADED` isn't profile-scoped.** Disabling the extension in one
    profile also ends its sessions in another profile. Harmless, but imprecise.
-5. **Cosmetic:**
+6. **Cosmetic:**
    - `mserver_uds.cc:292-294` still says opaque origins are sent as "null"
      (they are refused: design-doc correction #9).
    - The socket default is still named `malabr_v3.sck`.
