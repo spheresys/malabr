@@ -190,10 +190,12 @@ needs an 8–9 h rebuild before it can be verified.
      had evicted, after a back/forward-cache return, or after a server
      restart, crash or model switch. The panel then showed a conversation the
      model had forgotten.
-   - **Fixed without a rebuild:** a read-only `status` meta command; the
-     panel redraws only if the server holds the session, and re-asks on a
-     back/forward-cache return; `bg.js` mirrors rule 1 on chat turns. Tests
-     03d and `test_transcript_keys.py` (13/13).
+   - **Fixed without a rebuild:** a read-only `status` meta command that
+     returns the conversation's id; the panel redraws only on a matching id,
+     re-asks on a back/forward-cache return, and learns the id after each
+     reply, so a server restart mid-page is caught too; `bg.js` mirrors rule
+     1 on chat turns. Tests 03d, `test_transcript_keys.py` (14/14) and
+     `test_panel_status.py` (test 72, by hand).
    - **Complete fix (rebuild):** `TAB_NAVIGATED`, so leaving for another site
      deletes both copies at once; and discard handling that rebuilds model
      memory from the transcript. The policy table is in

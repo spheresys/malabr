@@ -167,6 +167,7 @@ There are three layers, and each owns one thing:
   - `addition_malabr/scripts/run_malabr.sh` is the launcher.
   - `chrome_rq*.py` and `nano_*.py` form the Chrome Prompt API harness.
   - `test_page_context*.py` and `test_transcript_keys.py` are the browser tests.
+    `test_panel_status.py` runs the whole stack (§12 test 72, by hand).
 - **Launch:** `EXTENSION_DIR=addition_malabr/mserver/malabr_chat_extension
   addition_malabr/scripts/run_malabr.sh`
 
@@ -174,8 +175,9 @@ There are three layers, and each owns one thing:
 
 Each conversation exists twice: the panel's transcript (what the user sees, in
 `chrome.storage.session`) and the model's memory (the KV session). They must
-end together. When they disagree, the server wins: the panel asks it
-(`status`) before redrawing a transcript.
+end together. When they disagree, the server wins: `status` returns the id of
+the conversation the server holds, and the panel keeps its transcript only
+while the ids match. A reload is the common case: same id, the chat continues.
 
 | What happens | Result | Status |
 |---|---|---|
@@ -186,8 +188,8 @@ end together. When they disagree, the server wins: the panel asks it
 | Leave for another site | both deleted at the navigation | rebuild (`TAB_NAVIGATED`). Today: deleted when you chat on the new site |
 | Chat on any other origin, same site or not | the tab's previous conversation is replaced | done (rule 1; `bg.js` mirrors it) |
 | Back/forward cache return | panel re-asks the server and clears if it's gone | done |
-| Server restart, crash or model switch | transcript dropped on the next load | done. Not noticed while the page stays open |
-| Tab discarded by the browser | model memory dropped, rebuilt from the transcript on return | rebuild, plus a re-prefill feature |
+| Server restart, crash or model switch | fresh conversation, new id; the panel drops what the model lost, on the next load or after the next reply | done |
+| Tab discarded by the browser | model memory dropped, rebuilt from the transcript on return; same conversation, same id | rebuild, plus a re-prefill feature |
 
 - **Origin owns a conversation; site decides when you've left.** Origin is the
   web's own security boundary and what the C++ already derives, so a sibling
@@ -285,7 +287,9 @@ trade-off.
   6. `TAB_NAVIGATED`: delete both copies when a tab leaves for another site
      (§2f).
   7. Discarded tabs: drop the model memory, rebuild it from the transcript on
-     return (§2f). Also needs a server re-prefill feature.
+     return (§2f), keeping the conversation id. Also needs a server re-prefill
+     feature, and the server should remember a discarded session's id so a
+     rebuild request is checked, not trusted.
 - **`a34926a`: socket moved to a private per-user directory** (finding 4 in
   the audit). The launcher uses `$XDG_RUNTIME_DIR`; the server refuses shared
   directories. Test 71.
@@ -298,6 +302,11 @@ trade-off.
     other-origin transcripts, the same moment the server evicts them.
     `test_transcript_keys.py` passes 13/13; the two new mirror checks fail
     against the old `bg.js`.
+- **`c09ad8e`: conversation ids.** `status` names the conversation (a random id
+  per session), so a restart mid-page is caught: the panel learns the id after
+  each reply and keeps only what the new server holds. Test 03d (7 cases);
+  `test_transcript_keys.py` 14/14; test 72 run by hand with
+  `scripts/test_panel_status.py` (6/6, back/forward-cache path exercised).
 
 ---
 
