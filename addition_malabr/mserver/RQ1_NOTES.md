@@ -313,12 +313,12 @@ has left** (the second half arrives with the rebuild).
 ### 4c. §12 suite (`tests/test_phase1.py`)
 
 Last run, 2026-11-02, 18 declared browser-only skips in each mode:
-partitioned 75/75; shared KV 74/75. The one failure is test 47, an RQ2
-compaction test outside this chapter: its pass condition compares absolute
-end positions, and under shared KV the two runs it compares start at
-different positions (510 vs 496). Both freed 382 tokens; batch did it in 1
-call against 5. It passed in the earlier shared-KV run that day. It had
-never run in shared-KV mode before (the env-var mix-up above). See §5, L11.
+partitioned 75/75; shared KV 74/75. The one failure was test 47, an RQ2
+compaction test: its pass condition compared absolute end positions, and its
+two runs can start at different positions (510 vs 496; seen in both modes).
+Both freed 382 tokens; batch did it in 1 call against 5. Fixed the same day
+to compare tokens freed; it then passed once partitioned and twice under
+shared KV.
 
 | # | Plants | Asks | Pass | Last detail |
 |---|---|---|---|---|
@@ -396,9 +396,6 @@ Declared browser-only skips that matter for RQ1: 16, 36, 39, 60, and 61
 - **L10. Other tests with the old question.** The compaction tests (04, 09,
   47, 53; RQ2) still use the guarded question, so their "the model can't
   recall dropped content" checks may share the trap.
-- **L11. Test 47 is flaky under shared KV** (RQ2): it compares absolute end
-  positions of two runs that can start at different positions. Comparing
-  the tokens freed instead would test what it means to decide.
 
 ---
 

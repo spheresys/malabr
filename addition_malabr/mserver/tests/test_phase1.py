@@ -1718,11 +1718,13 @@ def t47_incremental_vs_batch_eviction():
     # shared KV, where the aggregate guard compacts on its own schedule and
     # the two runs can diverge. So assert the decision criterion instead of
     # bitwise sameness: both strategies must actually reclaim, and batch must
-    # get there in no more calls than incremental. That is what picks a
-    # default, and it is stable in both modes.
+    # reclaim as much in no more calls. That is what picks a default, and it
+    # is stable in both modes. Compared as tokens FREED, not end positions:
+    # the two runs can start at different positions (510 vs 496, seen in both
+    # modes), and then their end positions differ by the same amount.
     ok = (batch["freed"] > 0 and incr["freed"] > 0
           and batch["calls"] <= incr["calls"]
-          and batch["after"] <= incr["after"])
+          and batch["freed"] >= incr["freed"])
     record(47, "incremental vs batch eviction compared, not assumed", ok,
            f"batch {batch['before']}->{batch['after']} freed {batch['freed']} "
            f"in {batch['calls']} call(s), {batch['turns']} turns left | "
