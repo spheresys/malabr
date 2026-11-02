@@ -159,8 +159,11 @@ There are three layers, and each owns one thing:
 - **Extension:** `addition_malabr/mserver/malabr_chat_extension/`
   (`content.js` is the panel; `bg.js` stores transcripts).
 - **Tests:**
-  - `mserver/tests/test_phase1.py` is the §12 suite, 70 tests. Run it in both
-    modes with `/home/chaitu/Desktop/vscode/malabr/bin/python`.
+  - `mserver/tests/test_phase1.py` is the §12 suite, 75 tests. Run it with
+    `/home/chaitu/Desktop/vscode/malabr/bin/python`, once plain and once with
+    `MALABR_TEST_SHARED_KV=1` (the suite ignores `MALABR_SHARED_KV`).
+  - `mserver/tests/negative_control.py` measures whether the canary method
+    catches real leaks (broken engines, fresh secrets). `RQ1_NOTES.md` §4.
   - Measurement scripts: `fidelity_check.py`, `kv_quant_check.py`,
     `baseline_bench.py`, `pipeline_bench.py`, with shared maths in `metrics.py`.
 - **Scripts:**
@@ -278,12 +281,15 @@ trade-off.
     `scripts/test_transcript_keys.py` passes 8/8.
 - **C++ audited for the first time, read-only.** It is sound. Ranked fixes that
   each need the 8–9 h rebuild:
-  1. Set `kill_on_parent_death`, so the server dies with a crashed browser.
+  1. ~~Set `kill_on_parent_death`~~ Done without a rebuild: the server arms
+     `PR_SET_PDEATHSIG` itself (`f44a4d5` below). The C++ flag would be a second
+     layer.
   2. Raise the abandon flag earlier, during prefill.
   3. Recompute foreground when a window is hidden or occluded.
   4. Scope `EXT_UNLOADED` to its profile.
-  5. Check the socket peer's uid (`SO_PEERCRED`) before sending. For now the
-     launcher's private socket directory and the server's check cover it.
+  5. Check the server before sending: compare the socket peer's **pid**
+     (`SO_PEERCRED`) with the server process the browser launched. A uid
+     check would pass for any program running as this user.
   6. `TAB_NAVIGATED`: delete both copies when a tab leaves for another site
      (§2f).
   7. Discarded tabs: drop the model memory, rebuild it from the transcript on
@@ -307,13 +313,37 @@ trade-off.
   each reply and keeps only what the new server holds. Test 03d (7 cases);
   `test_transcript_keys.py` 14/14; test 72 run by hand with
   `scripts/test_panel_status.py` (6/6, back/forward-cache path exercised).
+- **`f44a4d5`: RQ1 evidence made honest, and the server locked to its browser.**
+  `mserver/RQ1_NOTES.md` has the details.
+  - **The canary method was mostly blind.** The leak question's "say UNKNOWN"
+    escape hatch made the holder fail to recall 19 of 20 fresh secrets, so
+    real leaks were being missed. Now: a direct question, detection on six
+    random digits, a probability score as a second detector, and a negative
+    control (deliberately broken engines). Holder recall 20/20, leaks
+    caught 120/120 by both detectors, 0/60 false alarms, at f16, q8_0, and f16
+    with shared KV.
+  - **q8_0 did not cause recall failures;** the question did. The NOTES and
+    the suite banner are corrected.
+  - **Tests:** 5 now really shares forward passes; 2 checks the wipe; 1, 2,
+    3 and 5 have positive controls; new 73 (same tab, new origin), 74
+    (negative control), 75 (peer check), 76 (parent death), 77 (shutdown
+    under repeated SIGTERM).
+  - **Server:** accepts only its parent process (the browser), with a loud
+    opt-out for hand-started servers; dies with the browser; SIGTERM no
+    longer deadlocks (2 hangs in 7 real crashes before, 0 in 11 after).
+  - **Earlier "both modes" suite runs were partitioned twice** (wrong env
+    var). Fixed. Now: partitioned 75/75; shared KV 74/75, the failure being
+    test 47 (RQ2), which compares absolute end positions of two runs that
+    can start at different positions under shared KV. Not changed; see
+    `RQ1_NOTES.md` §5, L11.
+  - Chrome re-run with the direct question and a fresh secret: 5/5.
 
 ---
 
 ## 5. Open items
 
 **Yours to do:**
-- **Push.** Both remotes are at `c0b16d4`; the commits after it are local
+- **Push.** Both remotes are at `4cd7463`; the commits after it are local
   only.
 - `design_doc/` is tracked (force-added; still in `.gitignore`) and pushed,
   except the conversation log, which stays local.

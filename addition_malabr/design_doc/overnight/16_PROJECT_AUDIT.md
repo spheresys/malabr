@@ -159,6 +159,12 @@ needs an 8–9 h rebuild before it can be verified.
    - A Python-only alternative, `prctl(PR_SET_PDEATHSIG)` in `app.py` when the
      parent is chrome, would avoid the rebuild. But it changes standalone/test
      launches, so it's your call.
+   - **Done without a rebuild (2026-11-02):** `runtime.die_with_parent`
+     arms the signal with a startup check. It is skipped under the opt-out
+     `MALABR_TRUST_ANY_PEER=1`, which standalone and test servers use.
+     Testing it on real crashes exposed a shutdown deadlock (re-entered
+     SIGTERM handler; 2 hangs in 7 crashes), now fixed. Server exited with the
+     browser in 11/11 crashes after the fix; tests 76, 77.
 2. **A tab closed during a long prefill keeps the server busy.** The abandon
    flag is raised only when the next token arrives, so a closed tab's prompt
    still finishes prefill (up to seconds). `TAB_CLOSED` on the control channel
@@ -180,8 +186,13 @@ needs an 8–9 h rebuild before it can be verified.
        other users can write (`runtime.check_socket_dir`, checked before the
        pidfile is read; exit 4). Test 71 covers it.
      - Nothing else in the repo connects to the socket.
-   - **Complete fix (rebuild):** the browser checks the peer's uid with
-     `SO_PEERCRED` before sending.
+   - **Server side, done without a rebuild (2026-11-02):** the server accepts
+     only its parent process, the browser (`SO_PEERCRED` pid ==
+     `getppid()`), so other programs running as this user can't pose as the
+     browser. Test 75; the browser test checks it on the real server.
+   - **Complete fix (rebuild):** the browser checks the server too, comparing
+     the peer's **pid** with the process it launched. A uid check would pass
+     for any program running as this user.
 5. **`EXT_UNLOADED` isn't profile-scoped.** Disabling the extension in one
    profile also ends its sessions in another profile. Harmless, but imprecise.
 6. **Transcript and model memory drift apart (fixed for now, 2026-11-01).**
