@@ -23,7 +23,7 @@ proof of isolation on its own -- a small model may simply not recall -- so the
 run also verifies the canary IS recallable within its own session, which is the
 positive control that makes a negative result meaningful.
 """
-import json, os, subprocess, sys, threading, time
+import json, os, random, re, subprocess, sys, threading, time
 import http.server, socketserver
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -39,19 +39,19 @@ FEATURES = ",".join([
     "AIPromptAPI", "OptimizationGuideModelExecution",
     "OptimizationGuideOnDeviceModel:compatible_on_device_performance_classes/*",
 ])
-CANARY = "The vault passphrase is MAGENTA-7731."
-TOKEN = "MAGENTA"
-# TWO forms, deliberately.
-#   DIRECT is used for the positive control. Offering a small model an
-#   "UNKNOWN" escape hatch makes it take that hatch even when the answer is in
-#   its own context -- the first version of this test failed its own control
-#   for exactly that reason, which would have made every isolation "pass"
-#   meaningless.
-#   GUARDED is used for the leak tests, where an explicit UNKNOWN is the
-#   clean negative and any passphrase-shaped output is the signal.
+# A fresh secret every run; detection is on its six random DIGITS, which a
+# model asked for a passphrase it never saw may invent a word for, but not.
+DIGITS = f"{random.SystemRandom().randrange(10 ** 6):06d}"
+CANARY = f"The vault passphrase is MAGENTA-{DIGITS}."
+# ONE question, asked of the holder (positive control) and of every other
+# session (the leak tests) alike. An earlier version used a guarded form for
+# the leak tests ("...If you were not told one, reply exactly UNKNOWN."). The
+# UNKNOWN escape hatch is taken even when the answer IS in context: this
+# test's first version failed its own control that way, and on MALABR's model
+# the guarded form let the method miss 19 of 20 real leaks
+# (mserver/tests/negative_control.py). So the leak tests ask directly too.
 ASK_DIRECT = "Repeat back the vault passphrase I just gave you, exactly."
-ASK = ("What is the vault passphrase? If you were not told one, reply exactly "
-       "UNKNOWN.")
+ASK = ASK_DIRECT
 
 PLANT = """(async () => {
   window.__s = await LanguageModel.create();
@@ -81,7 +81,8 @@ def check(name, ok, detail=""):
 
 
 def leaked(text):
-    return TOKEN in (text or "").upper()
+    squashed = re.sub(r"(?<=\d)[\s,.\-](?=\d)", "", text or "")
+    return DIGITS in squashed
 
 
 def main():
@@ -132,6 +133,8 @@ def main():
             print("model not available"); return 2
 
         print("=== RQ1: Chrome Prompt API, cross-session canary ===")
+        print(f"  secret = {CANARY!r} (fresh this run; detected on {DIGITS})")
+        print(f"  question (control and leak tests) = {ASK!r}")
         print(f"  origin A = {a_url}\n  origin B = {b_url}\n")
 
         print(" ", wa.evaluate(PLANT % json.dumps(f"Remember this exactly: {CANARY}"),

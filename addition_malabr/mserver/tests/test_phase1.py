@@ -24,8 +24,10 @@ from malabr_service import protocol as pr
 from malabr_service import runtime as rt
 from malabr_service.config import MIN_N_CTX
 
-from harness import (CANARY, DECODE_CURVE, Fixture, PREFILL_CURVE, ask, drive,
-                     recalls_canary)
+from harness import (CANARY, DECODE_CURVE, Fixture, LEAK_QUESTION, LEAK_SCORE_THRESHOLD,
+                     LEAK_VARIANTS,
+                     PREFILL_CURVE, ask, drive, leak_trial, recalls_canary,
+                     text_of)
 
 RESULTS = []
 FIX = None
@@ -52,27 +54,36 @@ def t01_cross_session_alive():
     for k in (ka, kb):
         e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 40)]))
     ask(e, ka, f"Remember this exactly: {CANARY}")
-    out = ask(e, kb, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    own = ask(e, ka, LEAK_QUESTION)            # positive control: A can recall it
+    out = ask(e, kb, LEAK_QUESTION)
     record(1, "cross-session, both alive: A's canary never reaches B",
-           not recalls_canary(out), f"B said: {(out or '')[:70]!r}")
-
+           recalls_canary(own) and not recalls_canary(out),
+           f"A recalls={recalls_canary(own)} B said: {(out or '')[:60]!r}")
 
 def t02_post_teardown_slot_reuse():
     alloc, e = FIX.new_engine()
     ka = key(tab=1)
     s, _ = e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 40)]))
     ask(e, ka, f"Remember this exactly: {CANARY}")
+    own = ask(e, ka, LEAK_QUESTION)            # positive control
     slot = s.slot
     e.cancel(ka, "teardown"); e._step()
     kc = key(tab=3, origin="https://c.test")
     s2, _ = e.get_or_create(kc, FIX.formatter, eng.OutputCap([(0, 40)]))
     reused = s2.slot == slot
-    e._step()                                   # engine-thread prepare() runs
-    residue = C.llama_memory_seq_pos_max(FIX.mem, s2.slot)
-    out = ask(e, kc, "What is the vault passphrase? If you do not know, say UNKNOWN.")
-    record(2, "post-teardown slot reuse: no residue from the previous session",
-           not recalls_canary(out) and residue <= 0 or not recalls_canary(out),
-           f"slot_reused={reused} pos_max_at_reuse={residue}")
+    # Still A's cells: acquire only FLAGS the slot. The wipe runs on the
+    # engine thread just before the first token (engine.py, _run_round) --
+    # done here directly, so the slot can be inspected between the two.
+    before = C.llama_memory_seq_pos_max(FIX.mem, s2.slot)
+    e._alloc.prepare(s2.slot)
+    after = C.llama_memory_seq_pos_max(FIX.mem, s2.slot)
+    out = ask(e, kc, LEAK_QUESTION)
+    record(2, "post-teardown slot reuse: the wipe empties the slot, no canary",
+           recalls_canary(own) and reused and before >= 0 and after == -1
+           and not recalls_canary(out),
+           f"A recalls={recalls_canary(own)} slot_reused={reused} "
+           f"pos_max {before} -> {after} C said: {(out or '')[:40]!r}")
+
 
 
 def t03_new_chat():
@@ -80,12 +91,14 @@ def t03_new_chat():
     ka = key(tab=1)
     e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 40)]))
     ask(e, ka, f"Remember this exactly: {CANARY}")
+    own = ask(e, ka, LEAK_QUESTION)            # positive control
     # "New chat" is a real teardown-and-reacquire (section 3), not a display clear.
     e.cancel(ka, "new chat"); e._step()
     e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 40)]))
-    out = ask(e, ka, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, ka, LEAK_QUESTION)
     record(3, "'new chat' is a real teardown, not a display clear",
-           not recalls_canary(out), f"said: {(out or '')[:70]!r}")
+           recalls_canary(own) and not recalls_canary(out),
+           f"before: recalls={recalls_canary(own)}; after: {(out or '')[:60]!r}")
 
 
 class _MetaCfg:                      # only model_path is read on these paths
@@ -95,22 +108,32 @@ class _MetaCfg:                      # only model_path is read on these paths
 
 
 class _FakeConn:
-    def __init__(self): self.buf = bytearray()
+    def __init__(self, data=b""):
+        self.buf = bytearray()
+        self._in = bytearray(data)
     def sendall(self, b): self.buf.extend(b)
+    def recv(self, n):
+        out = bytes(self._in[:n]); del self._in[:n]
+        return out
     def close(self): pass
+
+
+def _parse_frames(buf):
+    import struct as _struct
+    frames, off = [], 0
+    while off + 5 <= len(buf):
+        ft, ln = _struct.unpack(">BI", buf[off:off + 5]); off += 5
+        frames.append((ft, bytes(buf[off:off + ln]).decode())); off += ln
+    return frames
 
 
 def _meta_reply(srv, k, command):
     """Run one meta command as session key `k`; return (reply, terminal frames)."""
     import json as _json
-    import struct as _struct
     conn = _FakeConn()
     srv._handle_meta(conn, pr.ClientEnvelope("generate", k[0], k[1], k[2], "visible", 0),
                      command)
-    frames, off = [], 0
-    while off + 5 <= len(conn.buf):
-        ft, ln = _struct.unpack(">BI", conn.buf[off:off + 5]); off += 5
-        frames.append((ft, bytes(conn.buf[off:off + ln]).decode())); off += ln
+    frames = _parse_frames(conn.buf)
     payload = "".join(p for ft, p in frames if ft == eng.FRAME_TOKEN)
     terminal = [ft for ft, _ in frames if ft in (eng.FRAME_COMPLETE, eng.FRAME_ERROR)]
     return _json.loads(payload or "{}"), terminal
@@ -144,7 +167,7 @@ def t03c_new_chat_rides_the_meta_channel_to_a_real_teardown():
     gone = ka not in e._sessions or e._sessions[ka].state == eng.SessionState.DEAD
     # a fresh session on the same key does not see the canary
     e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 40)]))
-    out = ask(e, ka, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, ka, LEAK_QUESTION)
     record("03c", "'new chat' meta command performs the §3 teardown",
            reply.get("ok") is True and reply.get("ended") is True
            and terminal == [eng.FRAME_COMPLETE] and gone and not recalls_canary(out),
@@ -274,28 +297,49 @@ def t04_compaction_fidelity():
 
 
 def t05_batched_isolation():
-    """Batching is a STRONGER isolation test: two sessions' tokens sit in one
-    forward pass, so a seq_id tagging bug shows up immediately."""
+    """Two sessions in the SAME forward passes, both asked for A's canary at
+    once: A must answer, B must not, and the rounds must really be shared.
+
+    The round budget is lifted for this test only. Under the measured cost
+    table two decodes never fit one 50 ms round, and this test used to pass
+    without ever sharing one. Only scheduling changes: every forward pass is
+    the real llama_decode, and sharing is counted from the batches it gets."""
     alloc, e = FIX.new_engine()
     ka, kb = key(tab=1), key(tab=2, origin="https://b.test")
-    for k in (ka, kb):
-        e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 30)]))
+    sa, _ = e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 40)]))
+    sb, _ = e.get_or_create(kb, FIX.formatter, eng.OutputCap([(0, 40)]))
     ask(e, ka, f"Remember this exactly: {CANARY}")
-    # Drive both concurrently so they share rounds.
-    ob_a = e.submit(ka, "Say READY.")
-    ob_b = e.submit(kb, "Say READY.")
-    shared = 0
-    for _ in range(200):
-        with e._reg_lock:
-            sess = list(e._sessions.values())
-        picks, pre, _ = eng.build_batch(sess, e.cost_curve, e.foreground_tab_id)
-        if len(picks) + len(pre) > 1:
-            shared += 1
-        if not e._step():
-            break
-    out = ask(e, kb, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+
+    real_bb, real_decode = eng.build_batch, e._decode_batch
+    seqs = []
+    def counting_decode(items):
+        seqs.append({seq for _, _, seq, _ in items})
+        return real_decode(items)
+    eng.build_batch = lambda ss, cc, fg: real_bb(ss, cc, fg, budget_ms=1e6,
+                                                 solo_budget_ms=1e6)
+    e._decode_batch = counting_decode
+    frames = {ka: [], kb: []}
+    try:
+        boxes = {ka: e.submit(ka, LEAK_QUESTION), kb: e.submit(kb, LEAK_QUESTION)}
+        done = set()
+        for _ in range(400):
+            e._step()
+            for k, ob in boxes.items():
+                while not ob.empty():
+                    f = ob.get_nowait(); frames[k].append(f)
+                    if f[0] in (eng.FRAME_COMPLETE, eng.FRAME_ERROR):
+                        done.add(k)
+            if len(done) == 2:
+                break
+    finally:
+        eng.build_batch = real_bb
+        del e._decode_batch
+    shared = sum(1 for q in seqs if {sa.slot, sb.slot} <= q)
+    a_out, b_out = text_of(frames[ka]), text_of(frames[kb])
     record(5, "batched rounds: no cross-session leak when sharing a forward pass",
-           not recalls_canary(out), f"shared_rounds={shared} said={(out or '')[:50]!r}")
+           shared > 0 and recalls_canary(a_out) and not recalls_canary(b_out),
+           f"shared_rounds={shared}/{len(seqs)} A recalls={recalls_canary(a_out)} "
+           f"B said={b_out[:40]!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -449,7 +493,7 @@ def t12_single_flight_no_kv_pollution():
         old_frames.append(ob_old.get_nowait())
     superseded = any(f[0] == eng.FRAME_ERROR and f[1] == "superseded" for f in old_frames)
     drive(e, ob_new)
-    out = ask(e, k, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, k, LEAK_QUESTION)
     record(12, "single-flight replace: superseded, rolled back, canary intact",
            superseded and recalls_canary(out),
            f"superseded={superseded} pos_clean={pos_clean}")
@@ -597,7 +641,7 @@ def t28_compaction_bug_containment():
     # Deliberately wrong range on A -- far wider than anything A owns.
     C.llama_memory_seq_rm(FIX.mem, sa.slot, 0, 100000)
     b_after = C.llama_memory_seq_pos_max(FIX.mem, sb.slot)
-    out = ask(e, kb, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, kb, LEAK_QUESTION)
     record(28, "a wrong compaction range on one session cannot touch another",
            b_after == b_pos - 1 and recalls_canary(out),
            f"B pos_max {b_after} (expected {b_pos-1})")
@@ -1786,6 +1830,232 @@ def t71_socket_dir_must_be_private():
            not bad, f"failed: {bad}" if bad else f"{len(cases)} cases")
 
 
+def t73_rule1_through_the_server():
+    """The server half of skip 61: same tab, new origin. Driven through
+    MalabrServer.handle_generate with the engine thread running, so rule 1
+    runs exactly as in production."""
+    alloc, e = FIX.new_engine()
+    srv = rt.MalabrServer(_MetaCfg(), e, FIX.formatter, eng.OutputCap([(0, 40)]))
+    ext, a, b = "a" * 32, "https://a.test", "https://b.test"
+
+    def gen(origin, text):
+        data = text.encode()
+        conn = _FakeConn(data)
+        srv.handle_generate(conn, pr.ClientEnvelope(
+            pr.ROUTE_GENERATE, ext, 1, origin, "foreground", len(data)))
+        return "".join(p for ft, p in _parse_frames(conn.buf) if ft == eng.FRAME_TOKEN)
+
+    e.start()
+    try:
+        gen(a, f"Remember this exactly: {CANARY}")
+        own = gen(a, LEAK_QUESTION)                    # positive control
+        out = gen(b, LEAK_QUESTION)
+        a_gone = e.conversation_id((ext, 1, a)) is None
+    finally:
+        e.stop()
+    record(73, "same tab, new origin: rule 1 evicts, the new origin sees nothing",
+           recalls_canary(own) and a_gone and not recalls_canary(out),
+           f"A recalls={recalls_canary(own)} A evicted={a_gone} B said={out[:40]!r}")
+
+
+def t74_canary_method_catches_a_broken_engine():
+    """The negative control for every canary test above: on a deliberately
+    broken engine the same method MUST report a leak, or its "no leak"
+    results mean nothing. Both detectors: the reply (digits repeated) and the
+    model's probability of the digits (harness.secret_logprob). Miss rates
+    over fresh secrets, f16 vs q8_0: tests/negative_control.py."""
+    res = {v: leak_trial(FIX, v, score=True) for v in LEAK_VARIANTS}
+    hi = {v: r["score"] > LEAK_SCORE_THRESHOLD for v, r in res.items()}
+    ok = (all(r["control"] for r in res.values())
+          and not res["correct"]["leaked"] and not hi["correct"]
+          and all(res[v]["leaked"] and hi[v] for v in ("stale_slot", "shared_sequence")))
+    record(74, "negative control: both detectors catch both broken engines",
+           ok, "  ".join(f"{v}: control={r['control']} leaked={r['leaked']} "
+                         f"score={r['score']:.2f}" for v, r in res.items()))
+
+
+def t75_only_the_launching_process_may_connect():
+    """L4: the server refuses every peer but the process that started it
+    (SO_PEERCRED pid == getppid), over a real socket. The opt-out lets anyone
+    in and must say so loudly."""
+    import contextlib
+    import io
+    import socket as _socket
+    import struct as _struct
+    import tempfile
+
+    def make(env_value):
+        d = tempfile.mkdtemp()
+        class Cfg(_MetaCfg):
+            socket_path = os.path.join(d, "m.sck")
+        srv = rt.MalabrServer(Cfg(), FIX.new_engine()[1], FIX.formatter,
+                              eng.OutputCap(), lock=rt.PidLock(Cfg.socket_path + ".pid"))
+        saved = os.environ.pop(rt.TRUST_ANY_PEER_ENV, None)
+        if env_value:
+            os.environ[rt.TRUST_ANY_PEER_ENV] = env_value
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err):
+                srv.start()
+        finally:
+            os.environ.pop(rt.TRUST_ANY_PEER_ENV, None)
+            if saved is not None:
+                os.environ[rt.TRUST_ANY_PEER_ENV] = saved
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        return srv, Cfg.socket_path, err.getvalue()
+
+    def status(path):
+        body = (rt.META_PREFIX + "status").encode()
+        hdr = f"{pr.ROUTE_GENERATE},{'a' * 32},1,https://a.test,foreground,{len(body)}".encode()
+        c = _socket.socket(_socket.AF_UNIX); c.settimeout(5)
+        buf = b""
+        try:
+            c.connect(path)
+            c.sendall(_struct.pack(">I", len(hdr)) + hdr + body)
+            while True:
+                chunk = c.recv(4096)
+                if not chunk:
+                    break
+                buf += chunk
+        except OSError:
+            pass
+        finally:
+            c.close()
+        return buf
+
+    srv, path, log = make(None)
+    try:
+        expected = srv._expected_peer
+        refused = status(path) == b""                  # we are not its parent
+        srv._expected_peer = os.getpid()
+        accepted = b'"ok": true' in status(path)
+    finally:
+        srv.stop()
+    srv2, path2, log2 = make("1")
+    try:
+        anyone = b'"ok": true' in status(path2)
+    finally:
+        srv2.stop()
+    cases = {
+        "expects its parent": expected == os.getppid(),
+        "another process is refused": refused,
+        "the expected process is served": accepted,
+        "opt-out lets anyone in": anyone,
+        "opt-out warns loudly": "peer check is OFF" in log2 and rt.TRUST_ANY_PEER_ENV in log2,
+    }
+    bad = [k for k, v in cases.items() if not v]
+    record(75, "only the process that launched the server may connect",
+           not bad, f"failed: {bad}" if bad else f"{len(cases)} cases")
+
+
+def t76_server_dies_with_its_parent():
+    """Rebuild fix 1 without the rebuild: PR_SET_PDEATHSIG, armed then checked.
+    A child that armed it must die when its parent exits; a child whose
+    parent is already gone at startup must refuse to run."""
+    import subprocess
+    import textwrap
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    child = textwrap.dedent(f"""
+        import os, sys, time
+        sys.path.insert(0, {here!r})
+        from malabr_service import runtime as rt
+        rt.die_with_parent(os.getppid())
+        print("armed", flush=True)
+        time.sleep(60)
+    """)
+    parent = textwrap.dedent(f"""
+        import subprocess, sys
+        c = subprocess.Popen([sys.executable, "-c", {child!r}], stdout=subprocess.PIPE,
+                             stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+        ok = c.stdout.readline().strip() == "armed"
+        print(c.pid if ok else -1, flush=True)
+    """)                                    # ...and exits, orphaning the child
+    out = subprocess.run([sys.executable, "-c", parent], capture_output=True,
+                         text=True, timeout=60).stdout.strip()
+    pid = int(out or -1)
+
+    def alive(p):
+        try:
+            with open(f"/proc/{p}/status") as fh:
+                return "\tZ" not in [l for l in fh if l.startswith("State:")][0]
+        except OSError:
+            return False
+    died = False
+    if pid > 0:
+        for _ in range(50):
+            if not alive(pid):
+                died = True
+                break
+            time.sleep(0.1)
+        if not died:
+            os.kill(pid, 9)
+    late = subprocess.run([sys.executable, "-c", textwrap.dedent(f"""
+        import os, sys
+        sys.path.insert(0, {here!r})
+        from malabr_service import runtime as rt
+        try:
+            rt.die_with_parent(os.getppid() + 1)   # "the parent we started with" is gone
+        except rt.ParentGoneError:
+            print("refused")
+    """)], capture_output=True, text=True, timeout=60).stdout.strip()
+    record(76, "the server dies with its parent, and refuses to start orphaned",
+           pid > 0 and died and late == "refused",
+           f"child armed={pid > 0} died_with_parent={died} startup_check={late!r}")
+
+
+def t77_repeated_sigterm_still_exits():
+    """A browser crash delivers SIGTERM several times in a row (once per
+    re-parenting). The old handler re-entered itself inside server.stop() and
+    deadlocked on the thread pool's lock -- 2 hangs in 7 real crashes. Here
+    the server receives SIGTERM, twice, while its own thread holds that lock:
+    the exact state of the captured hang, made deterministic. It must exit
+    and remove its socket; the old handler hangs (verified)."""
+    import subprocess
+    import tempfile
+    import textwrap
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sock = os.path.join(tempfile.mkdtemp(), "m.sck")
+    child = textwrap.dedent(f"""
+        import os, signal, sys
+        sys.path.insert(0, {here!r})
+        os.environ["MALABR_TRUST_ANY_PEER"] = "1"
+        from malabr_service import runtime as rt
+        class Cfg:
+            socket_path = {sock!r}
+            model_dir = "/m"
+            model_path = "/m/x.gguf"
+        class Engine:
+            pass
+        real_serve = rt.MalabrServer.serve_forever
+        def serve_forever(self):
+            with self._pool._shutdown_lock:          # as inside pool.shutdown()
+                os.kill(os.getpid(), signal.SIGTERM)
+                os.kill(os.getpid(), signal.SIGTERM)
+                for _ in range(10000):                # handlers run in here
+                    pass
+            real_serve(self)
+        rt.MalabrServer.serve_forever = serve_forever
+        rt.run_server(config=Cfg(), engine=Engine(), formatter_factory=None,
+                      output_cap=None, lock=rt.PidLock({sock!r} + ".pid"))
+    """)
+    p = subprocess.Popen([sys.executable, "-c", child], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+    try:
+        p.wait(timeout=20)
+        exited = True
+    except subprocess.TimeoutExpired:
+        p.kill(); p.wait()
+        exited = False
+    clean = exited and not os.path.exists(sock)
+    for f in (sock, sock + ".pid"):
+        try:
+            os.unlink(f)
+        except OSError:
+            pass
+    record(77, "SIGTERM while holding the pool lock: the server still exits",
+           clean, f"exited={exited} socket_removed={clean}")
+
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------
@@ -1807,7 +2077,7 @@ BROWSER_ONLY = [
     (51, "control connection reused, not reopened per push"),
     (57, "control-connection resync pushes foreground on reconnect"),
     (60, "navigation mid-generation rolls back without desyncing"),
-    (61, "cross-origin navigation does not leak conversation"),
+    (61, "cross-origin navigation does not leak conversation (server half: test 73)"),
     (72, "panel redraws a saved transcript only if 'status' names the same "
          "conversation; re-asks on a back/forward-cache return and after each "
          "reply (scripts/test_panel_status.py, run by hand)"),
@@ -1819,16 +2089,17 @@ def main():
     print("=== MALABR Phase 1 -- section 12 suite ===\n")
     _kv = os.getenv("MALABR_KV_TYPE", "f16").lower()
     if _kv != "f16":
-        # Not a style preference. This suite proves ISOLATION by checking that
-        # a session does NOT recall another session's canary. A lossy KV cache
-        # degrades recall in general, so a session can fail to recall a canary
-        # it legitimately holds -- measured on Qwen3-0.6B under q8_0, where a
-        # session could not reproduce its OWN planted canary while its KV
-        # positions were provably intact. Under that condition a leak test can
-        # pass for the wrong reason, and a passing run is no longer evidence.
-        print(f"  !! MALABR_KV_TYPE={_kv}: canary results are NOT isolation")
-        print( "  !! evidence in this mode -- a lossy cache produces recall")
-        print( "  !! false-negatives. Use f16 for anything you intend to cite.\n")
+        # This suite proves ISOLATION by checking that a session does NOT
+        # recall another session's canary, which is evidence only while the
+        # holder CAN recall it. A lossy cache could break that. Measured: with
+        # the direct leak question, q8_0 kept holder recall at 20/20 and
+        # caught 20/20 broken-engine leaks (tests/negative_control.py), and
+        # the earlier q8_0 failure of test 28 came from the old guarded
+        # question. That is one model; for a different model or KV type, run
+        # negative_control.py first. Cited isolation evidence is f16.
+        print(f"  !! MALABR_KV_TYPE={_kv}: isolation evidence is cited at f16.")
+        print( "  !! Before trusting canary results at this KV type, check the")
+        print( "  !! method still catches leaks: tests/negative_control.py.\n")
     FIX = Fixture()
     try:
         for fn in sorted([f for n, f in globals().items()

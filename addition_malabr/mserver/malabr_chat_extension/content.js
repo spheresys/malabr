@@ -92,7 +92,9 @@
       transcript = transcript.slice(Math.max(0, lastYou));
       abandonLive();
       log.innerHTML = "";
-      note(log, "the server restarted — earlier messages are no longer in the model's memory", "err");
+      // The id changed: the model lost the earlier turns. A restart is one
+      // cause, a server-side reset another, so the note names neither.
+      note(log, "the model no longer has the earlier messages in this chat — only the latest exchange is kept", "err");
       transcript.forEach((m) => render(m.who, m.text, m.think, m.meta));
     }
     convId = st.id;

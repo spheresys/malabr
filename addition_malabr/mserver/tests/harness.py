@@ -9,7 +9,9 @@ be deterministic pass/fail. The user-facing path uses SAMPLING_CHAT and must
 not silently inherit this.
 """
 
+import math
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,6 +33,9 @@ PREFILL_CURVE = [[32, 279.0], [512, 195.0]]
 
 CANARY = "The vault passphrase is MAGENTA-7731."
 CANARY_TOKEN = "MAGENTA"
+# Detection is on the DIGITS: a model asked for a passphrase it was never given
+# may invent a word, but not this number.
+CANARY_DIGITS = "7731"
 
 
 class Fixture:
@@ -127,6 +132,118 @@ def ask(engine, key, prompt, limit=400):
     return text_of(drive(engine, outbox, limit=limit))
 
 
-def recalls_canary(text):
-    """Yes/no, never a score (section 12's framing)."""
-    return CANARY_TOKEN.lower() in (text or "").lower()
+def recalls_canary(text, digits=CANARY_DIGITS):
+    """Yes/no, never a score (section 12's framing). True if the secret's
+    digits appear, allowing the separators a model puts between digits
+    ("77 31", "7,731")."""
+    squashed = re.sub(r"(?<=\d)[\s,.\-](?=\d)", "", text or "")
+    return digits in squashed
+
+
+# The question every leak test asks, of the holder (positive control) and of
+# the other session (the leak check) alike. DIRECT on purpose: the old guarded
+# form, "...If you do not know, say UNKNOWN.", offers an escape hatch that
+# Qwen3-0.6B takes even when the answer is in its own context -- with it the
+# holder recalled 1 of 20 fresh canaries, so the method missed 19 of 20 real
+# leaks (tests/negative_control.py). Chrome's test found the same.
+LEAK_QUESTION = "Repeat back the vault passphrase I gave you, exactly."
+
+# Distinctive words for fresh secrets; the digits carry the detection.
+CANARY_WORDS = ["MAGENTA", "PELICAN", "OBSIDIAN", "JUNIPER", "TANGERINE",
+                "FALCON", "QUARTZ", "LAVENDER", "CINNABAR", "WALRUS",
+                "SAFFRON", "HARPOON", "GLACIER", "MARIGOLD", "TOPAZ",
+                "BADGER", "CRIMSON", "ORCHID", "COBALT", "MACKEREL"]
+
+
+def fresh_secret(rng):
+    """A newly generated secret: a word and six random digits. Greedy
+    decoding makes one secret one data point, so trials vary the secret."""
+    digits = f"{rng.randrange(10 ** 6):06d}"
+    return f"The vault passphrase is {rng.choice(CANARY_WORDS)}-{digits}.", digits
+
+
+LEAK_VARIANTS = ("correct", "stale_slot", "shared_sequence")
+
+# Second detector's threshold, fixed before any run: the mean probability per
+# digit at least 1/2 -- the model more likely than not to produce each digit.
+# A session that never saw the secret should sit near 1/10 per digit.
+LEAK_SCORE_THRESHOLD = math.log(0.5)
+
+
+def secret_logprob(fix, e, s, text, digits):
+    """The probability-based detector: mean log-probability per token of the
+    secret's digits as session `s`'s answer to LEAK_QUESTION, teacher-forced
+    after "The vault passphrase is WORD-". Reads the model's belief directly,
+    so it does not depend on what the model chooses to say. Leaves the
+    session's KV and formatter exactly as found."""
+    import numpy as np
+    if s.slot in e._alloc.pending_wipe:
+        e._alloc.prepare(s.slot)                  # as before any first token
+    cp = s.formatter.checkpoint()
+    start = s.pos
+    try:
+        question = s.formatter.user_turn(LEAK_QUESTION)
+        prefix = text[:text.index(digits)]
+        pre = s.formatter._tokenize(prefix, parse_special=False)
+        full = s.formatter._tokenize(prefix + digits, parse_special=False)
+        if full[:len(pre)] != pre:                # tokenizer merged across the seam
+            pre = []
+        target = full[len(pre):]
+        toks = question + full
+        e._decode_batch([(t, start + i, s.slot, True) for i, t in enumerate(toks)])
+        n_vocab = C.llama_vocab_n_tokens(fix.vocab)
+        total = 0.0
+        first = len(question) + len(pre)
+        for j, tok in enumerate(target):
+            row = np.ctypeslib.as_array(
+                C.llama_get_logits_ith(fix.ctx, first + j - 1), shape=(n_vocab,))
+            m = float(row.max())
+            total += float(row[tok]) - (m + math.log(float(np.exp(row - m).sum())))
+        return total / len(target)
+    finally:
+        C.llama_memory_seq_rm(fix.mem, s.slot, start, -1)
+        s.formatter.restore(cp)
+
+
+def leak_trial(fix, variant, text=CANARY, digits=CANARY_DIGITS, cap=40, score=False):
+    """Plant a canary in session A, check A recalls it, then ask session B --
+    on the real engine, or on a DELIBERATELY BROKEN one.
+
+    correct          A torn down; B gets A's slot, wiped as usual. Must not leak.
+    stale_slot       Same, but the wipe is skipped and B carries on at the
+                     slot's next position, as a bug that forgot the wipe would.
+                     (Starting B at position 0 instead is refused by llama.cpp
+                     itself: positions in a sequence must be consecutive.)
+    shared_sequence  A stays alive and B is handed A's sequence, as a bug
+                     that mapped two keys to one slot would.
+
+    Returns {"control", "leaked", "said", "reused", "score"}. The canary
+    test works only if it reports a leak for both broken variants. With
+    score=True, "score" is secret_logprob() for B, measured before B answers.
+    """
+    alloc, e = fix.new_engine()
+    ka = ("a" * 32, 1, "https://a.test")
+    kb = ("a" * 32, 2, "https://b.test")
+    sa, _ = e.get_or_create(ka, fix.formatter, eng.OutputCap([(0, cap)]))
+    ask(e, ka, f"Remember this exactly: {text}")
+    control = recalls_canary(ask(e, ka, LEAK_QUESTION), digits)
+    reused = None
+    if variant in ("correct", "stale_slot"):
+        slot = sa.slot
+        e.cancel(ka, "trial teardown"); e._step()
+        if variant == "stale_slot":
+            alloc._wipe_and_verify = lambda _slot: None          # THE BUG
+        sb, _ = e.get_or_create(kb, fix.formatter, eng.OutputCap([(0, cap)]))
+        reused = sb.slot == slot
+        if variant == "stale_slot":
+            sb.pos = C.llama_memory_seq_pos_max(fix.mem, sb.slot) + 1
+    elif variant == "shared_sequence":
+        sb, _ = e.get_or_create(kb, fix.formatter, eng.OutputCap([(0, cap)]))
+        sb.slot, sb.pos = sa.slot, sa.pos                          # THE BUG
+        reused = True
+    else:
+        raise ValueError(variant)
+    lp = secret_logprob(fix, e, sb, text, digits) if score else None
+    said = ask(e, kb, LEAK_QUESTION) or ""
+    return {"control": control, "leaked": recalls_canary(said, digits),
+            "said": said, "reused": reused, "score": lp}

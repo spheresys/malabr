@@ -967,8 +967,90 @@ pidfile is read, or a planted pidfile would win first. run_malabr.sh points
 MALABR_SOCKET_PATH at $XDG_RUNTIME_DIR (/run/user/<uid>, 0700). A launch that
 leaves the /tmp default now fails closed (exit 4) instead of serving.
 
-The complete fix is browser-side: check the peer's uid with SO_PEERCRED before
-sending anything. That is C++, so it waits for a rebuild.
+The complete fix is browser-side: check the peer with SO_PEERCRED before
+sending anything. That is C++, so it waits for a rebuild. Compare the peer's
+PID with the server process the browser launched, not its uid: every program
+running as this user has the same uid.
+
+#### runtime.MalabrServer._peer_allowed
+
+The server trusts the header: whoever connects names the (extension, tab,
+origin) and gets that conversation. The private socket keeps other USERS out,
+but any program running as this user could connect, claim any tab and origin
+and read the conversation back, take over the control channel (ControlReader
+replaces the previous connection), or switch the model under every tab.
+
+Only the browser should ever connect, and the browser is this server's parent:
+MalabrManager launches it (chrome_browser_main.cc -> malabr_manager.cc
+LaunchProcess), and every MALABR connection -- generate, stop, control -- is
+opened by the browser process itself. So the check is exact and needs no
+rebuild: the kernel's record of the connecting process (SO_PEERCRED, taken at
+connect time) must equal os.getppid() as of start(). A model switch keeps it
+valid: os.execv keeps both the pid and the parent. The uid is checked as well,
+though mode 0600 already rules out other users.
+
+What it does not stop: a program that kills the server and listens in its
+place. The browser does not check who it is talking to (rebuild fix 5).
+
+MALABR_TRUST_ANY_PEER=1 turns the check off, for a server started by hand or
+by a test, whose parent is not the browser. It prints a banner on start,
+because with it on, the protection above is gone. The browser tests set it only
+for the server they restart themselves.
+
+Tests: 75 (real socket: a non-parent refused, the parent served, the opt-out
+open and loud); the browser test checks that a non-browser program is refused
+by the browser's own server.
+
+#### runtime.die_with_parent
+
+The server must exit with the browser that launched it. Before this, after a
+browser crash the server lived on with every conversation in RAM. The next
+browser's server found its lock taken and exited, and the new browser silently
+reused the orphan. With the peer check that reuse would fail anyway (wrong
+parent), so dying with the parent is required, not optional.
+
+prctl(PR_SET_PDEATHSIG, SIGTERM) makes the kernel signal this process when its
+parent dies. SIGTERM runs run_server's shutdown, which unlinks the socket and
+releases the lock (before the server loop starts, the default action just
+ends the process). The signal is tied to the THREAD that forked us; the
+browser launches the server from its main thread, which lives as long as the
+browser. It survives execve, and the re-exec arms it again anyway.
+
+Arm, then check: app.py records getppid() before its slow imports; after
+arming, a different parent (or pid 1) means the parent died before the signal
+could cover it, so the server refuses to start (exit 5). From arming onward a
+death is signalled, and before it the comparison catches it, so there is no
+gap. The window left is the interpreter's own startup before app.py's first
+lines.
+
+Not armed under MALABR_TRUST_ANY_PEER: the parent is then a shell or a test
+script, and tying the server's life to it would surprise whoever started it.
+Such a server is stopped by hand.
+
+This is rebuild fix 1 (kill_on_parent_death) without the rebuild. Test 76
+(a child dies with its parent; a late start is refused); the browser test
+SIGKILLs the browser and checks the server exits.
+
+#### runtime.run_server
+
+Shutting down on SIGTERM must work however many times the signal arrives.
+It arrives more than once on a browser crash: the parent-death signal is sent
+each time the server is re-parented, and it is re-parented once per browser
+thread that dies before it lands on init. The old handler called
+server.stop() and raised; a second SIGTERM re-entered it inside stop(), and
+the nested pool.shutdown() waited forever for the lock its outer copy held.
+Measured: 2 hangs in 7 real browser crashes, with faulthandler stacks showing
+three nested handlers blocked in concurrent.futures' shutdown.
+
+Now the handler runs once, ignores further SIGTERM/SIGINT, does no cleanup,
+and only raises SystemExit. Cleanup is the `finally` after serve_forever,
+outside any handler, so it can never sit inside a lock the interrupted code
+holds. app.py then leaves with os._exit() once main() has released
+everything: interpreter shutdown joins pool threads, and one could still be
+streaming to a browser that no longer exists.
+
+Tests: 77 (a burst of SIGTERMs; the server exits and removes its socket);
+the browser crash check, repeated.
 
 #### runtime.PidLock
 
@@ -1360,16 +1442,20 @@ Three conclusions:
      compaction on Qwen, ten times that on gemma-3. A default that moves the
      output distribution by a model-dependent amount would silently move every
      fidelity and benchmark number measured afterwards.
-  3. q8_0 produces canary RECALL FALSE-NEGATIVES. Running the section 12 suite
-     under q8_0 failed test 28 -- not on isolation (KV positions were provably
-     intact) but because the session could not reproduce its OWN planted
-     canary. The suite proves isolation by checking a session does NOT recall
-     another's canary, so a lossy cache can make a leak test pass for the wrong
-     reason. The suite prints a warning banner when MALABR_KV_TYPE != f16.
+  3. CORRECTED 2026-11-02. This said q8_0 produces canary recall false-
+     negatives: under q8_0 test 28 failed because a session could not
+     reproduce its OWN canary. The cause was mostly the leak question, not the
+     cache. The old question, "...If you do not know, say UNKNOWN.", offers an
+     escape hatch the model takes even when the answer is in context -- at f16
+     the holder recalled 1 of 20 fresh canaries with it. With the direct
+     question ("Repeat back the vault passphrase I gave you, exactly.") q8_0
+     measured holder recall 20/20 and caught 20/20 broken-engine leaks, and
+     test 28 passes under q8_0 (tests/negative_control.py; RQ1_NOTES.md).
+     The suite still cites f16 and prints a banner at other KV types.
 
 So q8_0 is opt-in (MALABR_KV_TYPE=q8_0), to be adopted per model only after
-running kv_quant_check.py against the model actually served, and never for runs
-that produce isolation evidence.
+running kv_quant_check.py against the model actually served (points 1-2), and
+negative_control.py before citing isolation results at that KV type.
 
 #### config.compute_n_threads
 

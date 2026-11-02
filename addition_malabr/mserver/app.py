@@ -8,6 +8,10 @@ import os
 import subprocess
 import sys
 
+# Before the slow imports below, so the parent-death check in __main__ can
+# tell if the parent died while they ran.  [notes: runtime.die_with_parent]
+_PARENT_AT_START = os.getppid()
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import llama_cpp.llama_cpp as C
@@ -191,4 +195,22 @@ def vocab_of(model):
 
 
 if __name__ == "__main__":
-    sys.exit(main() or 0)
+    # Die with the browser that started us (it is also the only allowed peer).
+    # Not with the opt-out: then the parent is a shell or a test.  [notes: runtime.die_with_parent]
+    if not rt.trust_any_peer():
+        try:
+            rt.die_with_parent(_PARENT_AT_START)
+        except rt.ParentGoneError as exc:
+            print(f"malabr: {exc}; not starting an orphaned server",
+                  file=sys.stderr, flush=True)
+            sys.exit(5)
+    try:
+        code = main() or 0
+    except SystemExit as exc:                    # the SIGTERM path
+        code = exc.code if isinstance(exc.code, int) else 0
+    # main() has already released everything it holds. Exit now rather than
+    # let interpreter shutdown wait on pool threads that may still be
+    # streaming to a browser that is gone.  [notes: runtime.run_server]
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)

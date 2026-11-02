@@ -3,6 +3,7 @@
 Rationale: NOTES.md, runtime
 """
 
+import ctypes
 import json
 import os
 import signal
@@ -39,6 +40,54 @@ class SingleInstanceError(RuntimeError):
 
 class InsecureSocketDirError(RuntimeError):
     pass
+
+
+class ParentGoneError(RuntimeError):
+    pass
+
+
+# Opt-out of the peer check, for a server started by hand or by a test
+# rather than by the browser. Never set it in normal use.  [notes: runtime.MalabrServer._peer_allowed]
+TRUST_ANY_PEER_ENV = "MALABR_TRUST_ANY_PEER"
+PR_SET_PDEATHSIG = 1                     # <linux/prctl.h>
+
+
+def trust_any_peer():
+    return os.getenv(TRUST_ANY_PEER_ENV) == "1"
+
+
+def peer_cred(conn):
+    """(pid, uid) of the process on the other end of a UNIX socket, as the
+    kernel recorded it at connect time (SO_PEERCRED)."""
+    raw = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+    pid, uid, _gid = struct.unpack("3i", raw)
+    return pid, uid
+
+
+def process_name(pid):
+    try:
+        with open(f"/proc/{pid}/comm") as fh:
+            return fh.read().strip()
+    except OSError:
+        return "?"
+
+
+def die_with_parent(parent_at_start):
+    """Have the kernel SIGTERM this process when its parent dies, and refuse
+    to start if the parent already has.
+
+    Rationale: NOTES.md, runtime.die_with_parent
+    """
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "prctl(PR_SET_PDEATHSIG) failed")
+    # Checked AFTER arming: a parent that dies from here on is signalled, one
+    # that died before is caught by this comparison. No gap between the two.
+    now = os.getppid()
+    if parent_at_start == 1 or now != parent_at_start:
+        raise ParentGoneError(
+            f"parent pid {parent_at_start} is gone (parent is now {now})")
+    return now
 
 
 def check_socket_dir(socket_path):
@@ -218,8 +267,13 @@ def eng_stop(engine, env):
 class MalabrServer:
     """UDS listener + request routing."""
 
-    def __init__(self, cfg, engine, formatter_factory, output_cap, lock=None):
+    def __init__(self, cfg, engine, formatter_factory, output_cap, lock=None,
+                 expected_peer=None):
         self._cfg = cfg
+        # Only this pid may connect: the browser that launched the server.
+        # Resolved in start() unless given.  [notes: runtime.MalabrServer._peer_allowed]
+        self._expected_peer = expected_peer
+        self._trust_any = False
         self._engine = engine
         self._formatter_factory = formatter_factory
         self._output_cap = output_cap
@@ -243,6 +297,20 @@ class MalabrServer:
         self._server.bind(self._cfg.socket_path)
         self._server.listen(128)
         os.chmod(self._cfg.socket_path, 0o600)   # this user only
+        self._trust_any = trust_any_peer()
+        if self._trust_any:
+            bar = "!" * 72
+            print(f"{bar}\n!! malabr: {TRUST_ANY_PEER_ENV}=1 -- the peer check is OFF.\n"
+                  f"!! ANY program running as this user can connect, claim any tab\n"
+                  f"!! and origin, and read that conversation back. For tests and\n"
+                  f"!! servers started by hand only; never for normal browsing.\n{bar}",
+                  file=sys.stderr, flush=True)
+        else:
+            if self._expected_peer is None:
+                self._expected_peer = os.getppid()
+            print(f"malabr: accepting connections only from pid {self._expected_peer} "
+                  f"({process_name(self._expected_peer)}), the process that started "
+                  f"this server", file=sys.stderr, flush=True)
         self._pool = ThreadPoolExecutor(max_workers=CLIENT_POOL_WORKERS)
         self._running = True
 
@@ -271,7 +339,32 @@ class MalabrServer:
                 if self._running:
                     raise
                 return
+            if not self._peer_allowed(conn):
+                try:
+                    conn.close()
+                except OSError:
+                    pass
+                continue
             self._pool.submit(self._guard, conn)
+
+    def _peer_allowed(self, conn):
+        """Only the browser that launched this server may talk to it.
+
+        Rationale: NOTES.md, runtime.MalabrServer._peer_allowed
+        """
+        try:
+            pid, uid = peer_cred(conn)
+        except OSError:
+            return False
+        if uid != os.getuid():
+            ok = False                     # mode 0600 should already stop this
+        else:
+            ok = self._trust_any or pid == self._expected_peer
+        if not ok:
+            print(f"malabr: refused a connection from pid {pid} ({process_name(pid)}, "
+                  f"uid {uid}); only pid {self._expected_peer} may connect",
+                  file=sys.stderr, flush=True)
+        return ok
 
     def _guard(self, conn):
         try:
@@ -486,8 +579,18 @@ def run_server(config=None, engine=None, formatter_factory=None,
     server = MalabrServer(cfg, engine, formatter_factory, output_cap, lock=lock)
     server.start()
 
+    stopping = []
+
     def shutdown(*_):
-        server.stop()
+        # Once, and no cleanup in here: SIGTERM can arrive several times in a
+        # row, and a handler re-entered inside server.stop() deadlocks on the
+        # thread pool's lock. The finally below cleans up, outside any
+        # handler.  [notes: runtime.run_server]
+        if stopping:
+            return
+        stopping.append(True)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         raise SystemExit(0)
 
     signal.signal(signal.SIGINT, shutdown)

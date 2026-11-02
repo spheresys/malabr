@@ -15,8 +15,13 @@ Cases:
   3. restart mid-page: chat, restart the server, chat again -- the panel keeps
      only what the new server holds, and a reload redraws exactly that
   4. restart, then reload without chatting -- nothing is redrawn
+Plus the server's own boundaries, which only the real browser can show:
+  - the browser is the server's only allowed peer: a program that is not the
+    browser (this script) is refused
+  - the hand-restarted server needs the opt-out, and warns loudly about it
+  - killing the browser (a crash) takes the server down with it
 """
-import http.server, json, os, shutil, signal, socket, socketserver, subprocess, sys, threading, time
+import http.server, json, os, shutil, signal, socket, socketserver, struct, subprocess, sys, threading, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nano_cdp import WS, http_json  # noqa: E402
@@ -75,6 +80,58 @@ def socket_ready(timeout):
     return False
 
 
+def foreign_status():
+    """Ask the server for a status AS THIS SCRIPT, not as the browser. A server
+    started by the browser must close the connection without answering."""
+    body = b"\x00MALABR::status"
+    hdr = f"ROUTE_MALABR_GENERATE_API,{'a' * 32},1,{A.rstrip('/')},foreground,{len(body)}".encode()
+    c = socket.socket(socket.AF_UNIX); c.settimeout(5)
+    buf = b""
+    try:
+        c.connect(SOCK)
+        c.sendall(struct.pack(">I", len(hdr)) + hdr + body)
+        while True:
+            chunk = c.recv(4096)
+            if not chunk:
+                break
+            buf += chunk
+    except OSError:
+        pass
+    finally:
+        c.close()
+    return buf
+
+
+def launch(log, env):
+    return subprocess.Popen([os.path.join(HERE, "run_malabr.sh"),
+                             f"--remote-debugging-port={CDP}", "--no-first-run",
+                             "--no-default-browser-check", "about:blank"],
+                            env=env, stdout=log, stderr=subprocess.STDOUT)
+
+
+def crash_check(log, env):
+    """Kill the browser outright and expect its server to follow it."""
+    shutil.rmtree(PROFILE, ignore_errors=True)
+    chrome = launch(log, env)              # run_malabr.sh execs, so this pid IS chrome
+    try:
+        http_json(CDP, "/json/version", timeout=60)
+        if not socket_ready(240) or not server_pids():
+            return False, "server never came up"
+        server = server_pids()[0]
+        os.kill(chrome.pid, signal.SIGKILL)
+        for _ in range(100):
+            if server not in server_pids():
+                return True, f"server pid {server} exited after the browser was killed"
+            time.sleep(0.1)
+        return False, f"server pid {server} still running 10 s after the browser died"
+    finally:
+        try:
+            chrome.kill()
+        except OSError:
+            pass
+        subprocess.run(["pkill", "-f", PROFILE], capture_output=True)
+
+
 def restart_server(log):
     """Kill the running server and start a fresh one on the same socket. The
     browser does not respawn it, so this is a stand-in for a crash + restart."""
@@ -85,9 +142,11 @@ def restart_server(log):
         time.sleep(0.5)
     for pid in server_pids():
         os.kill(pid, signal.SIGKILL)
+    # Its parent is now this script, not the browser, so the browser would be
+    # refused without the opt-out (which the server must announce loudly).
     subprocess.Popen([ENV["MALABR_PYTHON"], "-u", SERVER], cwd=REPO_ROOT,
-                     env={**os.environ, **ENV}, stdout=log, stderr=subprocess.STDOUT,
-                     start_new_session=True)
+                     env={**os.environ, **ENV, "MALABR_TRUST_ANY_PEER": "1"},
+                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     time.sleep(2.0)                       # let the old socket file be replaced
     return socket_ready(180)
 
@@ -164,16 +223,14 @@ def main():
     log = open(LOG, "w")
     env = {**os.environ, **ENV, "EXTENSION_DIR": os.path.abspath(EXT),
            "USER_DATA_DIR": PROFILE, "RUN_LOG": LOG + ".runs"}
-    chrome = subprocess.Popen([os.path.join(HERE, "run_malabr.sh"),
-                               f"--remote-debugging-port={CDP}", "--no-first-run",
-                               "--no-default-browser-check", "about:blank"],
-                              env=env, stdout=log, stderr=subprocess.STDOUT)
+    chrome = launch(log, env)
     try:
         ver = http_json(CDP, "/json/version", timeout=60)
         print("browser:", ver["Browser"])
         if not socket_ready(240):
             check("model server came up", False, f"see {LOG}")
             return 1
+        check("a program that is not the browser is refused", foreign_status() == b"")
         b = WS(ver["webSocketDebuggerUrl"])
         tid = b.call("Target.createTarget", {"url": A})["targetId"]
         time.sleep(2.0)
@@ -230,12 +287,14 @@ def main():
         p.ask("Remember the codeword HERON. Reply with OK only.")
         before = p.text()
         up = restart_server(log)
-        check("server restarted", up, f"see {LOG}")
+        log.flush()
+        warned = "peer check is OFF" in open(LOG, errors="replace").read()
+        check("server restarted (opt-out on, and it warned)", up and warned, f"see {LOG}")
         p.ask("Reply with the single word DONE.")
         txt = p.text()
         check("3a. restart mid-page: earlier turns dropped, the new turn kept",
               "HERON" in before and "HERON" not in txt and "DONE" in txt
-              and "server restarted" in txt, repr(txt[-160:]))
+              and "no longer has the earlier messages" in txt, repr(txt[-160:]))
         reload()
         txt = p.text()
         check("3b. ...and a reload redraws exactly what the new server holds",
@@ -249,19 +308,30 @@ def main():
         check("4. restart then reload: nothing redrawn",
               up and "DONE" not in txt and "ended on the server" in txt, repr(txt[-120:]))
 
-        failed = [n for n, ok in RESULTS if not ok]
-        print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed   (log: {LOG})")
-        return 1 if failed else 0
     finally:
         chrome.terminate()
         try:
             chrome.wait(timeout=10)
         except subprocess.TimeoutExpired:
             chrome.kill()
-        # The browser does not take its server down with it yet (rebuild fix 1).
+        # The hand-restarted server's parent is this script, not the browser.
         for pid in server_pids():
             os.kill(pid, signal.SIGTERM)
+        end = time.time() + 20
+        while server_pids() and time.time() < end:
+            time.sleep(0.5)
         shutil.rmtree(PROFILE, ignore_errors=True)
+
+    # 5. crash: a fresh browser + server, then SIGKILL the browser
+    ok, detail = crash_check(log, env)
+    check("5. browser killed: its server exits too", ok, detail)
+    for pid in server_pids():
+        os.kill(pid, signal.SIGTERM)
+    shutil.rmtree(PROFILE, ignore_errors=True)
+
+    failed = [n for n, ok in RESULTS if not ok]
+    print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed   (log: {LOG})")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
