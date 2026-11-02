@@ -175,17 +175,7 @@ add, and I would expect the gap to widen rather than narrow."
 
 It shows judgement, and panels reward that.
 
-Quantising the KV cache to 8-bit buys ~1.9× the resident context. I did not
-adopt it, for two measured reasons:
-- The fidelity cost is **model-dependent by ~10×** — 0.0040 on one model,
-  0.0343 on another.
-- More seriously, under lossy KV a session **failed to recall its own planted
-  canary** while its memory was provably intact. That means **a lossy cache can
-  make an isolation test pass for the wrong reason** — the canary method has a
-  precondition nobody states.
-
-**The line:** *"I found a way to double my context and refused it, because it
-would have quietly invalidated my own safety tests."*
+**The line:** *"My first isolation test was nearly blind: its question let the model say ‘I don’t know’, and it took that escape even when it knew the answer, so the test would have missed about 19 of 20 real leaks. I only found this by building a deliberately broken engine and checking the test caught it. The corrected method caught 120 of 120 leaks with no false alarms."*
 
 ---
 

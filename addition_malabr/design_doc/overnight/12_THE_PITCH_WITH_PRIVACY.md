@@ -241,17 +241,7 @@ next chapter.
 
 ## 10. One methodological result worth volunteering
 
-Quantising the model's memory to 8-bit buys nearly double the context. I
-measured it and **refused it** — for two reasons, the second of which matters
-more:
-
-- The quality cost is **model-dependent by about 10×**.
-- Under lossy memory, a session **failed to recall its own planted secret** while
-  its memory was provably intact. Which means **a lossy cache can make a privacy
-  test pass for the wrong reason.**
-
-*I found a way to double my capacity and turned it down, because it would have
-quietly invalidated my own privacy tests.*
+*My first isolation test was nearly blind: its question let the model say ‘I don’t know’, and it took that escape even when it knew the answer, so the test would have missed about 19 of 20 real leaks. I only found this by building a deliberately broken engine and checking the test caught it. The corrected method caught 120 of 120 leaks with no false alarms.*
 
 ---
 
