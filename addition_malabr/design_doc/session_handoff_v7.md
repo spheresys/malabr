@@ -333,9 +333,9 @@ trade-off.
     longer deadlocks (2 hangs in 7 real crashes before, 0 in 11 after).
   - **Earlier "both modes" suite runs were partitioned twice** (wrong env
     var). Fixed. Now: partitioned 75/75; shared KV 74/75, the failure being
-    test 47 (RQ2), which compares absolute end positions of two runs that
-    can start at different positions under shared KV. Not changed; see
-    `RQ1_NOTES.md` §5, L11.
+    test 47 (RQ2), which compared absolute end positions of two runs that can
+    start at different positions. It now compares tokens freed, and passes in
+    both modes.
   - Chrome re-run with the direct question and a fresh secret: 5/5.
 
 ---
