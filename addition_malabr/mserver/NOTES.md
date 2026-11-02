@@ -1107,15 +1107,26 @@ only, §7); wait_for_teardown() then blocks this pool thread until
 the slot is actually released, so the panel's next generate()
 cannot be handed the old session -- and its context -- back.
 
-"status" answers one question: does this caller's (ext, tab, origin)
-still have a live session? It exists so the panel can stop guessing. A
-saved transcript says what the user SAW; only the server knows what the
-model still HOLDS, and the two part ways whenever the server drops a
-session without the panel watching -- rule 1 after the tab chatted on
-another origin, LIVE_TABS cleanup, a restart or crash, a model switch. The panel asks before redrawing a transcript and drops it if the
-answer is no. Read-only by construction: meta commands are dispatched
-before rule 1 and get_or_create, so asking never evicts or creates a
-session (engine.has_session only looks).
+"status" answers one question: WHICH conversation does the model hold
+for this caller's (ext, tab, origin)? {"session": bool, "id": conv_id}.
+It exists so the panel can stop guessing. A saved transcript says what
+the user SAW; only the server knows what the model still HOLDS, and the
+two part ways whenever the server drops a session without the panel
+watching -- rule 1 after the tab chatted on another origin, LIVE_TABS
+cleanup, a restart or crash, a model switch.
+
+An id, not a yes/no, because the key outlives the conversation. After a
+restart mid-page, the next turn creates a NEW session under the SAME key;
+"is there a session?" then says yes while the model has lost every
+earlier turn. Session.conv_id is random per session (secrets.token_hex),
+so it names one conversation and changes whenever the key is reused: new
+chat, rule 1 then return, restart, switch. It is a label, never an
+authority -- the key stays browser-derived, so a page can only ever learn
+or present ids for its own (tab, origin).
+
+Read-only by construction: meta commands are dispatched before rule 1
+and get_or_create, so asking never evicts or creates a session
+(engine.conversation_id only looks).
 
 Acknowledge BEFORE re-execing, so the panel gets a reply on this
 connection. The exec then replaces this whole process -- every
@@ -1665,15 +1676,23 @@ re-applies the cap (MAX_TURNS) so it holds whatever a sender claims. Older
 turns stop persisting across reloads; the server's KV still has them
 until compaction, so nothing the model knows is lost, only the display.
 
-The server is the source of truth. A saved transcript is redrawn only after
-meta("status") says the model still holds this (ext, tab, origin) session;
-on "no" the copy is dropped. Before this the panel assumed the session
-survived any reload because its key does not change, and redrew transcripts
-the model had lost: after Back to an origin that rule 1 had since evicted,
-after a server restart or crash, after a model switch in another tab.
-  - no answer (server down, old server without "status"): redraw, marked
-    unconfirmed -- dropping on a transient failure would lose the display
-    for nothing.
+The server is the source of truth. The panel stores the server's
+conversation id (runtime "status") with its transcript, and redraws a saved
+transcript only if the server holds a session with that same id; otherwise
+the copy is dropped. Before this the panel assumed the session survived any
+reload because its key does not change, and redrew transcripts the model had
+lost: after Back to an origin that rule 1 had since evicted, after a server
+restart or crash, after a model switch in another tab.
+  - The id is learned after each reply (syncConversation), so a restart
+    mid-page is caught on the first turn after it: the id changed, so the
+    model holds only that latest exchange. The panel keeps just that
+    exchange, says why, and saves it under the new id -- a reload then
+    redraws exactly what the new server holds. If the user has already sent
+    again by the time the answer lands, it waits for the next reply rather
+    than trim under a live turn.
+  - no answer (server down, old server without "status"), or a saved copy
+    with no id yet: redraw, marked unconfirmed -- dropping on a transient
+    failure would lose the display for nothing.
   - `restoring` holds off a send until the answer lands, so a new turn is
     never drawn above the restored ones; "New chat" cancels a pending
     restore.
@@ -1681,9 +1700,6 @@ after a server restart or crash, after a model switch in another tab.
     included, and restore() does not run. pageshow(persisted) asks again.
     This stays needed after the TAB_NAVIGATED rebuild: that clears the
     server and storage, not a frozen page's memory.
-Known gap: a server restart while the page stays open is not noticed until
-the next load or cache return; the next turn starts a fresh session under
-the old display.
 
 #### content.js esc
 

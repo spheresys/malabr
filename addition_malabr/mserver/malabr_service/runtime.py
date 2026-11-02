@@ -422,11 +422,11 @@ class MalabrServer:
             return
 
         if command == "status":
-            # Does the model still hold this caller's conversation? Read-only,
-            # and handled here, before rule 1, so asking never evicts or
-            # creates anything.  [notes: runtime.MalabrServer._handle_meta]
-            self._reply_json(conn, {"ok": True,
-                                    "session": self._engine.has_session(env.session_key)})
+            # WHICH conversation the model holds for this caller, if any.
+            # Read-only, and handled here, before rule 1, so asking never
+            # evicts or creates anything.  [notes: runtime.MalabrServer._handle_meta]
+            cid = self._engine.conversation_id(env.session_key)
+            self._reply_json(conn, {"ok": True, "session": cid is not None, "id": cid})
             return
 
         if command == "new":

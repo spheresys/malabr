@@ -52,6 +52,7 @@
 
   // ---- transcript persistence (section 2) ------------------------...  [notes: bg.js]
   let transcript = [];
+  let convId = null;      // the server's id for the conversation shown  [notes: content.js restore]
 
   // Stored by bg.js under a key IT derives from the sender  [notes: bg.js]
   // evictOtherOrigins: only on a chat turn, the moment rule 1 runs on the server  [notes: bg.js]
@@ -59,15 +60,43 @@
     try {
       // Last 40 turns only  [notes: content.js restore]
       chrome.runtime.sendMessage({ malabr: "save", transcript: transcript.slice(-40),
-                                   evictOtherOrigins: !!evictOtherOrigins },
+                                   id: convId, evictOtherOrigins: !!evictOtherOrigins },
                                  () => void chrome.runtime.lastError);
     } catch (e) {}
   }
 
-  // true / false, or null when the server did not answer  [notes: content.js restore]
-  async function serverHolds() {
-    try { const r = await meta("status"); return r && r.ok ? !!r.session : null; }
-    catch (e) { return null; }
+  // { session, id }, or null when the server did not answer  [notes: content.js restore]
+  async function serverStatus() {
+    try {
+      const r = await meta("status");
+      return r && r.ok ? { session: !!r.session, id: r.id || null } : null;
+    } catch (e) { return null; }
+  }
+
+  // Did the server lose the conversation this panel shows? Only a definite
+  // answer counts: no answer is not evidence either way.
+  function lostOnServer(st, id) {
+    return !!st && (!st.session || (!!id && st.id !== id));
+  }
+
+  // After each reply: learn which conversation the server used. A changed
+  // id means the earlier turns are gone from the model  [notes: content.js restore]
+  async function syncConversation() {
+    if (switching) return;
+    const n = transcript.length;
+    const st = await serverStatus();
+    if (!st || !st.session) return;            // a later reply will tell
+    if (transcript.length !== n || inFlight || sending) return;   // moved on; next reply
+    if (convId && st.id !== convId) {
+      const lastYou = transcript.map((m) => m.who).lastIndexOf("you");
+      transcript = transcript.slice(Math.max(0, lastYou));
+      abandonLive();
+      log.innerHTML = "";
+      note(log, "the server restarted — earlier messages are no longer in the model's memory", "err");
+      transcript.forEach((m) => render(m.who, m.text, m.think, m.meta));
+    }
+    convId = st.id;
+    save();
   }
 
   // The server is the source of truth: show a saved transcript only if the
@@ -77,22 +106,24 @@
     try {
       chrome.runtime.sendMessage({ malabr: "restore" }, async (saved) => {
         if (chrome.runtime.lastError) return;
-        if (!Array.isArray(saved) || !saved.length) return;
+        if (!saved || !Array.isArray(saved.turns) || !saved.turns.length) return;
         restoring = true;
-        const held = await serverHolds();
+        const st = await serverStatus();
         if (!restoring) return;              // "New chat" was pressed meanwhile
         restoring = false;
-        if (held === false) {
+        if (lostOnServer(st, saved.id)) {
           save();                            // drop the stale copy
           note(log, "the previous conversation ended on the server, so it was not restored", "note");
           return;
         }
-        saved.forEach((m) => render(m.who, m.text, m.think, m.meta));
-        transcript = saved;
-        note(log.lastElementChild || log, held
+        saved.turns.forEach((m) => render(m.who, m.text, m.think, m.meta));
+        transcript = saved.turns;
+        convId = st ? st.id : saved.id;
+        const sure = !!(st && saved.id);
+        note(log.lastElementChild || log, sure
           ? "restored after reload"
-          : "restored, but the server did not answer — the model may not remember this",
-          held ? "note" : "err");
+          : "restored, but the server could not confirm it — the model may not remember this",
+          sure ? "note" : "err");
       });
     } catch (e) {}
   }
@@ -432,7 +463,7 @@
     // The server re-execs on a switch: its sessions and KV caches go with it,
     // so this transcript is stale everywhere. Clear it to match.
     abandonLive();
-    log.innerHTML = ""; transcript = []; save();
+    log.innerHTML = ""; transcript = []; convId = null; save();
     note(log, `switching to ${name} — loading the model, up to ~2 min on first use`, "note");
     try { await meta("switch " + name); } catch (e) { /* the connection drops as it re-execs; expected */ }
     const deadline = Date.now() + 240000;
@@ -543,6 +574,7 @@
       live.delete(id);
     }
     if (inFlight === id) { inFlight = null; setBusy(false); }
+    if (s) syncConversation();
   });
 
   function setBusy(busy) {
@@ -716,7 +748,7 @@
   $(".clear").addEventListener("click", async () => {
     // §3: a real teardown, not a display clear  [notes: content.js STYLES]
     abandonLive();
-    log.innerHTML = ""; transcript = []; save(); pageHash = null;
+    log.innerHTML = ""; transcript = []; convId = null; save(); pageHash = null;
     inFlight = null; sending = false; restoring = false;
     let acked = false;
     try { const r = await meta("new"); acked = !!(r && r.ok); } catch (e) {}
@@ -731,9 +763,9 @@
   // included, and restore() does not run again  [notes: content.js restore]
   window.addEventListener("pageshow", async (e) => {
     if (!e.persisted || !transcript.length) return;
-    if (await serverHolds() !== false) return;
+    if (!lostOnServer(await serverStatus(), convId)) return;
     abandonLive();
-    log.innerHTML = ""; transcript = []; save(); pageHash = null;
+    log.innerHTML = ""; transcript = []; convId = null; save(); pageHash = null;
     inFlight = null; sending = false; setBusy(false);
     note(log, "this conversation ended on the server while you were away", "note");
   });

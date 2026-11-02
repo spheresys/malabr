@@ -98,11 +98,14 @@ class Tab:
             raise RuntimeError((d.get("exception") or {}).get("description") or d.get("text"))
         return r["result"].get("value")
 
-    def save(self, turns, chat_turn=False):
+    def save(self, turns, chat_turn=False, conv_id=None):
         evict = "true" if chat_turn else "false"
         return self.ev("new Promise(r => chrome.runtime.sendMessage("
                        f"{{malabr: 'save', transcript: {json.dumps(turns)}, "
-                       f"evictOtherOrigins: {evict}}}, r))")
+                       f"id: {json.dumps(conv_id)}, evictOtherOrigins: {evict}}}, r))")
+
+    def restore_raw(self):
+        return self.ev("new Promise(r => chrome.runtime.sendMessage({malabr: 'restore'}, r))")
 
     def go(self, url):
         self.ws.call("Page.navigate", {"url": url}); time.sleep(2.0)
@@ -110,7 +113,8 @@ class Tab:
         return self.ctx is not None
 
     def restore(self):
-        return self.ev("new Promise(r => chrome.runtime.sendMessage({malabr: 'restore'}, r))")
+        v = self.restore_raw()
+        return v["turns"] if v else None
 
 
 def sw_keys():
@@ -163,6 +167,16 @@ def main():
         check("tab2, SAME origin, does not get tab1's transcript", t2.restore() is None)
         check("tab3, other origin, does not get it", t3.restore() is None)
         t2.save([{"who": "you", "text": "t2 own"}])
+
+        # The server's conversation id rides along, so a restore can be checked
+        # against what the server holds now (content.js restore).
+        t3.save([{"who": "you", "text": "t3"}], conv_id="0123abcd0123abcd")
+        r3 = t3.restore_raw() or {}
+        t3.save([{"who": "you", "text": "t3"}], conv_id=None)
+        check("the conversation id round-trips with the transcript",
+              r3.get("id") == "0123abcd0123abcd" and (t3.restore_raw() or {}).get("id") is None,
+              repr(r3.get("id")))
+        t3.save([])
 
         t1.ws.call("Page.reload"); time.sleep(2.0)
         t1.ctx = t1.find_ctx()

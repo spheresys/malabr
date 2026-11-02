@@ -4,6 +4,7 @@ Rationale: NOTES.md, session
 """
 
 import queue
+import secrets
 
 from .formatter import Utf8Streamer
 
@@ -87,6 +88,9 @@ class Session:
 
     def __init__(self, key, slot, formatter, output_cap, session_budget=2048):
         self.key = key
+        # Names THIS conversation, not the key: a new session on the same key
+        # (after new chat, rule 1, a restart) gets a new id.  [notes: runtime.MalabrServer._handle_meta]
+        self.conv_id = secrets.token_hex(8)
         self.slot = slot
         self.formatter = formatter
         self.output_cap = output_cap

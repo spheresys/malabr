@@ -30,6 +30,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.malabr === "save") {
     const turns = Array.isArray(msg.transcript) ? msg.transcript.slice(-MAX_TURNS) : [];
+    // The server's id for this conversation  [notes: content.js restore]
+    const id = typeof msg.id === "string" && msg.id.length <= 64 ? msg.id : null;
     // Rule 1, mirrored: a chat turn from this origin is the moment the server
     // tears down this tab's sessions for other origins, so their transcripts
     // go too. Only on a chat turn -- a save that sends nothing (new chat,
@@ -40,13 +42,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           if (other.length) return chrome.storage.session.remove(other);
         })
       : Promise.resolve();
-    evicted.then(() => chrome.storage.session.set({ [key]: turns }))
+    evicted.then(() => chrome.storage.session.set({ [key]: { id, turns } }))
       .then(() => sendResponse(true), () => sendResponse(false));
     return true;                          // async sendResponse
   }
   if (msg.malabr === "restore") {
     chrome.storage.session.get(key)
-      .then((o) => sendResponse(o[key] || null), () => sendResponse(null));
+      .then((o) => sendResponse(o[key] || null), () => sendResponse(null));   // { id, turns }
     return true;
   }
   sendResponse(null);

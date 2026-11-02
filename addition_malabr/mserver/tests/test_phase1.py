@@ -152,10 +152,12 @@ def t03c_new_chat_rides_the_meta_channel_to_a_real_teardown():
 
 
 def t03d_status_meta_only_looks():
-    """The panel asks 'status' before redrawing a saved transcript, and drops
-    the transcript on 'no'. The answer must be the caller's own session, and
-    asking must change nothing: no session created for the caller, and no
-    rule-1 eviction of the same tab's other-origin session."""
+    """The panel asks 'status' to learn WHICH conversation the server holds for
+    it, and drops a saved transcript whose id no longer matches. The id must
+    be stable for one session, absent when there is none, and new for a new
+    session on the same key -- the restart-mid-page case, where the key
+    survives but the conversation does not. Asking must change nothing: no
+    session created, no rule-1 eviction of the tab's other-origin session."""
     alloc, e = FIX.new_engine()
     ka = key(tab=1, origin="https://a.test")
     kb = key(tab=1, origin="https://b.test")
@@ -165,19 +167,27 @@ def t03d_status_meta_only_looks():
 
     rb, tb = _meta_reply(srv, kb, "status")
     ra, ta = _meta_reply(srv, ka, "status")
-    looked_only = (kb not in e._sessions and e.has_session(ka)
+    ra2, _ = _meta_reply(srv, ka, "status")
+    looked_only = (kb not in e._sessions and e.conversation_id(ka) is not None
                    and e._alloc.in_use_count == in_use)
     e.cancel(ka, "test"); e._step()
     rgone, _ = _meta_reply(srv, ka, "status")
+    # Same key again: what a server restart (or new chat) leaves behind.
+    e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 16)]))
+    rnew, _ = _meta_reply(srv, ka, "status")
     cases = {
-        "other origin, same tab: no session": rb == {"ok": True, "session": False},
-        "own session: yes": ra == {"ok": True, "session": True},
-        "after teardown: no": rgone == {"ok": True, "session": False},
+        "other origin, same tab: none": rb == {"ok": True, "session": False, "id": None},
+        "own session: an id": ra.get("session") is True and isinstance(ra.get("id"), str)
+                              and len(ra["id"]) == 16,
+        "id stable across asks": ra2 == ra,
+        "after teardown: none": rgone == {"ok": True, "session": False, "id": None},
+        "new session, same key: new id": rnew.get("session") is True
+                                         and rnew.get("id") not in (None, ra.get("id")),
         "one clean terminal frame": tb == ta == [eng.FRAME_COMPLETE],
         "nothing created or evicted": looked_only,
     }
     bad = [k for k, v in cases.items() if not v]
-    record("03d", "'status' meta command reports the caller's session, changes nothing",
+    record("03d", "'status' names the caller's conversation, changes nothing",
            not bad, f"failed: {bad}" if bad else f"{len(cases)} cases")
 
 
@@ -1798,8 +1808,9 @@ BROWSER_ONLY = [
     (57, "control-connection resync pushes foreground on reconnect"),
     (60, "navigation mid-generation rolls back without desyncing"),
     (61, "cross-origin navigation does not leak conversation"),
-    (72, "panel redraws a saved transcript only if 'status' says the model holds it, "
-         "and re-asks on a back/forward-cache return"),
+    (72, "panel redraws a saved transcript only if 'status' names the same "
+         "conversation; re-asks on a back/forward-cache return and after each "
+         "reply (scripts/test_panel_status.py, run by hand)"),
 ]
 
 
