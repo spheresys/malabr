@@ -43,7 +43,7 @@ import ctypes
 import llama_cpp.llama_cpp as C
 
 from malabr_service import engine as eng
-from harness import Fixture, ask
+from harness import Fixture, ask, conversation_of, force_turn
 from metrics import js, kl, softmax, topk
 
 
@@ -61,12 +61,28 @@ FILLER = [
     "What is the CAP theorem?",
 ]
 
-# Probes deliberately span the range compaction should and should not affect.
+# Probes deliberately span the range compaction should and should not affect:
+# what the KEPT turns hold (anchor, recent), what the DROPPED middle held,
+# questions that need no conversation at all, and open-ended ones. 16, not 4:
+# four probes gave one number per category, too few to tell a category's cost
+# from one probe's luck.
 PROBES = [
-    ("anchor recall",   "What was the very first thing I asked you about?"),
-    ("recent recall",   "What did I ask you about most recently?"),
-    ("fresh reasoning", "What is 17 multiplied by 23? Answer with the number."),
-    ("open ended",      "Summarise our conversation in one sentence."),
+    ("anchor recall",    "What was the very first thing I asked you about?"),
+    ("anchor recall 2",  "Repeat my first question word for word."),
+    ("recent recall",    "What did I ask you about most recently?"),
+    ("recent recall 2",  "What was your last answer about?"),
+    ("middle recall",    "Did I ask you about the TCP handshake? Answer yes or no."),
+    ("middle recall 2",  "List every topic I asked about, in order."),
+    ("count",            "How many questions have I asked you so far?"),
+    ("fresh arithmetic", "What is 17 multiplied by 23? Answer with the number."),
+    ("fresh fact",       "What is the capital of Australia?"),
+    ("fresh code",       "Write a Python one-liner that reverses a string."),
+    ("fresh define",     "Define the word 'idempotent' in one sentence."),
+    ("fresh translate",  "Translate 'good morning' into French."),
+    ("open summary",     "Summarise our conversation in one sentence."),
+    ("open next",        "What should I ask you next?"),
+    ("open opinion",     "Which of the topics we covered is the most important?"),
+    ("open style",       "Answer in one word: how do you feel?"),
 ]
 
 
@@ -133,32 +149,45 @@ def main():
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
 
-    print("=== MALABR section 8 -- output fidelity under compaction ===\n")
     fix = Fixture(n_seq_max=4, n_ctx=4096, n_threads=3)
+    model = os.path.basename(os.getenv("MALABR_TEST_MODEL") or "Qwen3-0.6B-Q8_0.gguf")
+    mode = "shared" if os.getenv("MALABR_TEST_SHARED_KV") == "1" else "partitioned"
+    print(f"=== MALABR section 8 -- output fidelity under compaction ===\n"
+          f"model {model}, {mode} KV, {len(PROBES)} probes\n")
     try:
         alloc, e = fix.new_engine()
         probe = Probe(fix, e)
 
+        kR = ("a" * 32, 9, "https://a.test")   # generates the conversation
         kA = ("a" * 32, 1, "https://a.test")   # full context, reference
         kB = ("a" * 32, 2, "https://a.test")   # to be compacted
         kC = ("a" * 32, 3, "https://a.test")   # noise floor, never compacted
-        for k in (kA, kB, kC):
+        for k in (kR, kA, kB, kC):
             e.get_or_create(k, fix.formatter, eng.OutputCap([(0, 48)]))
 
-        sA, sB, sC = (e._sessions[k] for k in (kA, kB, kC))
-        stop = int(sA.budget * 0.80)
+        sR, sA, sB, sC = (e._sessions[k] for k in (kR, kA, kB, kC))
+        # The same conversation length in both modes, so they are comparable:
+        # 80% of a partitioned slice. (80% of the shared budget, n_ctx/2, times
+        # the four sessions this needs would not fit the fixture's pool.)
+        stop = int(0.80 * fix.n_ctx // fix.n_seq_max)
 
-        print(f"growing three identical conversations to ~{stop} tokens "
-              f"(budget {sA.budget})")
-        for k in (kA, kB, kC):
-            grow(e, k, a.turns, stop)
+        # One session GENERATES the conversation; A, B and C are force-fed it,
+        # so they hold identical tokens. Growing each by generation is not
+        # reproducible on the shared cache: a near-tie flips and the "twins"
+        # become different conversations (harness.force_turn).
+        print(f"generating a conversation to ~{stop} tokens (budget {sA.budget}), "
+              f"then replaying it into three sessions")
+        grow(e, kR, a.turns, stop)
+        for user, reply in conversation_of(sR):
+            for s_ in (sA, sB, sC):
+                force_turn(e, s_, user, reply)
+        e.cancel(kR, "done"); e._step()
         print(f"  posA={sA.pos} posB={sB.pos} posC={sC.pos}  "
               f"turns={len(sA.turn_boundaries)}\n")
-
-        if sA.pos != sB.pos:
-            print("  NOTE: contexts diverged before compaction "
-                  f"({sA.pos} vs {sB.pos}); rows below still valid but the "
-                  "noise floor matters more than usual.")
+        if not (sA.formatter._rendered == sB.formatter._rendered
+                == sC.formatter._rendered and sA.pos == sB.pos == sC.pos):
+            print("  ABORT: the three sessions do not hold identical tokens")
+            return 1
 
         before = sB.pos
         freed = e.compact(sB)
@@ -208,13 +237,27 @@ def main():
               f"{sum(r['kl_nats'] for r in comp)/len(comp):.4f} nats")
         print(f"  mean KL (noise floor)  : "
               f"{sum(r['kl_nats'] for r in base)/len(base):.4f} nats")
+        cats = []
+        for label, _q in PROBES:
+            cat = label.split()[0]
+            if cat not in cats:
+                cats.append(cat)
+        print("\n  by category        top-1 cmp / floor    mean KL cmp / floor")
+        for cat in cats:
+            cr = [r for r in comp if r["probe"].split()[0] == cat]
+            br = [r for r in base if r["probe"].split()[0] == cat]
+            print(f"  {cat:<18} {sum(r['top1_agree'] for r in cr)}/{len(cr)} / "
+                  f"{sum(r['top1_agree'] for r in br)}/{len(br)}"
+                  f"{sum(r['kl_nats'] for r in cr)/len(cr):>14.4f} / "
+                  f"{sum(r['kl_nats'] for r in br)/len(br):.4f}")
         print("\n  Read the compacted row against the noise floor, not against "
               "zero.")
 
         if a.json:
             with open(a.json, "w") as f:
-                json.dump({"freed": freed, "before": before,
-                           "budget": sA.budget, "rows": rows}, f, indent=2)
+                json.dump({"model": model, "mode": mode, "freed": freed,
+                           "before": before, "budget": sA.budget, "rows": rows},
+                          f, indent=2)
             print(f"\n  wrote {a.json}")
         return 0
     finally:

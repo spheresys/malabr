@@ -24,9 +24,11 @@ from malabr_service import protocol as pr
 from malabr_service import runtime as rt
 from malabr_service.config import MIN_N_CTX
 
-from harness import (CANARY, DECODE_CURVE, Fixture, LEAK_QUESTION, LEAK_SCORE_THRESHOLD,
-                     LEAK_VARIANTS,
-                     PREFILL_CURVE, ask, drive, leak_trial, recalls_canary,
+from harness import (CANARY, CANARY_WORDS, DECODE_CURVE, Fixture, LEAK_QUESTION,
+                     LEAK_SCORE_THRESHOLD, LEAK_VARIANTS, SUITE_RNG, SUITE_SEED,
+                     compaction_trial, fresh_secret,
+                     PREFILL_CURVE, ask, conversation_of, drive, force_turn,
+                     leak_trial, recalls_canary,
                      text_of)
 
 RESULTS = []
@@ -279,21 +281,15 @@ def t03b_template_error_in_begin_turn_tears_down_cleanly():
 
 
 def t04_compaction_fidelity():
-    alloc, e = FIX.new_engine()
-    k = key(tab=1)
-    s, _ = e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 24)]))
-    s.budget = FIX.n_ctx // FIX.n_seq_max
-    ask(e, k, f"Remember this exactly: {CANARY}")
-    for i in range(6):
-        ask(e, k, f"Say the word filler{i} once.")
-    before = len(s.turn_boundaries)
-    e.TARGET_FREED_TOKENS = 1
-    freed = e.compact(s)
-    out = ask(e, k, "What is the vault passphrase? If you do not know, say UNKNOWN.")
-    # The canary is in the ANCHOR turn, which compaction must never drop.
-    record(4, "compaction fidelity: canary in the anchor turn survives",
-           recalls_canary(out),
-           f"freed={freed} turns {before}->{len(s.turn_boundaries)} said={(out or '')[:60]!r}")
+    """A fresh secret in the ANCHOR turn survives compaction. The other half of
+    the evidence -- a compaction that drops the anchor IS detected -- is
+    test 78."""
+    text, digits = fresh_secret(SUITE_RNG)
+    r = compaction_trial(FIX, broken=False, text=text, digits=digits)
+    record(4, "compaction fidelity: a fresh secret in the anchor turn survives",
+           r["freed"] > 0 and r["recalled"],
+           f"secret {digits} freed={r['freed']} score={r['score']:.2f} "
+           f"said={r['said'][:50]!r}")
 
 
 def t05_batched_isolation():
@@ -445,14 +441,16 @@ def t09_user_triggered_compaction():
     k = key(tab=1)
     s, _ = e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 20)]))
     s.budget = FIX.n_ctx // FIX.n_seq_max
-    ask(e, k, f"Remember this exactly: {CANARY}")
+    text, digits = fresh_secret(SUITE_RNG)
+    ask(e, k, f"Remember this exactly: {text}")
     for i in range(5):
         ask(e, k, f"Say filler{i}.")
     e.TARGET_FREED_TOKENS = 1
     freed = e.compact(s)                         # same path as the 95% trigger
-    out = ask(e, k, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, k, LEAK_QUESTION)
     record(9, "user-triggered compaction uses the same path and keeps the anchor",
-           freed > 0 and recalls_canary(out), f"freed={freed}")
+           freed > 0 and recalls_canary(out, digits),
+           f"secret {digits} freed={freed} said={(out or '')[:50]!r}")
 
 
 def t10_visibility_promotion():
@@ -1175,7 +1173,8 @@ def t53_rollback_survives_compaction():
     k = key(tab=1)
     s, _ = e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 16)]))
     s.budget = FIX.n_ctx // FIX.n_seq_max
-    ask(e, k, f"Remember this exactly: {CANARY}")
+    text, digits = fresh_secret(SUITE_RNG)
+    ask(e, k, f"Remember this exactly: {text}")
     for i in range(5):
         ask(e, k, f"Say filler{i}.")
     e.submit(k, "Tell me a long story.")
@@ -1188,10 +1187,11 @@ def t53_rollback_survives_compaction():
     e.submit(k, "Say OK.")
     e._step()
     drive(e, None, limit=200)
-    out = ask(e, k, "What is the vault passphrase? If you do not know, say UNKNOWN.")
+    out = ask(e, k, LEAK_QUESTION)
     record(53, "rollback snapshot shifted by an interleaved compaction",
-           freed > 0 and shifted == snap_before - freed and recalls_canary(out),
-           f"snapshot {snap_before}->{shifted} freed={freed}")
+           freed > 0 and shifted == snap_before - freed and recalls_canary(out, digits),
+           f"snapshot {snap_before}->{shifted} freed={freed} secret {digits} "
+           f"recalled={recalls_canary(out, digits)}")
 
 
 def t54_boundaries_across_two_compactions():
@@ -1592,33 +1592,51 @@ def t44_eos_assumption_survives_a_model_swap():
 
 
 def t48_compaction_fidelity_distributional():
-    """Compaction must not move the next-token distribution much.
+    """Compaction must not change the model's next-token choice by more than
+    two IDENTICAL sessions already differ.
 
-    Was declared browser-only as a "cheap stub" because no real fidelity check
-    existed. One does now (tests/fidelity_check.py), so this becomes a fast
-    in-suite version of it: two sessions driven identically, one compacted
-    through the shipping `Engine.compact`, then the same probe decoded into
-    both and the argmax compared.
+    Three sessions hold the same conversation -- force-fed, so their tokens
+    are identical: A (reference), B (compacted through the shipping
+    Engine.compact) and C, an uncompacted twin of A. C is this mode's noise
+    floor. On a partitioned cache C matches A exactly. On the shared
+    (unified) cache it can differ slightly: identical tokens give slightly
+    different logits when their cells sit in a different order.
 
-    Deliberately NOT a duplicate of test 4. Test 4 asks whether a planted fact
-    can still be RECALLED, which is binary and generous. This asks whether the
-    model would still say the same next token, which is the quantitative claim
-    §8 actually makes.
+    Six probes, about what compaction KEEPS (the anchor, the recent turn) and
+    what needs no conversation at all. A probe fails only if B's top choice
+    differs from A's AND A's lead over its runner-up exceeds the noise on
+    that probe -- the largest probability difference between A and C. On a
+    partitioned cache the noise is usually zero, so any flip fails; on the
+    shared cache a flip within the noise cannot be blamed on compaction.
+
+    Was a single exact argmax at one probe, which failed on the real shared
+    cache at a near-tie (end-of-text 0.46 vs another token) that the noise
+    floor alone moves by 0.11. Distributional numbers: tests/fidelity_check.py.
     """
     import ctypes
+    import numpy as np
     alloc, e = FIX.new_engine()
-    ka, kb = key(tab=1), key(tab=2)
-    for k in (ka, kb):
+    kr, ka, kb, kc = key(tab=9), key(tab=1), key(tab=2), key(tab=3)
+    for k in (kr, ka, kb, kc):
         e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 24)]))
-    sa, sb = e._sessions[ka], e._sessions[kb]
+    sr, sa, sb, sc = (e._sessions[k] for k in (kr, ka, kb, kc))
 
-    filler = ["Explain what a hash table is.",
-              "What is a process versus a thread?",
-              "Describe a page fault.",
-              "What is a write-ahead log for?"]
-    for msg in filler:
-        for k in (ka, kb):
-            ask(e, k, msg, limit=80)
+    # A reference session generates the conversation; A, B and C are FORCE-FED
+    # it, so they hold identical tokens by construction. Generating each one
+    # separately is not reproducible on the shared cache (harness.force_turn).
+    for msg in ["Explain what a hash table is.",
+                "What is a process versus a thread?",
+                "Describe a page fault.",
+                "What is a write-ahead log for?"]:
+        ask(e, kr, msg, limit=80)
+    for user, reply in conversation_of(sr):
+        for s_ in (sa, sb, sc):
+            force_turn(e, s_, user, reply)
+    if not (sa.formatter._rendered == sb.formatter._rendered == sc.formatter._rendered
+            and sa.pos == sb.pos == sc.pos):
+        record(48, "compaction changes no next-token choice beyond this mode's noise floor",
+               False, "twins are not identical -- the comparison is invalid")
+        return
 
     freed = e.compact(sb)
     if not freed:
@@ -1628,7 +1646,7 @@ def t48_compaction_fidelity_distributional():
 
     n_vocab = C.llama_vocab_n_tokens(FIX.vocab)
 
-    def argmax_next(s, q):
+    def dist(s, q):
         toks = s.formatter._tokenize(q, parse_special=False)
         start = s.pos
         items = [(t, start + i, s.slot, i == len(toks) - 1)
@@ -1636,18 +1654,40 @@ def t48_compaction_fidelity_distributional():
         try:
             idx = e._decode_batch(items)
             ptr = C.llama_get_logits_ith(e._ctx, idx[-1])
-            arr = ctypes.cast(ptr,
-                              ctypes.POINTER(ctypes.c_float * n_vocab)).contents
-            return max(range(n_vocab), key=lambda i: arr[i])
+            v = np.ctypeslib.as_array(
+                ctypes.cast(ptr, ctypes.POINTER(ctypes.c_float * n_vocab)).contents).astype(np.float64)
+            v = np.exp(v - v.max())
+            return v / v.sum()
         finally:
             C.llama_memory_seq_rm(e._alloc._mem, s.slot, start, start + len(toks))
             s.pos = start
 
-    probe = "What was the first thing I asked about?"
-    ta, tb = argmax_next(sa, probe), argmax_next(sb, probe)
-    record(48, "compaction leaves the next-token choice unchanged", ta == tb,
-           f"freed {freed} tok ({100*freed/max(sb.pos+freed,1):.0f}% of context); "
-           f"argmax full={ta} compacted={tb}")
+    probes = ["What was the first thing I asked about?",
+              "Repeat my first question word for word.",
+              "What did I ask you about most recently?",
+              "What is 17 multiplied by 23? Answer with the number.",
+              "What is the capital of Australia?",
+              "Translate 'good morning' into French."]
+    flips, unexplained, kl_b, kl_c, detail = 0, 0, [], [], []
+    for q in probes:
+        pa, pb, pc = dist(sa, q), dist(sb, q), dist(sc, q)
+        top2 = np.argsort(pa)[-2:]
+        t1, margin = int(top2[1]), float(pa[top2[1]] - pa[top2[0]])
+        noise = float(np.abs(pa - pc).max())
+        flip = int(np.argmax(pb)) != t1
+        bad = flip and margin > noise
+        flips += flip
+        unexplained += bad
+        kl_b.append(float(np.sum(pa * (np.log(pa + 1e-30) - np.log(pb + 1e-30)))))
+        kl_c.append(float(np.sum(pa * (np.log(pa + 1e-30) - np.log(pc + 1e-30)))))
+        if flip:
+            detail.append(f"{q[:28]!r}: flip, margin {margin:.3f} vs noise {noise:.3f}")
+    record(48, "compaction changes no next-token choice beyond this mode's noise floor",
+           unexplained == 0,
+           f"freed {freed} tok ({100 * freed / max(sb.pos + freed, 1):.0f}%); "
+           f"{len(probes)} probes: top-1 flips {flips}, beyond noise {unexplained}; "
+           f"mean KL compacted {sum(kl_b) / len(kl_b):.4f} vs floor "
+           f"{sum(kl_c) / len(kl_c):.4f} nats" + (f"; {', '.join(detail)}" if detail else ""))
 
 
 def t47_incremental_vs_batch_eviction():
@@ -1666,7 +1706,9 @@ def t47_incremental_vs_batch_eviction():
     about. The number that decides a default is how much live context each
     leaves behind for a given amount of compaction work.
     """
-    MID = "The server codename is OBSIDIAN-4412."
+    anchor_text, anchor_digits = fresh_secret(SUITE_RNG)
+    mid_digits = f"{SUITE_RNG.randrange(10 ** 6):06d}"
+    MID = f"The server codename is {SUITE_RNG.choice(CANARY_WORDS)}-{mid_digits}."
 
     def drive(target):
         alloc, e = FIX.new_engine()
@@ -1674,7 +1716,7 @@ def t47_incremental_vs_batch_eviction():
         k = key(tab=1)
         e.get_or_create(k, FIX.formatter, eng.OutputCap([(0, 24)]))
         s = e._sessions[k]
-        ask(e, k, f"Remember this exactly: {CANARY}", limit=80)   # anchor
+        ask(e, k, f"Remember this exactly: {anchor_text}", limit=80)   # anchor
         for i, q in enumerate(["Explain what a hash table is.",
                                "What is a process versus a thread?",
                                "Describe a page fault.",
@@ -1692,14 +1734,12 @@ def t47_incremental_vs_batch_eviction():
             if not f:
                 break
             calls += 1; freed_total += f
-        anchor_ok = recalls_canary(
-            ask(e, k, "What is the vault passphrase? If you do not know, say UNKNOWN.",
-                limit=80))
-        mid_out = ask(e, k, "What is the server codename? If you do not know, say UNKNOWN.",
+        anchor_ok = recalls_canary(ask(e, k, LEAK_QUESTION, limit=80), anchor_digits)
+        mid_out = ask(e, k, "Repeat back the server codename I gave you, exactly.",
                       limit=80) or ""
         return {"before": before, "after": s.pos, "calls": calls,
                 "freed": freed_total, "anchor": anchor_ok,
-                "mid": "OBSIDIAN" in mid_out.upper(),
+                "mid": recalls_canary(mid_out, mid_digits),
                 "turns": len(s.turn_boundaries)}
 
     batch = drive(512)
@@ -2058,6 +2098,23 @@ def t77_repeated_sigterm_still_exits():
            clean, f"exited={exited} socket_removed={clean}")
 
 
+def t78_compaction_negative_control():
+    """The negative control for compaction fidelity (tests 4, 9, 47, 53): a
+    compaction that drops the anchor must be DETECTED -- the secret no longer
+    recalled, and the model's probability of its digits back at chance. Both
+    variants run the shipping Engine.compact (harness.compaction_trial). Over
+    many fresh secrets: tests/compaction_control.py."""
+    text, digits = fresh_secret(SUITE_RNG)
+    good = compaction_trial(FIX, broken=False, text=text, digits=digits)
+    bad = compaction_trial(FIX, broken=True, text=text, digits=digits)
+    ok = (good["recalled"] and good["score"] > LEAK_SCORE_THRESHOLD
+          and not bad["recalled"] and bad["score"] <= LEAK_SCORE_THRESHOLD)
+    record(78, "negative control: a compaction that drops the anchor is detected", ok,
+           f"secret {digits}  correct: recalled={good['recalled']} "
+           f"score={good['score']:.2f}  broken: recalled={bad['recalled']} "
+           f"score={bad['score']:.2f}")
+
+
 def t79_browser_control_header_accepted():
     """The shipped browser's control header has 5 fields
     (malabr_manager.cc); the parser wanted 6 and refused it, so no control
@@ -2086,6 +2143,7 @@ def t79_browser_control_header_accepted():
     record(79, "the browser's 5-field control header is accepted, near misses are not",
            accepted and not let_through,
            f"accepted={accepted}; near misses let through: {let_through}")
+
 
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
@@ -2120,7 +2178,8 @@ BROWSER_ONLY = [
 
 def main():
     global FIX
-    print("=== MALABR Phase 1 -- section 12 suite ===\n")
+    print("=== MALABR Phase 1 -- section 12 suite ===")
+    print(f"fresh-secret seed {SUITE_SEED} (MALABR_TEST_SEED={SUITE_SEED} replays it)\n")
     _kv = os.getenv("MALABR_KV_TYPE", "f16").lower()
     if _kv != "f16":
         # This suite proves ISOLATION by checking that a session does NOT

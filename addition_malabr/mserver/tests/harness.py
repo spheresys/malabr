@@ -11,6 +11,7 @@ not silently inherit this.
 
 import math
 import os
+import random
 import re
 import sys
 
@@ -19,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import llama_cpp.llama_cpp as C
 
 from malabr_service import engine as eng
+from malabr_service.session import Turn
 
 MODEL_PATH = os.getenv(
     "MALABR_TEST_MODEL",
@@ -41,7 +43,7 @@ CANARY_DIGITS = "7731"
 class Fixture:
     """One model + one context, reused across tests to keep the suite quick."""
 
-    def __init__(self, n_seq_max=4, n_ctx=4096, n_threads=3):
+    def __init__(self, n_seq_max=4, n_ctx=4096, n_threads=3, kv_unified=None):
         C.llama_backend_init()
         mp = C.llama_model_default_params()
         mp.n_gpu_layers = 0
@@ -57,6 +59,15 @@ class Fixture:
             os.getenv("MALABR_KV_TYPE", "f16").lower())
         if _kv and hasattr(C, _kv):
             cp.type_k = cp.type_v = getattr(C, _kv)
+        # The CACHE must match the mode, as app.build does: shared-KV mode is
+        # one unified pool of n_ctx cells; partitioned is n_seq_max hard slices.
+        # Until 2026-11-02 the fixture never set this, so "shared KV" test runs
+        # used shared-KV bookkeeping over a partitioned cache.
+        if kv_unified is None:
+            kv_unified = os.getenv("MALABR_TEST_SHARED_KV") == "1"
+        self.kv_unified = bool(kv_unified)
+        if self.kv_unified:
+            cp.kv_unified = True
         self.ctx = C.llama_init_from_model(self.model, cp)
         if not self.ctx:
             raise RuntimeError("context creation failed")
@@ -162,6 +173,11 @@ def fresh_secret(rng):
     return f"The vault passphrase is {rng.choice(CANARY_WORDS)}-{digits}.", digits
 
 
+# One generator per suite run, so the compaction tests plant fresh secrets each
+# run. The seed is printed by the suite; MALABR_TEST_SEED replays a run.
+SUITE_SEED = int(os.getenv("MALABR_TEST_SEED") or int.from_bytes(os.urandom(4), "big"))
+SUITE_RNG = random.Random(SUITE_SEED)
+
 LEAK_VARIANTS = ("correct", "stale_slot", "shared_sequence")
 
 # Second detector's threshold, fixed before any run: the mean probability per
@@ -247,3 +263,78 @@ def leak_trial(fix, variant, text=CANARY, digits=CANARY_DIGITS, cap=40, score=Fa
     said = ask(e, kb, LEAK_QUESTION) or ""
     return {"control": control, "leaked": recalls_canary(said, digits),
             "said": said, "reused": reused, "score": lp}
+
+
+COMPACTION_FILLER = ["Say the word filler{} once.", "Name one colour, then say filler{}.",
+                     "Reply with the word filler{} only."]
+
+
+def compaction_trial(fix, broken, text, digits, fillers=6, cap=24):
+    """Plant a secret in the ANCHOR turn, grow the conversation, compact once,
+    then ask for the secret -- on the real compaction, or on a DELIBERATELY
+    BROKEN one that drops the anchor.
+
+    The broken variant still runs the shipping Engine.compact: a zero-length
+    placeholder turn is put in front of the anchor, so the anchor becomes
+    droppable (compact never protects anything but index 0). With
+    TARGET_FREED_TOKENS = 1 the correct compaction drops the first middle
+    turn, the broken one drops exactly the anchor.
+
+    Returns {"recalled", "score", "freed", "said"}. Compaction fidelity is
+    evidenced only if correct compaction keeps recall AND the broken one
+    loses it.
+    """
+    alloc, e = fix.new_engine()
+    k = ("a" * 32, 1, "https://a.test")
+    s, _ = e.get_or_create(k, fix.formatter, eng.OutputCap([(0, cap)]))
+    ask(e, k, f"Remember this exactly: {text}")
+    for i in range(fillers):
+        ask(e, k, COMPACTION_FILLER[i % len(COMPACTION_FILLER)].format(i))
+    e.TARGET_FREED_TOKENS = 1
+    placeholder = None
+    if broken:
+        placeholder = Turn(0, 0, "placeholder", -1)
+        s.turn_boundaries.insert(0, placeholder)
+    try:
+        freed = e.compact(s)
+    finally:
+        if placeholder is not None and placeholder in s.turn_boundaries:
+            s.turn_boundaries.remove(placeholder)
+    lp = secret_logprob(fix, e, s, text, digits)
+    said = ask(e, k, LEAK_QUESTION) or ""
+    return {"recalled": recalls_canary(said, digits), "score": lp,
+            "freed": freed, "said": said}
+
+
+def force_turn(e, s, user, reply):
+    """Add one exchange with a FIXED reply, decoded directly -- no sampling.
+
+    Why: on the shared (unified) cache, generation is not reproducible across
+    sessions. Two sessions given identical prompts get slightly different
+    logits when their cells sit in a different ORDER (holes left by trims and
+    probes get reused), a near-tie eventually flips, and from then on they
+    hold different conversations. So "twins" built by generation are not
+    twins there. Force-fed turns are identical by construction. Records the
+    turn exactly as Engine._finish_turn does, so compaction treats it alike.
+    """
+    if s.slot in e._alloc.pending_wipe:
+        e._alloc.prepare(s.slot)
+    start = s.pos
+    toks = s.formatter.user_turn(user)
+    msg_index = len(s.formatter._messages) - 1
+    toks = toks + s.formatter._tokenize(reply, parse_special=False)
+    e._decode_batch([(t, start + i, s.slot, i == len(toks) - 1) for i, t in enumerate(toks)])
+    s.pos = start + len(toks)
+    s.turn_boundaries.append(Turn(start, s.pos, "exchange", msg_index))
+    s.formatter.assistant_generated(reply)
+    s.pos_before_request = s.pos_before_generation = s.pos
+
+
+def conversation_of(s):
+    """The (user, reply) pairs a session holds, for replaying into others."""
+    msgs, suffix, out = s.formatter._messages, s.formatter._think_suffix, []
+    for i in range(0, len(msgs) - 1, 2):
+        (ru, u), (ra, a) = msgs[i], msgs[i + 1]
+        if ru == "user" and ra == "assistant":
+            out.append((u, a[len(suffix):] if a.startswith(suffix) else a))
+    return out

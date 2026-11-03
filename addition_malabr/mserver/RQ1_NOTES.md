@@ -237,6 +237,18 @@ KV session.
 Policy in one line: **origin owns a conversation; site decides when the user
 has left** (the second half arrives with the rebuild).
 
+**Caveat found 2026-11-03: the control channel never worked in a real
+browser.** The browser opens it with a 5-field header that the server refused
+(fixed server-side, test 79; rebuild item 8). So until then, the rows that
+depend on a browser control event were true of the server only, never end to
+end. Those rows are: tab closed, tab closed while the channel was down, tab
+switched away, and extension unloaded. With the fix, foreground and LIVE_TABS
+reach the server (test 80). **Tab close still doesn't free the model's session
+in a real browser**, because TAB_CLOSED carries the wrong tab id (rebuild item
+9). Rows driven by the per-request connection were never affected: rule 1,
+reload, back/forward cache, "New chat", restart, and crash. Full list:
+`design_doc/control_channel_audit.md`.
+
 ---
 
 ## 4. The isolation tests
@@ -286,6 +298,12 @@ has left** (the second half arrives with the rebuild).
   harness reads `MALABR_TEST_SHARED_KV=1`. Earlier "both modes" runs set
   only `MALABR_SHARED_KV`, which the suite ignores, so before 2026-11-02 the
   shared-KV pass was really a second partitioned run.
+- **The cache must match the mode, too.** Until later on 2026-11-02 the test
+  fixture never set `kv_unified`, so even with the right variable "shared
+  KV" meant shared-KV *bookkeeping* over a *partitioned* llama.cpp cache:
+  sessions never shared one pool of cells. The fixture now builds a unified
+  cache whenever `MALABR_TEST_SHARED_KV=1` (`harness.py`, `Fixture`). Every
+  shared-KV result below says which cache it ran on.
 
 ### 4b. Is the method trustworthy? (`tests/negative_control.py`)
 
@@ -296,11 +314,24 @@ has left** (the second half arrives with the rebuild).
 |---|---|---|---|---|---|---|
 | f16, partitioned | 1539520127 | 20/20 | 40/40 / 40/40 | 0/20 / 0/20 | −3.61 to −2.67 | 0.00 |
 | q8_0, partitioned | 2978590849 | 20/20 | 40/40 / 40/40 | 0/20 / 0/20 | −3.84 to −2.72 | 0.00 |
-| f16, shared KV | 3366340333 | 20/20 | 40/40 / 40/40 | 0/20 / 0/20 | −3.36 to −2.37 | 0.00 |
+| f16, shared-KV bookkeeping, **partitioned cache** | 3366340333 | 20/20 | 40/40 / 40/40 | 0/20 / 0/20 | −3.36 to −2.37 | 0.00 |
+| f16, shared KV, **unified cache** (fixture fixed) | 3540045651 | 20/20 | 40/40 / 40/40 | 0/20 / 0/20 | −3.29 to −2.84 | 0.00 |
 
-- With the direct question, no real leak was missed in 120 broken-engine
-  trials, by either detector, and there were no false alarms in 60
-  correct-engine trials.
+- With the direct question, no real leak was missed in 160 broken-engine
+  trials, by either detector, and there were no false alarms in 80
+  correct-engine trials. The row that matters most for the shared design is
+  the unified-cache one: there, sessions draw cells from one pool, and only
+  llama.cpp's per-sequence mask keeps them apart.
+- **Does a neighbour's content reach a session's output on the unified
+  cache?** Not measurably. With identical, force-fed conversations, a
+  neighbour full of very different content (French, with its own secret)
+  changed the session's next-token distributions by exactly 0.0000, and the
+  neighbour's secret stayed at chance. Cell ORDER alone does move the output
+  slightly: identical tokens whose cells land out of order (reused holes)
+  differ by up to 0.0007 nats, the same whatever content once filled those
+  holes (`RQ2_NOTES.md`, noise floor). Future work, as a hypothesis only:
+  since placement depends on other tabs' activity, a tab's output may depend
+  very slightly on its neighbours' activity, though not their content.
 - The score separates completely. A session that never saw the secret puts
   about 1/10 to 1/40 on each digit (chance for a random digit), while a
   leaking one is certain.
@@ -351,6 +382,7 @@ Declared browser-only skips that matter for RQ1: 16, 36, 39, 60, and 61
 |---|---|---|---|
 | `test_transcript_keys.py` | patched Chromium, MalabrFeature **off**; drives the real `bg.js` over CDP | content script can't read storage; other tab or origin gets nothing; reload restores; conversation id round-trips; pass-through deletes nothing; a non-chat save evicts nothing; a chat turn elsewhere deletes only this tab's old copy; tab close deletes only that tab's keys | 14/14 in 7 consecutive runs, after 1 failure in the first run of the day (the failing check wasn't captured; not reproduced) |
 | `test_panel_status.py` | full stack via `run_malabr.sh`; types into the closed shadow DOM over CDP; restarts the server by hand | a non-browser program is refused; reload redraws; Back from the back/forward cache clears a stale panel; restart mid-page keeps only the new exchange, and reload redraws exactly that; restart then reload redraws nothing; the hand-restarted server warns about the opt-out; killing the browser takes its server down | 8/8 on 2026-11-02, after the shutdown fix; case 2 came from the back/forward cache |
+| `test_control_channel.py` | full stack via `run_malabr.sh`, 2 session slots | the server accepts the control channel; activating a tab moves the server's foreground; with both slots held a third tab is refused, and closing a tab frees its slot | 2026-11-03, before the server fix: 1/4 (header refused). After it: 3/4. Closing a tab still frees nothing, because TAB_CLOSED carries the history entry's id (rebuild item 9) |
 | `chrome_rq1_isolation.py` | Chrome 153, Gemini Nano on CPU; fresh six-digit secret, the direct question for control and leaks | control; cross-origin; second same-origin tab; fresh session after `destroy()` | 5/5 on 2026-11-02 (secret `MAGENTA-477146`). The first attempt that day failed before planting: "unable to create a session" although `availability()` said available |
 
 ---
@@ -393,9 +425,9 @@ Declared browser-only skips that matter for RQ1: 16, 36, 39, 60, and 61
 - **L9. One model.** Every measurement uses Qwen3-0.6B. The question trap
   shows how much a small model's habits shape a canary test; run
   `negative_control.py` again for any other model.
-- **L10. Other tests with the old question.** The compaction tests (04, 09,
-  47, 53; RQ2) still use the guarded question, so their "the model can't
-  recall dropped content" checks may share the trap.
+- ~~**L10. Other tests with the old question.**~~ Closed 2026-11-02: the
+  compaction tests (04, 09, 47, 53) now use the direct question with fresh
+  secrets, and test 78 is their negative control (`RQ2_NOTES.md` §4b).
 
 ---
 
@@ -420,3 +452,18 @@ The same list is in `design_doc/session_handoff_v7.md` §4 and the audit,
 6. `TAB_NAVIGATED`: leaving for another site deletes both copies at once.
 7. Report tab discards: free the model's memory, keep the transcript, rebuild
    on return with the same conversation id.
+8. Send a 6-field control header. Today's browser opens the control channel
+   with `ROUTE_MALABR_CONTROL,,-1,background,0` (`malabr_manager.cc:96`).
+   Until 2026-11-03 the server refused it (6 fields required), so no
+   FOREGROUND, TAB_CLOSED, LIVE_TABS or EXT_UNLOADED ever reached the server
+   from a real browser. The server now accepts exactly that string
+   (`protocol.LEGACY_CONTROL_HEADER`, test 79); drop the special case once
+   the browser sends 6 fields.
+9. Send the closed tab's own id in TAB_CLOSED. `OnTabStripModelChanged`
+   (`malabr_manager.cc`, the `kRemoved` branch) prefers
+   `removed.session_id`, which is the id of the "recently closed" history
+   entry `CreateHistoricalTab` makes (`tab_strip_model.cc:456-458`), not the
+   tab's. Measured 2026-11-03: closing tab 1061986978 sent `TAB_CLOSED,1061986981`,
+   and nothing was freed. Use `SessionTabHelper::IdForTab(removed.contents)`
+   always. Until then a closed idle tab keeps its slot until the server exits
+   (test 80, case 2b).
