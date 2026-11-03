@@ -296,6 +296,16 @@ trade-off.
      return (§2f), keeping the conversation id. Also needs a server re-prefill
      feature, and the server should remember a discarded session's id so a
      rebuild request is checked, not trusted.
+  8. Send a proper 6-field control header (`malabr_manager.cc:96` sends
+     `ROUTE_MALABR_CONTROL,,-1,background,0`). Until 2026-11-03 the server
+     refused it, so no control event (FOREGROUND, TAB_CLOSED, LIVE_TABS,
+     EXT_UNLOADED) ever reached it; the server now accepts that exact string
+     (test 79). Once the browser sends 6 fields, drop the special case.
+  9. TAB_CLOSED must carry the closed tab's own id. `malabr_manager.cc`
+     prefers `removed.session_id`, which is the "recently closed" history
+     entry's id, not the tab's (`tab_strip_model.cc:456-458`). Measured
+     2026-11-03: closing tab 1061986978 sent `TAB_CLOSED,1061986981`; nothing
+     was freed. Use `SessionTabHelper::IdForTab(removed.contents)` always.
 - **`a34926a`: socket moved to a private per-user directory** (finding 4 in
   the audit). The launcher uses `$XDG_RUNTIME_DIR`; the server refuses shared
   directories. Test 71.

@@ -236,17 +236,22 @@ class ControlReader:
             return
 
         if msg.kind == MSG_TAB_CLOSED:
-            for key in eng.keys_for_tab(msg.tab_id):
+            keys = eng.keys_for_tab(msg.tab_id)
+            for key in keys:
                 eng.cancel(key, "tab closed")
+            print(f"malabr: control TAB_CLOSED tab {msg.tab_id} -> "
+                  f"{len(keys)} session(s) cancelled", file=sys.stderr, flush=True)
             return
 
         if msg.kind == MSG_LIVE_TABS:
             # RECONCILE, not replay  [notes: runtime.ControlReader.dispatch]
             live = set(msg.tab_ids)
-            for key in eng.all_keys():
-                tab = key[1]
-                if tab != -1 and tab not in live:
-                    eng.cancel(key, "tab no longer live")
+            gone = [key for key in eng.all_keys()
+                    if key[1] != -1 and key[1] not in live]
+            for key in gone:
+                eng.cancel(key, "tab no longer live")
+            print(f"malabr: control LIVE_TABS {len(live)} live -> "
+                  f"{len(gone)} session(s) cancelled", file=sys.stderr, flush=True)
             return
 
         if msg.kind == MSG_EXT_UNLOADED:

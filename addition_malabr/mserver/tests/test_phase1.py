@@ -2058,6 +2058,35 @@ def t77_repeated_sigterm_still_exits():
            clean, f"exited={exited} socket_removed={clean}")
 
 
+def t79_browser_control_header_accepted():
+    """The shipped browser's control header has 5 fields
+    (malabr_manager.cc); the parser wanted 6 and refused it, so no control
+    event ever reached the server. That exact string must parse as the
+    control route; near misses must still be refused."""
+    env = pr.unpack_client_envelope(pr.LEGACY_CONTROL_HEADER.encode())
+    accepted = (env.route == pr.ROUTE_CONTROL and env.tab_id == -1
+                and env.payload_size == 0)
+    near_misses = [
+        "ROUTE_MALABR_CONTROL,,-1,background,1",
+        "ROUTE_MALABR_CONTROL,,-1,foreground,0",
+        "ROUTE_MALABR_CONTROL,,5,background,0",
+        "ROUTE_MALABR_GENERATE_API,,-1,background,0",
+        "ROUTE_MALABR_STOP,,-1,background,0",
+        " ROUTE_MALABR_CONTROL,,-1,background,0",
+        "ROUTE_MALABR_CONTROL,,-1,background,0,",
+        "ROUTE_MALABR_CONTROL,,-1,null,background,0",
+    ]
+    let_through = []
+    for h in near_misses:
+        try:
+            pr.unpack_client_envelope(h.encode())
+            let_through.append(h)
+        except pr.ProtocolError:
+            pass
+    record(79, "the browser's 5-field control header is accepted, near misses are not",
+           accepted and not let_through,
+           f"accepted={accepted}; near misses let through: {let_through}")
+
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------
@@ -2083,6 +2112,9 @@ BROWSER_ONLY = [
     (72, "panel redraws a saved transcript only if 'status' names the same "
          "conversation; re-asks on a back/forward-cache return and after each "
          "reply (scripts/test_panel_status.py, run by hand)"),
+    (80, "the real browser's control channel reaches the server: activating a "
+         "tab moves the foreground, closing one frees its slot "
+         "(scripts/test_control_channel.py, run by hand)"),
 ]
 
 

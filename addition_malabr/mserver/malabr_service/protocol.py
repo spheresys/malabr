@@ -25,6 +25,11 @@ MAX_PAYLOAD_SIZE = 1024 * 1024
 # A 6-field header is short; anything large is a peer probing for an allocation.
 MAX_HEADER_LEN = 4096
 
+# The control header today's browser sends: 5 fields, no extension id or origin.
+# Until the browser sends a 6-field one (rebuild list), the parser accepts this
+# exact string as the control route and nothing else short of 6 fields.
+LEGACY_CONTROL_HEADER = "ROUTE_MALABR_CONTROL,,-1,background,0"
+
 # Section 5: extension ids are exactly 32 characters drawn from a-p.
 EXTENSION_ID_LEN = 32
 _EXT_ID_CHARS = frozenset("abcdefghijklmnop")
@@ -109,6 +114,11 @@ def unpack_client_envelope(header_bytes):
     except UnicodeDecodeError as exc:
         # Every field is ASCII by construction  [notes: protocol.unpack_client_envelope]
         raise ProtocolError("header is not ASCII") from exc
+
+    if header == LEGACY_CONTROL_HEADER:
+        # The shipped browser opens its control channel with this 5-field
+        # header (malabr_manager.cc); exactly this string, nothing looser.
+        return ClientEnvelope(ROUTE_CONTROL, "", -1, "", "background", 0)
 
     parts = header.split(",")
     if len(parts) != 6:
