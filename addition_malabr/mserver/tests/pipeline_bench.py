@@ -196,6 +196,10 @@ def main():
     ap.add_argument("--cap", type=int, default=64)
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--calibration", choices=("measured", "fixed"), default="measured",
+                    help="cost curve: measured for this fixture's configuration "
+                         "(harness.Fixture.use_measured_calibration), or the "
+                         "harness's fixed DECODE_CURVE used before 2026-11-04")
     a = ap.parse_args()
 
     fg_tab = a.tabs                      # foreground arrives LAST
@@ -204,6 +208,9 @@ def main():
           f"{fg_tab} (arrives last), {a.runs} counted run(s) + warm-up ===\n")
 
     fix = Fixture(n_seq_max=max(4, a.tabs), n_ctx=4096, n_threads=3)
+    if a.calibration == "measured":
+        _cal, _path = fix.use_measured_calibration()
+        print(f"  calibration: {_path} ({_cal['key']})", flush=True)
     out = {arm: [] for arm in ARMS}
     try:
         print("  warm-up (not counted)...", flush=True)

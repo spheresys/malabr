@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import llama_cpp.llama_cpp as C
 
+from malabr_service import calibration as cal
 from malabr_service import engine as eng
 from malabr_service.session import Turn
 
@@ -75,6 +76,41 @@ class Fixture:
         self.vocab = C.llama_model_get_vocab(self.model)
         self.n_seq_max = n_seq_max
         self.n_ctx = n_ctx
+        self.n_threads = n_threads
+        self.calibration = None     # set by use_measured_calibration
+
+    def use_measured_calibration(self, shared_kv=None, path=None):
+        """Measure (or load) a calibration for THIS fixture's model, mode, KV
+        type, n_ctx, n_seq_max and threads, and make new_engine use its curves
+        instead of the fixed DECODE_CURVE. Benchmarks only: the suite keeps the
+        fixed curve so scheduler tests are deterministic.
+
+        Stored per key, so the old and new code trees load the same file.
+        """
+        if shared_kv is None:
+            shared_kv = self.kv_unified
+        budget = self.n_ctx // 2 if shared_kv else self.n_ctx // self.n_seq_max
+
+        class _Cfg:
+            pass
+        cfg = _Cfg()
+        cfg.model_path, cfg.n_ctx, cfg.n_seq_max = MODEL_PATH, self.n_ctx, self.n_seq_max
+        cfg.n_batch, cfg.n_threads, cfg.n_threads_explicit = 512, self.n_threads, True
+        cfg.shared_kv, cfg.n_ctx_per_session = shared_kv, budget
+        key = cal.calibration_key(cfg)
+        path = path or os.getenv("MALABR_BENCH_CALIBRATION") or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            f"bench_calibration_{'shared' if shared_kv else 'partitioned'}"
+            f"_{self.n_ctx}x{self.n_seq_max}_t{self.n_threads}.json")
+        result = cal.load(path, key)
+        if result is None:
+            result = cal.run(cfg, eng.MIN_CAP, eng.ABSOLUTE_CEILING,
+                             ctx=self.ctx, model=self.model)
+            C.llama_memory_clear(self.mem, True)
+            if not result.get("fallback"):
+                cal.save(result, path)
+        self.calibration = result
+        return result, path
 
     def new_engine(self, sampling=None, shared_kv=None, session_budget=None):
         # shared_kv=None means "test's choice": partitioned by default, but a
@@ -98,7 +134,10 @@ class Fixture:
                        sampling=sampling or eng.SAMPLING_DETERMINISTIC,
                        n_ctx=self.n_ctx, n_seq_max=self.n_seq_max,
                        shared_kv=shared_kv, session_budget=session_budget)
-        e.cost_curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+        if self.calibration is not None:
+            cal.apply_to_engine(self.calibration, e, eng)
+        else:
+            e.cost_curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
         return alloc, e
 
     def formatter(self):

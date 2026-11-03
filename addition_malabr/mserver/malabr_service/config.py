@@ -14,17 +14,58 @@ KV_TYPE = os.getenv("MALABR_KV_TYPE", "f16").lower()
 if KV_TYPE not in ("f16", "q8_0"):
     raise ValueError(f"MALABR_KV_TYPE must be f16 or q8_0, got {KV_TYPE!r}")
 
-# Measured on this project's test models: ~107 KB of KV per token of context
-# at f16. Scaled by the element size for other types, so the sizing in §11
-# tracks the cache actually allocated instead of a stale f16 assumption.
+# KV bytes per token of context are computed from the model's own shape
+# (kv_bytes_per_token). This constant is only the fallback when the GGUF
+# metadata can't be read: ~107 KB at f16, measured on Qwen3-0.6B, scaled by the
+# element size. From the shapes: Qwen3-0.6B needs 112 KiB, gemma-3-1b 26 KiB.
 #
 # NOTE: changing KV_TYPE changes this, and calibration measures real timings
-# against a real cache -- so `calibration.json` MUST be regenerated after a
-# change here, not carried over.
+# against a real cache -- calibration.json is keyed on it (calibration_key).
 _BYTES_PER_TOKEN_F16 = 107 * 1024
 _KV_BYTES_PER_ELEMENT = {"f16": 2.0, "q8_0": 34.0 / 32.0}
 BYTES_PER_TOKEN = int(_BYTES_PER_TOKEN_F16
                       * _KV_BYTES_PER_ELEMENT[KV_TYPE] / 2.0)
+
+
+def kv_bytes_per_token(model_path, kv_type=None):
+    """KV-cache bytes one token of context costs in this model, from its GGUF
+    metadata: layers x KV heads x (key + value head size) x element size.
+
+    For a sliding-window model (gemma3) this is an upper bound: llama.cpp keeps
+    the windowed layers' cache smaller. Returns (bytes, source); source is
+    "model shape" or the reason the fallback constant was used.
+    """
+    kv_type = kv_type or KV_TYPE
+    try:
+        import ctypes
+        import llama_cpp.llama_cpp as C
+        C.llama_backend_init()
+        mp = C.llama_model_default_params()
+        mp.vocab_only = True            # metadata + vocab only, no weights
+        model = C.llama_model_load_from_file(model_path.encode(), mp)
+        if not model:
+            return BYTES_PER_TOKEN, "fallback constant (model not readable)"
+        try:
+            buf = ctypes.create_string_buffer(256)
+
+            def meta(k):
+                n = C.llama_model_meta_val_str(model, k.encode(), buf, len(buf))
+                return buf.value.decode() if n >= 0 else None
+
+            arch = meta("general.architecture")
+            g = lambda k: meta(f"{arch}.{k}")      # noqa: E731
+            n_layer = int(g("block_count"))
+            n_head = int(g("attention.head_count"))
+            n_head_kv = int(g("attention.head_count_kv") or n_head)
+            head = int(g("embedding_length")) // n_head
+            k_len = int(g("attention.key_length") or head)
+            v_len = int(g("attention.value_length") or head)
+        finally:
+            C.llama_model_free(model)
+    except Exception as exc:            # per-layer arrays, missing keys, ...
+        return BYTES_PER_TOKEN, f"fallback constant ({type(exc).__name__}: {exc})"
+    per_token = n_layer * n_head_kv * (k_len + v_len) * _KV_BYTES_PER_ELEMENT[kv_type]
+    return int(per_token), "model shape"
 
 # Fraction of USABLE RAM the KV pool may claim  [notes: config.(module)]
 RAM_FRACTION_FOR_KV = 0.5
@@ -91,17 +132,24 @@ def detect_available_ram_bytes():
     return 2 * 1024 ** 3                  # conservative fallback
 
 
-def compute_n_ctx(n_seq_max=DEFAULT_N_SEQ_MAX, available_bytes=None,
-                  model_bytes=0):
+def size_n_ctx(n_seq_max=DEFAULT_N_SEQ_MAX, available_bytes=None,
+               model_bytes=0, bytes_per_token=BYTES_PER_TOKEN):
+    """The sizing rule with its inputs and the unclamped result, for the log."""
     avail = available_bytes if available_bytes is not None else detect_available_ram_bytes()
     usable = avail - BROWSER_RESERVE_BYTES - model_bytes
-    if usable <= 0:
-        return MIN_N_CTX                  # tiny machine: floor, do not go negative
-    raw = int(usable * RAM_FRACTION_FOR_KV / BYTES_PER_TOKEN)
+    raw = int(usable * RAM_FRACTION_FOR_KV / bytes_per_token) if usable > 0 else 0
+    # tiny machine: floor, do not go negative
     n_ctx = max(MIN_N_CTX, min(raw, MAX_N_CTX))
     # llama.cpp divides the pool evenly, so keep n_ctx a whole multiple of
     # n_seq_max; otherwise the remainder is silently unusable.
-    return (n_ctx // n_seq_max) * n_seq_max
+    return {"mem_available": avail, "usable": usable, "raw": raw,
+            "n_ctx": (n_ctx // n_seq_max) * n_seq_max}
+
+
+def compute_n_ctx(n_seq_max=DEFAULT_N_SEQ_MAX, available_bytes=None,
+                  model_bytes=0, bytes_per_token=BYTES_PER_TOKEN):
+    return size_n_ctx(n_seq_max, available_bytes, model_bytes,
+                      bytes_per_token)["n_ctx"]
 
 
 def compute_n_threads(physical_cores=None):
@@ -155,6 +203,16 @@ class ServerConfig:
     # HARD CPU ceiling in cores (MALABR_CPU_MAX)  [notes: config.ServerConfig]
     cpu_max_cores: float = 0.0
 
+    # How n_ctx and n_threads were arrived at, for the startup log and the
+    # calibration key. n_ctx_raw is the sizing rule's result before clamping,
+    # computed even when MALABR_N_CTX pins n_ctx.
+    n_ctx_pinned: bool = False
+    n_ctx_raw: int = 0
+    mem_available_bytes: int = 0
+    kv_bytes_per_token: int = 0
+    kv_bytes_source: str = ""
+    n_threads_explicit: bool = False
+
     @property
     def n_ctx_per_session(self):
         """The per-session budget section 8's compaction trigger measures against.
@@ -204,13 +262,17 @@ def load_config(base_dir=None):
         model_bytes = os.path.getsize(model_path)
     except OSError:
         model_bytes = 0
+    per_token, per_token_source = kv_bytes_per_token(model_path)
+    sizing = size_n_ctx(n_seq_max, model_bytes=model_bytes,
+                        bytes_per_token=per_token)
     if env_ctx:
         # An explicit value may exceed MAX_N_CTX on purpose (see the const...  [notes: config.load_config]
         n_ctx = max(n_seq_max, (int(env_ctx) // n_seq_max) * n_seq_max)
     else:
-        n_ctx = compute_n_ctx(n_seq_max, model_bytes=model_bytes)
+        n_ctx = sizing["n_ctx"]
 
-    n_threads = int(os.getenv("MALABR_N_THREADS", compute_n_threads()))
+    env_threads = os.getenv("MALABR_N_THREADS")
+    n_threads = int(env_threads or compute_n_threads())
     cpu_max_env = (os.getenv("MALABR_CPU_MAX") or "").strip().lower()
     if cpu_max_env in ("0", "off", "none", "disabled"):
         cpu_max_cores = 0.0
@@ -243,4 +305,10 @@ def load_config(base_dir=None):
         shared_kv_soft_div=int(os.getenv("MALABR_SESSION_SOFT_DIV", "2")),
         cpu_duty=float(os.getenv("MALABR_CPU_DUTY", "1.0")),
         cpu_max_cores=cpu_max_cores,
+        n_ctx_pinned=bool(env_ctx),
+        n_ctx_raw=sizing["raw"],
+        mem_available_bytes=sizing["mem_available"],
+        kv_bytes_per_token=per_token,
+        kv_bytes_source=per_token_source,
+        n_threads_explicit=bool(env_threads),
     )

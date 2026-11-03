@@ -146,9 +146,19 @@ def build(cfg, quick_calibration=False):
           f"{f' cpu_duty={cfg.cpu_duty}' if cfg.cpu_duty < 1.0 else ''}"
           f"{f' cpu_max={cfg.cpu_max_cores:g}' if cfg.cpu_max_cores > 0 else ''}",
           flush=True)
+    mib = 1024 ** 2
+    print(f"malabr: sizing MemAvailable={cfg.mem_available_bytes // mib} MiB, "
+          f"KV {cfg.kv_bytes_per_token} B/token ({cfg.kv_bytes_source}), "
+          f"unclamped n_ctx={cfg.n_ctx_raw}; n_ctx={cfg.n_ctx} "
+          f"{'pinned by MALABR_N_CTX' if cfg.n_ctx_pinned else 'from the sizing rule'}",
+          flush=True)
     print(f"malabr: calibration {'measured' if measured else 'loaded'}"
           f"{' (FALLBACK)' if result.get('fallback') else ''}"
           f" passed={result.get('passed')}", flush=True)
+    if measured:
+        print(f"malabr: calibration measured because: "
+              f"{'; '.join(result.get('recalibrated_because') or ['?'])}",
+              flush=True)
     for w in result.get("warnings") or []:
         print(f"malabr: WARNING {w}", file=sys.stderr, flush=True)
 

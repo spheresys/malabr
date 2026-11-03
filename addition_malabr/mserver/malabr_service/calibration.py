@@ -10,9 +10,11 @@ import time
 
 import llama_cpp.llama_cpp as C
 
-from .config import MAX_N_CTX, MIN_N_CTX, QUOTA_PCT, detect_physical_cores
+from .config import (KV_TYPE, MAX_N_CTX, MIN_N_CTX, QUOTA_PCT,
+                     detect_physical_cores)
 
-CALIBRATION_VERSION = 2
+# 3: results carry a `key`; a stored result is used only when it matches.
+CALIBRATION_VERSION = 3
 
 # Phase D: no single response should take longer than this to generate.
 TARGET_MAX_RESPONSE_SECONDS = 15
@@ -28,6 +30,35 @@ TRIALS_PER_POINT = 3
 
 class CalibrationError(RuntimeError):
     pass
+
+
+def calibration_key(cfg):
+    """What a stored calibration was measured under. Timings and the cap table
+    depend on every field, so any difference means measuring again.
+
+    The model is identified by file name and size, which is cheap and catches
+    a swapped or re-quantised file. Threads are the explicit MALABR_N_THREADS,
+    or "auto" when phase A picks them.
+    """
+    try:
+        model_bytes = os.path.getsize(cfg.model_path)
+    except OSError:
+        model_bytes = None
+    return {"model": os.path.basename(cfg.model_path),
+            "model_bytes": model_bytes,
+            "shared_kv": bool(getattr(cfg, "shared_kv", False)),
+            "kv_type": KV_TYPE,
+            "n_ctx": int(cfg.n_ctx),
+            "n_seq_max": int(cfg.n_seq_max),
+            "n_threads": (int(cfg.n_threads)
+                          if getattr(cfg, "n_threads_explicit", False) else "auto")}
+
+
+def key_mismatch(stored, key):
+    """Fields where a stored result differs from `key`, as "name: old -> new"."""
+    have = (stored or {}).get("key") or {}
+    return [f"{k}: {have.get(k)!r} -> {v!r}" for k, v in key.items()
+            if have.get(k) != v]
 
 
 # ----------------------------------------------------------------...  [notes: calibration._decode]
@@ -106,8 +137,11 @@ def phase_a_threads(model_path, candidates=None, probe_tokens=24, n_ctx=1024):
     Rationale: NOTES.md, calibration.phase_a_threads
     """
     cores = detect_physical_cores()
+    quota_threads = max(1, round(cores * QUOTA_PCT / 100))
     if candidates is None:
-        candidates = sorted({1, 2, 4, cores})
+        # The quota's own count is always a candidate, so the count deployed
+        # under the quota is one that was measured.
+        candidates = sorted({1, 2, quota_threads, 4, cores})
     results = {}
     # n_threads is a CONTEXT parameter, so the model -- the expensive...  [notes: calibration.phase_a_threads]
     mp = C.llama_model_default_params(); mp.n_gpu_layers = 0
@@ -135,11 +169,12 @@ def phase_a_threads(model_path, candidates=None, probe_tokens=24, n_ctx=1024):
         raise CalibrationError("no thread candidates measured")
     best = max(results, key=results.get)
     # The deployed value is capped by the quota regardless of what measured
-    # fastest: an unthrottled optimum is not achievable under the runtime quota.
-    quota_threads = max(1, round(cores * QUOTA_PCT / 100))
+    # fastest: an unthrottled optimum is not achievable under the runtime
+    # quota. Chosen is the fastest MEASURED count within the quota.
+    within = {n: t for n, t in results.items() if n <= quota_threads} or results
     return {"measured": {str(k): v for k, v in results.items()},
             "fastest": best,
-            "chosen": min(best, quota_threads),
+            "chosen": max(within, key=within.get),
             "quota_threads": quota_threads,
             "physical_cores": cores}
 
@@ -172,12 +207,14 @@ def phase_b_prefill_curve(ctx, vocab, sizes, depths, trials=2, seq=1):
     Rationale: NOTES.md, calibration.phase_b_prefill_curve
     """
     tok = _safe_token(vocab)
+    mem = C.llama_get_memory(ctx)
     rows = []
     for depth in depths:
         best_tps = None
+        _fill_to(ctx, vocab, seq, depth)        # once per depth, as phase B does
         for size in sizes:
             for _ in range(trials):
-                _fill_to(ctx, vocab, seq, depth)
+                C.llama_memory_seq_rm(mem, seq, depth, -1)
                 t0 = time.perf_counter()
                 _decode(ctx, [tok] * size, depth, [seq])
                 dt = time.perf_counter() - t0
@@ -347,8 +384,9 @@ def save(result, path):
     return path
 
 
-def load(path):
-    """Return a stored result, or None.
+def load(path, key=None):
+    """Return a stored result, or None. With `key`, only a result measured
+    under that key (calibration_key) is returned.
 
     Rationale: NOTES.md, calibration.load
     """
@@ -360,6 +398,8 @@ def load(path):
     if not isinstance(data, dict) or data.get("version") != CALIBRATION_VERSION:
         return None
     if not data.get("decode_curve"):
+        return None
+    if key is not None and key_mismatch(data, key):
         return None
     return data
 
@@ -408,14 +448,21 @@ def run(cfg, min_cap, absolute_ceiling, quick=False, ctx=None, model=None):
         positions = sorted({32, budget // 8, budget // 4, budget // 2,
                             int(budget * 0.75), budget - 64})
         positions = [p for p in positions if 0 < p < budget]
-        prefill_sizes, prefill_depths = [64, 256], [32, budget // 2]
+        # Prefill at depth too, to the deepest point a 256-token chunk can
+        # start, so the cost of a late chunk is measured, not extrapolated.
+        prefill_sizes = [64, 256]
+        prefill_depths = sorted({32, budget // 4, budget // 2,
+                                 max(32, budget - 320)})
         joint_depth = min(budget // 2, 1500)
         trials = TRIALS_PER_POINT
 
     owns = ctx is None
+    # Phase A is skipped when the threads are fixed: by MALABR_N_THREADS, or
+    # by a caller's context, whose n_threads was set when it was created.
+    fixed = quick or not owns or getattr(cfg, "n_threads_explicit", False)
     try:
         threads = (phase_a_threads(cfg.model_path)
-                   if not quick else
+                   if not fixed else
                    {"measured": {}, "fastest": cfg.n_threads,
                     "chosen": cfg.n_threads,
                     "quota_threads": cfg.n_threads,
@@ -437,6 +484,9 @@ def run(cfg, min_cap, absolute_ceiling, quick=False, ctx=None, model=None):
         vocab = C.llama_model_get_vocab(model)
 
         decode_rows = phase_b_position_curve(ctx, vocab, positions, trials=trials)
+        # Free the decode probe's sequence: in shared mode it is budget-deep,
+        # and the prefill probe goes that deep too.
+        C.llama_memory_seq_rm(C.llama_get_memory(ctx), 0, -1, -1)
         prefill_rows = phase_b_prefill_curve(ctx, vocab, prefill_sizes,
                                              prefill_depths, trials=1)
         joint = phase_c_joint_worst_case(ctx, vocab, cfg.n_seq_max, joint_depth)
@@ -455,17 +505,27 @@ def run(cfg, min_cap, absolute_ceiling, quick=False, ctx=None, model=None):
             if model:
                 C.llama_model_free(model)
 
+    result["key"] = calibration_key(cfg)
     # Phase F always runs, on measured AND fallback results alike.
     return phase_f_clamp(result, min_cap, absolute_ceiling)
 
 
 def load_or_run(cfg, min_cap, absolute_ceiling, quick=False, force=False):
-    """Use stored calibration if usable, otherwise measure and store it."""
+    """Use stored calibration if it was measured under this configuration,
+    otherwise measure and store it. A measured result records why in
+    `recalibrated_because`."""
+    key = calibration_key(cfg)
+    why = ["forced"]
     if not force:
-        cached = load(cfg.calibration_path)
+        cached = load(cfg.calibration_path, key)
         if cached is not None:
             return phase_f_clamp(cached, min_cap, absolute_ceiling), False
+        stale = load(cfg.calibration_path)
+        why = (key_mismatch(stale, key) if stale is not None
+               else ["no usable stored calibration (missing, unreadable or "
+                     f"not version {CALIBRATION_VERSION})"])
     result = run(cfg, min_cap, absolute_ceiling, quick=quick)
+    result["recalibrated_because"] = why
     try:
         save(result, cfg.calibration_path)
     except OSError:

@@ -140,6 +140,10 @@ def main():
     ap.add_argument("--tabs", type=int, default=4)
     ap.add_argument("--cap", type=int, default=48, help="max output tokens")
     ap.add_argument("--json", default=None)
+    ap.add_argument("--calibration", choices=("measured", "fixed"), default="measured",
+                    help="cost curve: measured for this fixture's configuration "
+                         "(harness.Fixture.use_measured_calibration), or the "
+                         "harness's fixed DECODE_CURVE used before 2026-11-04")
     a = ap.parse_args()
 
     print("=== MALABR vs FIFO vs equal-share (llama.cpp --parallel) ===")
@@ -159,6 +163,9 @@ def main():
     orders = [("foreground first", 1), ("foreground last", a.tabs)]
 
     fix = Fixture(n_seq_max=max(4, a.tabs), n_ctx=4096, n_threads=3)
+    if a.calibration == "measured":
+        _cal, _path = fix.use_measured_calibration()
+        print(f"  calibration: {_path} ({_cal['key']})", flush=True)
     out = {}
     try:
         for label, fg in orders:

@@ -35,7 +35,9 @@ DOCROOT = "/tmp/malabr-panelstatus-pages"
 LOG = "/tmp/malabr_panelstatus.log"
 SOCK = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/nonexistent"), "malabr-paneltest.sck")
 SERVER = "addition_malabr/mserver/app.py"
+# n_ctx pinned: the sizing rule follows MemAvailable, which drifts run to run.
 ENV = {"MALABR_SOCKET_PATH": SOCK, "MALABR_SHARED_KV": "1", "MALABR_CPU_DUTY": "1.0",
+       "MALABR_N_CTX": os.environ.get("MALABR_N_CTX", "16384"),
        "MALABR_PYTHON": "/home/chaitu/Desktop/vscode/malabr/bin/python"}
 A, B = f"http://localhost:{HTTP}/", f"http://127.0.0.1:{HTTP}/"
 

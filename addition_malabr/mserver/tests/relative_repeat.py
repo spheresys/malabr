@@ -28,6 +28,10 @@ def main():
     ap.add_argument("--tabs", type=int, default=8)
     ap.add_argument("--cap", type=int, default=48)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--calibration", choices=("measured", "fixed"), default="measured",
+                    help="cost curve: measured for this fixture's configuration "
+                         "(harness.Fixture.use_measured_calibration), or the "
+                         "harness's fixed DECODE_CURVE used before 2026-11-04")
     a = ap.parse_args()
 
     fg = a.tabs                       # foreground arrives LAST: the real case
@@ -35,6 +39,9 @@ def main():
           f"foreground = tab {fg} (arrives last) ===\n")
 
     fix = Fixture(n_seq_max=max(4, a.tabs), n_ctx=4096, n_threads=3)
+    if a.calibration == "measured":
+        _cal, _path = fix.use_measured_calibration()
+        print(f"  calibration: {_path} ({_cal['key']})", flush=True)
     rows = []
     try:
         # One UNCOUNTED warm-up. The first run pays for cold caches and the

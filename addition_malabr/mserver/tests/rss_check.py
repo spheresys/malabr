@@ -80,7 +80,9 @@ def main():
     sock = os.path.join(d, "m.sck")
     log_path = os.path.join(d, "server.log")
     env = {**os.environ, "MALABR_SOCKET_PATH": sock, "MALABR_TRUST_ANY_PEER": "1",
-           "MALABR_SHARED_KV": "1" if a.mode == "shared" else "0"}
+           "MALABR_SHARED_KV": "1" if a.mode == "shared" else "0",
+           # Pinned: the sizing rule follows MemAvailable, which drifts run to run.
+           "MALABR_N_CTX": os.environ.get("MALABR_N_CTX", "16384")}
     log = open(log_path, "w")
     srv = subprocess.Popen([PY, "-u", "app.py"], cwd=HERE, env=env, stdout=log,
                            stderr=subprocess.STDOUT)

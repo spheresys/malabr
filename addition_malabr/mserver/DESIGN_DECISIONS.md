@@ -569,7 +569,24 @@ Two more gaps:
 
     n_ctx = 0.5 × (MemAvailable − 2 GiB − model size) / bytes per token
 
-It is clamped to 4,096–16,384 and allocated once. There are two modes:
+It is clamped to 4,096–16,384 and allocated once.
+
+**Changed 2026-11-04.**
+- **Bytes per token come from the model's shape** (`config.kv_bytes_per_token`,
+  read from the GGUF metadata): layers × KV heads × (key + value head size) ×
+  element size. That is 112 KiB for Qwen3-0.6B and 26 KiB for gemma-3-1b at
+  f16. For a sliding-window model such as gemma it is an upper bound. The old
+  constant, 107 KB measured on Qwen3, is only the fallback when the metadata
+  can't be read. For gemma it had sized the pool about 4× too small, short of
+  the clamp.
+- **The startup log** gives MemAvailable, bytes per token and their source,
+  the unclamped n_ctx, and whether `MALABR_N_CTX` pinned it.
+- **Experiments pin `MALABR_N_CTX`** (16,384 by default in `rss_check.py`,
+  `test_panel_status.py` and `test_control_channel.py`; `greedy_tab.py` and
+  the benchmarks already set n_ctx explicitly). MemAvailable drifts between
+  runs, so the sizing rule doesn't give a stable configuration.
+
+There are two modes:
 - **Partitioned** (the server's default): n_seq_max hard slices of
   n_ctx / n_seq_max each.
 - **Shared KV** (what the launcher runs): one unified pool. Each session gets
@@ -610,12 +627,12 @@ which is the research question (`NOTES.md config.(module)`).
 - `tests/greedy_tab.py` at production size, one greedy tab: partitioned had
   156,019 failed rounds; shared had none (`RQ2_NOTES.md` §4d).
 
-**Status.** In place. M1 (gate 2) and M3 (the failure stop) are open
-limitations with no fix chosen.
+**Status.** In place. M1 (gate 2) and M3 (the failure stop) were closed by
+admission control on 2026-11-03 (D29).
 
 **Code.**
-- `config.py:30-47`: the constants.
-- `config.py:94-104`: `compute_n_ctx`.
+- `config.py`: `kv_bytes_per_token`, then the constants.
+- `config.py`: `size_n_ctx` and `compute_n_ctx`.
 - `config.py:159-167`: `n_ctx_per_session`.
 - `app.py:111`, `:124-126`: `n_seq_max` and `kv_unified`.
 - `scripts/run_malabr.sh:62`: the launcher turns shared mode on.
@@ -1018,6 +1035,31 @@ Two statistics are used:
 Each round's real time feeds a moving-average correction that can only make
 estimates more conservative (floor 1.0, ceiling 8).
 
+**Changed 2026-11-04: calibration is keyed to its configuration.**
+- A stored result carries a `key`: model file name and size, mode
+  (partitioned or shared), KV type, n_ctx, n_seq_max, and threads (the
+  explicit `MALABR_N_THREADS`, or "auto"). It is used only under the same key.
+  Any difference means measuring again, and the log says which fields
+  differed. `CALIBRATION_VERSION` went to 3, so unkeyed files are measured
+  again.
+- **Why.** Before this, the file had no key. The stored one (measured
+  2026-08-24: partitioned, n_ctx 16,384, 8 slots, 3 threads) was reused in
+  shared mode, where a session reaches 8,192. Its decode curve stopped at
+  1,984, and the cost curve and the cap table hold flat past their last point.
+  So every depth beyond 1,984 was priced at 1,984's cost and capped at 1,984's
+  cap.
+- **The probes span the whole session budget:** decode to budget − 64
+  (8,128 in shared mode at 16,384), and prefill at depths up to budget − 320.
+  The prefill probe now fills once per depth, as the decode probe does,
+  instead of once per trial.
+- **The scheduling benchmarks** used the harness's fixed `DECODE_CURVE`,
+  measured on no particular configuration. They now default to
+  `--calibration measured`: a calibration measured for the fixture's own
+  configuration (`harness.Fixture.use_measured_calibration`), stored per key,
+  so the old and new code load the same file. `--calibration fixed`
+  reproduces the earlier runs. The §12 suite keeps the fixed curve, so its
+  scheduler tests stay deterministic.
+
 **Context.** Decode speed falls from 48 to 5 tok/s with depth. A time budget
 is only as good as the prices it is spent at.
 
@@ -1043,12 +1085,13 @@ is only as good as the prices it is spent at.
   (D26).
 - Within a run, estimates only ever get more cautious.
 
-**Evidence.** Tests 22, 24, 26, 27, 31, 35, 41, 46 and 63.
+**Evidence.** Tests 22, 24, 26, 27, 31, 35, 41, 46, 63 and 89.
 
 **Status.** In place.
 
 **Code.**
 - `scheduler.py:34-125`.
+- `calibration.py`: `calibration_key`, `load`, `load_or_run`.
 - `calibration.py`, including `apply_to_engine`.
 
 ---
@@ -1404,10 +1447,18 @@ position on` more positions (`OutputCap.bound_from`).
    - after 20 s (`ADMISSION_WAIT_SECONDS`, below the browser's 60 s frame
      timeout) it is refused: "[refused] the server is at capacity";
    - a newer message or Stop ends a waiting turn with its own terminal frame.
-3. **Refusals** start with `[refused] ` (`session.REFUSED`), including "no
+3. **The 256-token reserve is superseded.** `RESERVED_FOR_RESPONSE` (256)
+   used to be the only room kept for a reply: a prompt fitted if it was at
+   most the budget minus 256. Admission now reserves the actual largest
+   reply cap from the turn's position on, and checks the session's current
+   size too. The budget-minus-256 check stays only as a cheap early refusal
+   for a prompt that no conversation of this budget could take (the static
+   half of gate 2, `engine.py` `_begin_turn`). 256 survives in one other place:
+   the floor, the fair share plus 256 (D15).
+4. **Refusals** start with `[refused] ` (`session.REFUSED`), including "no
    free session slots". The panel shows the rest with "(not saved)", removes
    the prompt from its stored transcript, and forgets a page attached with it.
-4. **Decode failures** that still happen are isolated per session (each
+5. **Decode failures** that still happen are isolated per session (each
    session retried alone, smallest first) and counted per session: three in a
    row roll back that session's turn. The engine-wide stop counts only
    unattributed errors, and only rounds that did work reset it (M3, M4).
@@ -1470,11 +1521,21 @@ verb needs an IDL change, C++ and the 8–9 h rebuild
 ### D31. CPU: threads from calibration, a smooth throttle, and a hard ceiling as a backstop
 
 **Decision.**
-- `n_threads` comes from calibration phase A: 4 on this machine, not 8.
+- `n_threads` comes from calibration phase A: the fastest measured count
+  within the 80% quota. That is 3 on this machine (4 measured fastest; 8 is
+  slower).
 - An optional `MALABR_CPU_DUTY` sleeps after each round in proportion to its
-  length.
+  length. **It is off by default:** 1.0 in `config.py` and in
+  `run_malabr.sh`, and every published result ran without it.
 - A `cpu.max` ceiling, set through a systemd scope, backstops runaways: half
   the logical CPUs, but never below `n_threads + 1`.
+
+**Changed 2026-11-04.** Phase A swept 1, 2, 4 and the physical core count,
+then deployed the quota's count, round(4 × 0.8) = 3, which it had never
+measured. 3 is now always a candidate, and the deployed count is the fastest
+of those measured within the quota. Phase A is skipped when the threads are
+fixed (`MALABR_N_THREADS`, or a caller's context), and the curves are then
+measured at that count.
 
 **Context.** The browser hosting the engine must stay responsive.
 
@@ -1491,11 +1552,12 @@ verb needs an IDL change, C++ and the 8–9 h rebuild
 **Trade-off.**
 - The ceiling silently doesn't exist when the cpu controller isn't delegated
   to the user session. The server detects and logs this.
-- A duty cycle of d slows every token by a factor of 1/d.
+- When enabled, a duty cycle of d slows every token by a factor of 1/d.
+  Off by default, it costs nothing.
 
 **Evidence.**
 - The thread table in ODQ §6, and the throttle table in §9.
-- Tests 29c and 30.
+- Tests 29c, 30 and 91.
 
 **Status.** In place.
 

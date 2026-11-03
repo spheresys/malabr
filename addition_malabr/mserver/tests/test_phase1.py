@@ -26,7 +26,7 @@ from malabr_service.config import MIN_N_CTX
 
 from harness import (CANARY, CANARY_WORDS, DECODE_CURVE, Fixture, LEAK_QUESTION,
                      LEAK_SCORE_THRESHOLD, LEAK_VARIANTS, SUITE_RNG, SUITE_SEED,
-                     compaction_trial, fresh_secret,
+                     MODEL_PATH, compaction_trial, fresh_secret,
                      PREFILL_CURVE, ask, conversation_of, drive, force_turn,
                      leak_trial, recalls_canary,
                      text_of)
@@ -2467,6 +2467,89 @@ def t88_a_turn_that_waits_too_long_is_refused_clearly():
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# 89-92: calibration keyed to its configuration; sizing from the model's shape
+# ---------------------------------------------------------------------------
+
+def t89_calibration_is_keyed_to_its_configuration():
+    """A stored calibration is used only under the configuration it was
+    measured in (model, mode, KV type, n_ctx, n_seq_max, threads). Before,
+    a file measured at n_ctx 16,384 partitioned was reused in shared mode."""
+    path = "/tmp/malabr_t89.json"
+    a = _Cfg(model_path=MODEL_PATH, n_ctx=4096, n_seq_max=4, n_batch=512,
+             n_threads=3, n_threads_explicit=True, shared_kv=False,
+             calibration_path=path)
+    stored = cal.conservative_fallback(4096, 4, eng.MIN_CAP, eng.ABSOLUTE_CEILING)
+    stored["key"] = cal.calibration_key(a)
+    cal.save(stored, path)
+    b = _Cfg(**{**a.__dict__, "shared_kv": True})
+    c = _Cfg(**{**a.__dict__, "n_ctx": 8192})
+    d = _Cfg(**{**a.__dict__, "n_threads": 2})
+    same = cal.load(path, cal.calibration_key(a)) is not None
+    refused = [cal.load(path, cal.calibration_key(x)) is None for x in (b, c, d)]
+    # load_or_run on a mismatch measures again and says why. A missing model
+    # makes that measurement the quick fallback, which is enough here.
+    b.model_path = "/definitely/not/a/model.gguf"
+    b.__dict__["calibration_path"] = path
+    _, measured = cal.load_or_run(b, eng.MIN_CAP, eng.ABSOLUTE_CEILING, quick=True)
+    why = cal.load(path).get("recalibrated_because") or []
+    os.unlink(path)
+    record(89, "calibration is used only under the configuration it was measured in",
+           same and all(refused) and measured
+           and any(w.startswith("shared_kv") for w in why),
+           f"same={same} refused(mode,n_ctx,threads)={refused} why={why}")
+
+
+def t90_kv_bytes_per_token_from_model_shape():
+    """Sizing uses the model's own KV shape, not a constant measured on one
+    model: layers x KV heads x (key + value head size) x element size."""
+    import glob
+    from malabr_service import config as cfgmod
+    expect = {"Qwen3-0.6B-Q8_0": 28 * 8 * (128 + 128) * 2,     # 112 KiB
+              "gemma-3-1b-it-Q4_K_M": 26 * 1 * (256 + 256) * 2}  # 26 KiB
+    got = {}
+    for p in sorted(glob.glob(os.path.join(os.path.dirname(MODEL_PATH), "*.gguf"))):
+        name = os.path.splitext(os.path.basename(p))[0]
+        if name in expect:
+            got[name] = cfgmod.kv_bytes_per_token(p, "f16")
+    ok = got and all(got[n] == (expect[n], "model shape") for n in got)
+    record(90, "KV bytes per token are computed from the model's shape",
+           bool(ok), f"{ {n: v[0] for n, v in got.items()} } constant={cfgmod.BYTES_PER_TOKEN}")
+
+
+def t91_chosen_thread_count_was_measured():
+    """Phase A deploys the fastest count WITHIN the quota, so that count must
+    be one it measured. Before, it swept {1, 2, 4} and deployed 3."""
+    r = cal.phase_a_threads(MODEL_PATH, probe_tokens=4)
+    record(91, "the deployed thread count is one phase A measured",
+           str(r["chosen"]) in r["measured"] and r["chosen"] <= r["quota_threads"],
+           f"chosen={r['chosen']} quota={r['quota_threads']} "
+           f"measured={ {k: round(v, 1) for k, v in r['measured'].items()} }")
+
+
+def t92_sizing_reports_unclamped_n_ctx():
+    """The startup log needs MemAvailable and the sizing rule's result before
+    the clamp, also when MALABR_N_CTX pins n_ctx."""
+    from malabr_service import config as cfgmod
+    big = cfgmod.size_n_ctx(8, available_bytes=64 * 1024 ** 3, bytes_per_token=114688)
+    old = os.environ.get("MALABR_N_CTX")
+    os.environ["MALABR_N_CTX"] = "8192"
+    try:
+        c = cfgmod.load_config()
+    finally:
+        if old is None:
+            os.environ.pop("MALABR_N_CTX")
+        else:
+            os.environ["MALABR_N_CTX"] = old
+    record(92, "sizing reports MemAvailable and the unclamped n_ctx",
+           big["raw"] > cfgmod.MAX_N_CTX and big["n_ctx"] == cfgmod.MAX_N_CTX
+           and c.n_ctx == 8192 and c.n_ctx_pinned and c.n_ctx_raw > 0
+           and c.mem_available_bytes > 0 and c.kv_bytes_source == "model shape",
+           f"64 GiB -> raw {big['raw']} clamped {big['n_ctx']}; pinned run: "
+           f"n_ctx={c.n_ctx} raw={c.n_ctx_raw} MemAvailable="
+           f"{c.mem_available_bytes // 1024 ** 2} MiB, {c.kv_bytes_per_token} B/token")
+
 
 BROWSER_ONLY = [
     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),

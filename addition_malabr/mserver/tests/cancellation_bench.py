@@ -131,6 +131,10 @@ def main():
     ap.add_argument("--after", type=float, default=1.5,
                     help="seconds before the tabs are closed")
     ap.add_argument("--json", default=None)
+    ap.add_argument("--calibration", choices=("measured", "fixed"), default="measured",
+                    help="cost curve: measured for this fixture's configuration "
+                         "(harness.Fixture.use_measured_calibration), or the "
+                         "harness's fixed DECODE_CURVE used before 2026-11-04")
     a = ap.parse_args()
 
     print("=== RQ4: what cancel-on-tab-close recovers ===")
@@ -138,6 +142,9 @@ def main():
           f"{a.after}s in; cap {a.cap} tokens\n")
 
     fix = Fixture(n_seq_max=max(4, a.tabs), n_ctx=4096, n_threads=3)
+    if a.calibration == "measured":
+        _cal, _path = fix.use_measured_calibration()
+        print(f"  calibration: {_path} ({_cal['key']})", flush=True)
     out = {}
     try:
         for label, reclaim in (("delivery-only", False), ("reclaim (MALABR)", True)):
