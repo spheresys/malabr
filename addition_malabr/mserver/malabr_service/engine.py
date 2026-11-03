@@ -13,19 +13,31 @@ import llama_cpp.llama_cpp as C
 from .formatter import (ChatFormatter, TemplateError, Utf8Streamer,  # noqa: F401
                         is_stop_token)
 from .protocol import FRAME_COMPLETE, FRAME_ERROR, FRAME_TOKEN
-from .scheduler import (CostCurve, IDLE_WAIT_SECONDS,  # noqa: F401
-                        MAX_CONSECUTIVE_EXCLUSIONS,
+from .scheduler import (ADMISSION_WAIT_SECONDS, CostCurve,  # noqa: F401
+                        IDLE_WAIT_SECONDS, MAX_CONSECUTIVE_EXCLUSIONS,
                         MAX_CONSECUTIVE_ROUND_ERRORS, MAX_CORRECTION,
-                        MAX_PREFILL_STALLS, PREFILL_CHUNK_MIN,
+                        MAX_PREFILL_STALLS, MAX_SESSION_DECODE_FAILURES,
+                        PREFILL_CHUNK_MIN, PREFILL_MIN_SHARE,
                         ROUND_LATENCY_BUDGET_MS, SOLO_ROUND_BUDGET_MS,
                         STALE_VISIBILITY_TIMEOUT, build_batch)
 from .session import (ABSOLUTE_CEILING, MAX_OUTBOX_TOKENS, MIN_CAP,  # noqa: F401
-                      OutboxFull, OutputCap, RESERVED_FOR_RESPONSE, Session,
-                      SessionState, Turn)
+                      OutboxFull, OutputCap, REFUSED, RESERVED_FOR_RESPONSE,
+                      Session, SessionState, Turn)
 from .slots import SlotAllocator, SlotWipeError  # noqa: F401
 
 
 SAMPLING_CHAT = {"temperature": 0.7, "top_p": 0.9, "top_k": 40}
+
+# Admission verdicts other than "fits" (None) and a refusal (its text).
+WAIT = "wait"
+
+REFUSED_FULL = (REFUSED + "this conversation has no room left for that message "
+                "-- start a new chat or send something shorter")
+REFUSED_CAPACITY = REFUSED + "the server is at capacity -- try again in a moment"
+
+
+class AdmissionWait(Exception):
+    """The turn does not fit the shared pool yet; retry it next round."""
 SAMPLING_DETERMINISTIC = {"temperature": 0.0}
 
 
@@ -50,8 +62,14 @@ class Engine:
         self._n_ctx = n_ctx or (session_budget * (n_seq_max or 8))
         self._n_seq_max = n_seq_max or 8
         self._session_budget = session_budget
+        # FIXED fair share: n_ctx / n_seq_max, however many sessions are live.
         self._fair_share = max(1, self._n_ctx // self._n_seq_max)
         self._agg_margin = 64               # leave a little slack under n_ctx
+        # The fair-share floor  [notes: engine.Engine._admit]. Neither admission
+        # nor the guard compacts a session to make room for ANOTHER session
+        # unless it holds more than this, and never below it. A session may
+        # still compact its own history for its own turn.
+        self._floor = self._fair_share + RESERVED_FOR_RESPONSE
 
         # Cooperative CPU throttle (§11): fraction of wall time the engine may
         # spend computing. 1.0 = flat out. See _run.
@@ -212,7 +230,8 @@ class Engine:
             s = self._sessions.get(key)
         if s is None or s.state == SessionState.DEAD:
             return False                    # defined no-op
-        if s.state not in (SessionState.PENDING, SessionState.GENERATING):
+        if s.state not in (SessionState.PENDING, SessionState.GENERATING) \
+                and s.waiting_text is None:
             return False                    # nothing in flight
         s.stop_requested = reason
         self.wake()
@@ -271,7 +290,11 @@ class Engine:
                     return
                 time.sleep(0.01)
                 continue
-            self.round_errors = 0
+            if did_work:
+                # Only a round that did work is a success. A deferred or idle
+                # round used to reset this too, so failures interleaved with
+                # deferred rounds never added up (RQ2 M3).
+                self.round_errors = 0
             if not did_work and self._deferred:
                 # Work EXISTS, this round just could not afford it. Nobody is
                 # going to wake us -- the thing that unblocks it is the stall
@@ -341,48 +364,103 @@ class Engine:
                 self._alloc.prepare(s.slot)
             self._alloc.assert_ready(s.slot)
 
-        items, owner = [], {}
-        for s in decode_picks:
-            owner[len(items)] = ("decode", s)
-            items.append((s.next_token, s.pos, s.slot, True))
-        for s, chunk in prefill_chunks:
-            for i, tok in enumerate(chunk):
-                last = (i == len(chunk) - 1)
-                completes = last and (s.prefill_offset + len(chunk) >= len(s.inbox_tokens))
-                if completes:
-                    owner[len(items)] = ("prefill", s)
-                items.append((tok, s.pos + i, s.slot, completes))
+        # One group per session: a decode pick carries one token AT s.pos, a
+        # prefill chunk carries its slice of the prompt.
+        groups = [(s, [s.next_token]) for s in decode_picks] + \
+                 [(s, chunk) for s, chunk in prefill_chunks]
+        items, wants = [], []
+        for s, toks in groups:
+            items.extend(self._group_items(s, toks))
+            wants.append(len(items) - 1 if items[-1][3] else None)
 
         t0 = time.perf_counter()
-        self._decode_batch(items)
+        try:
+            self._decode_batch(items)
+        except RuntimeError as exc:
+            # RQ2 M4: one session's failure used to fail the whole round, for
+            # every session in it. Retry each session on its own instead.
+            self._decode_each(groups, exc)
+            return True
         observed_ms = (time.perf_counter() - t0) * 1000.0
-
-        # Each decode pick carried one token AT s.pos  [notes: engine.Engine._run_round]
-        for s in decode_picks:
-            s.pos += 1
 
         # §9b part 2  [notes: engine.Engine._run_round]
         self.cost_curve.observe_round(estimated_ms, observed_ms)
 
-        for s, chunk in prefill_chunks:
-            s.pos += len(chunk)
-            s.prefill_offset += len(chunk)
+        for (s, toks), want in zip(groups, wants):
+            # batch index, NOT the output ordinal -- see _decode_batch.
+            self._commit_group(s, toks, want)
+        return True
+
+    @staticmethod
+    def _group_items(s, toks):
+        """One session's batch items. Logits only where a token is sampled next:
+        every decode pick, and the last token of a prompt's final chunk."""
+        if s.state == SessionState.GENERATING:
+            return [(toks[0], s.pos, s.slot, True)]
+        completes = s.prefill_offset + len(toks) >= len(s.inbox_tokens)
+        return [(tok, s.pos + i, s.slot, completes and i == len(toks) - 1)
+                for i, tok in enumerate(toks)]
+
+    def _commit_group(self, s, toks, logits_index):
+        """Advance one session past tokens that decoded, then sample if due."""
+        s.decode_failures = 0
+        if s.state == SessionState.GENERATING:
+            # Each decode pick carried one token AT s.pos  [notes: engine.Engine._run_round]
+            s.pos += 1
+        else:
+            s.pos += len(toks)
+            s.prefill_offset += len(toks)
             if s.prefill_offset >= len(s.inbox_tokens):
                 s.pos_before_generation = s.pos
                 if s.sampler is None:
                     s.sampler = self._make_sampler(s)
                 s.state = SessionState.GENERATING
+        if logits_index is None or s.state != SessionState.GENERATING or s.cancelled:
+            return
+        try:
+            self._sample_and_emit(s, logits_index)
+        except OutboxFull as e:
+            s.terminate(FRAME_ERROR, "reader stalled")
+            self._teardown(s, str(e))
 
-        for batch_i, (kind, s) in owner.items():
-            if s.state != SessionState.GENERATING or s.cancelled:
-                continue
+    def _decode_each(self, groups, exc):
+        """The batch failed: decode each session alone, smallest first.
+
+        A failed llama_decode leaves no cells behind (checked by §12 test 84),
+        so every session is still exactly at s.pos. The seq_rm below only
+        guards that for batches split into several micro-batches. A session
+        that decodes is committed and sampled at once, before the next decode
+        overwrites the logits; one that fails is blamed, and only it.
+        """
+        mem = self._alloc._mem
+        print(f"malabr: batched decode failed ({exc}); retrying "
+              f"{len(groups)} session(s) one by one", file=sys.stderr, flush=True)
+        for s, _ in groups:
+            C.llama_memory_seq_rm(mem, s.slot, s.pos, -1)
+        for s, toks in sorted(groups, key=lambda g: (len(g[1]), g[0].pos)):
+            items = self._group_items(s, toks)
             try:
-                # batch index, NOT the output ordinal -- see _decode_batch.
-                self._sample_and_emit(s, batch_i)
-            except OutboxFull as e:
-                s.terminate(FRAME_ERROR, "reader stalled")
-                self._teardown(s, str(e))
-        return True
+                self._decode_batch(items)
+            except RuntimeError as one:
+                C.llama_memory_seq_rm(mem, s.slot, s.pos, -1)
+                self._session_decode_failed(s, one)
+                continue
+            self._commit_group(s, toks, len(items) - 1 if items[-1][3] else None)
+
+    def _session_decode_failed(self, s, exc):
+        """RQ2 M3: failures are counted per session. After
+        MAX_SESSION_DECODE_FAILURES in a row the turn is rolled back with an
+        error; the session itself and every other one carry on."""
+        s.decode_failures += 1
+        print(f"malabr: decode failed for tab {s.key[1]} at pos {s.pos} "
+              f"({s.decode_failures}/{MAX_SESSION_DECODE_FAILURES}): {exc}",
+              file=sys.stderr, flush=True)
+        if s.decode_failures < MAX_SESSION_DECODE_FAILURES:
+            return
+        s.decode_failures = 0
+        self._roll_back_partial(s)
+        s.terminate(FRAME_ERROR, REFUSED + "this message could not be processed "
+                    "-- try again, or start a new chat")
 
     def _sample_and_emit(self, s, logits_index):
         """Produce exactly ONE token for this session, then return.
@@ -409,6 +487,13 @@ class Engine:
     def _apply_control(self):
         with self._reg_lock:
             sessions = list(self._sessions.values())
+        # Admission order: the visible tab first, then waiting turns oldest
+        # first, then new turns. Room that frees up goes to them in that order.
+        fg = self.effective_foreground_tab_id()
+        sessions.sort(key=lambda s: (s.key[1] != fg,
+                                     s.wait_since if s.wait_since is not None
+                                     else float("inf")))
+        now = time.time()
         for s in sessions:
             if s.state == SessionState.DEAD:
                 continue
@@ -422,6 +507,8 @@ class Engine:
                 # Same rollback as a supersede, then the session goes idle and
                 # stays available -- no teardown, no slot release.
                 self._roll_back_partial(s)
+                if s.waiting_text is not None:
+                    s.waiting_text = s.wait_since = None
                 s.terminate(FRAME_ERROR, reason)
                 continue
             if s.pending_replace is not None:
@@ -431,20 +518,45 @@ class Engine:
                 if s.state in (SessionState.PENDING, SessionState.GENERATING):
                     self._roll_back_partial(s)
                     s.terminate(FRAME_ERROR, "superseded")
-                try:
-                    self._begin_turn(s, text)
-                except ValueError as exc:
-                    # Gate 2 (the input cap in _begin_turn) fired  [notes: engine.Engine._apply_control]
-                    print(f"malabr: {exc}", file=sys.stderr, flush=True)
-                    s.terminate(FRAME_ERROR, str(exc))
-                    s.state = SessionState.IDLE
-                except TemplateError as exc:
-                    # The formatter desynced from the KV (its _rendered is no longer a...  [notes: engine.Engine._apply_control]
-                    print(f"malabr: formatter desync, ending session: {exc}",
-                          file=sys.stderr, flush=True)
-                    s.terminate(FRAME_ERROR,
-                                "conversation state was lost -- start a new chat")
-                    self._teardown(s, "formatter desync")
+                elif s.waiting_text is not None:
+                    # A turn still waiting for room is superseded the same way;
+                    # without this its request would never get a terminal frame.
+                    s.waiting_text = s.wait_since = None
+                    s.terminate(FRAME_ERROR, "superseded")
+                self._try_begin(s, text, now)
+            elif s.waiting_text is not None and now >= s.wait_retry_at:
+                text, s.waiting_text = s.waiting_text, None
+                self._try_begin(s, text, now)
+
+    def _try_begin(self, s, text, now):
+        """Start a turn, or keep it waiting, or refuse it. Never blocks the round."""
+        try:
+            self._begin_turn(s, text)
+            s.wait_since = None
+        except AdmissionWait:
+            if s.wait_since is None:
+                s.wait_since = now
+            if now - s.wait_since > ADMISSION_WAIT_SECONDS:
+                s.wait_since = None
+                print("malabr: turn refused after waiting "
+                      f"{ADMISSION_WAIT_SECONDS:.0f} s for room (tab {s.key[1]})",
+                      file=sys.stderr, flush=True)
+                s.terminate(FRAME_ERROR, REFUSED_CAPACITY)
+            else:
+                s.waiting_text = text
+                s.wait_retry_at = now + IDLE_WAIT_SECONDS
+        except ValueError as exc:
+            # Gate 2 (the input cap in _begin_turn) fired  [notes: engine.Engine._apply_control]
+            print(f"malabr: {exc}", file=sys.stderr, flush=True)
+            s.terminate(FRAME_ERROR, str(exc))
+            s.state = SessionState.IDLE
+        except TemplateError as exc:
+            # The formatter desynced from the KV (its _rendered is no longer a...  [notes: engine.Engine._apply_control]
+            print(f"malabr: formatter desync, ending session: {exc}",
+                  file=sys.stderr, flush=True)
+            s.terminate(FRAME_ERROR,
+                        "conversation state was lost -- start a new chat")
+            self._teardown(s, "formatter desync")
 
     def _begin_turn(self, s, text):
         # Swap in the queue this request's handler is already holding  [notes: engine.Engine._begin_turn]
@@ -456,30 +568,97 @@ class Engine:
         s.pos_before_generation = s.pos
         s.formatter_cp_before_request = s.formatter.checkpoint()
         s.inbox_tokens = s.formatter.user_turn(text)
-        # Section 8 gate 2  [notes: engine.Engine._begin_turn]
+        # Section 8 gate 2, the static half: a prompt no conversation of this
+        # budget could ever take  [notes: engine.Engine._begin_turn]
         max_input = s.budget - RESERVED_FOR_RESPONSE
-        if self._shared_kv:
-            # Shared-KV: s.budget is a soft cap  [notes: engine.Engine._begin_turn]
-            with self._reg_lock:
-                reserved = sum(min(o.pos, self._fair_share)
-                               for o in self._sessions.values()
-                               if o is not s and o.state != SessionState.DEAD)
-            room = self._n_ctx - reserved - self._agg_margin
-            max_input = min(max_input, room - RESERVED_FOR_RESPONSE)
-        if len(s.inbox_tokens) > max_input:
-            n_tokens = len(s.inbox_tokens)
+        n_tokens = len(s.inbox_tokens)
+        verdict = None
+        if n_tokens > max_input:
+            verdict = (f"{REFUSED}gate 1 bypassed: prompt is too long -- {n_tokens} "
+                       f"tokens, but this conversation can accept at most "
+                       f"{max(0, max_input)}")
+        else:
+            # The dynamic half: does it fit NOW, given what this conversation
+            # and the others already hold (RQ2 M1, M2, M5)?
+            need = n_tokens + s.output_cap.bound_from(s.pos + n_tokens)
+            verdict = self._admit(s, need)
+        if verdict is not None:
             s.formatter.restore(s.formatter_cp_before_request)
             s.formatter_cp_before_request = None
             s.state = SessionState.IDLE
             s.inbox_tokens = []
-            raise ValueError(
-                f"gate 1 bypassed: prompt is too long -- {n_tokens} tokens, "
-                f"but this conversation can accept at most {max(0, max_input)}")
+            if verdict == WAIT:
+                raise AdmissionWait()
+            raise ValueError(verdict)
+        s.turn_need = need
         s.prefill_offset = 0
         s.produced = 0
         s.streamer = Utf8Streamer()
         s._reply_bytes = bytearray()
         s.state = SessionState.PENDING
+
+    # -- admission (RQ2 M1, M2, M5) -------------------------------------------
+
+    def _live(self):
+        with self._reg_lock:
+            return [o for o in self._sessions.values() if o.state != SessionState.DEAD]
+
+    @staticmethod
+    def _outstanding(o):
+        """Positions o's admitted turn may still add (its reservation)."""
+        if o.state not in (SessionState.PENDING, SessionState.GENERATING):
+            return 0
+        return max(0, o.turn_need - (o.pos - o.pos_before_request))
+
+    def _claims_of_others(self, s):
+        """What every other live session holds or is owed: its current size plus
+        its admitted turn's reservation, and never less than the fixed fair share."""
+        return sum(max(self._fair_share, o.pos + self._outstanding(o))
+                   for o in self._live() if o is not s)
+
+    def _reclaimable(self, s, floor):
+        """Tokens compact(s, floor=floor) could free, keeping the recent turn."""
+        pos, freed = s.pos, 0
+        for turn in s.turn_boundaries[1:-1]:
+            n = turn.end - turn.start
+            if n > 0 and pos - n >= floor:
+                pos -= n; freed += n
+        return freed
+
+    def _admit(self, s, need):
+        """Does a turn needing `need` more positions fit now?
+
+        Returns None (admit), WAIT (may fit once others finish; retried), or the
+        refusal text. Rationale: NOTES.md, engine.Engine._admit
+        """
+        # 1. The session's own limit: hard in partitioned mode, the soft cap in
+        # shared mode. Its OWN history pays first; nothing is dropped unless
+        # dropping it is enough.
+        short = s.pos + need - s.budget
+        if short > 0:
+            if self._reclaimable(s, floor=0) < short:
+                return REFUSED_FULL
+            self.compact(s, target=short)
+            if s.pos + need > s.budget:
+                return REFUSED_FULL
+        if not self._shared_kv:
+            return None
+        # 2. The shared pool. Room may come only from sessions above the floor,
+        # never below it, and never by dropping their latest turn.
+        limit = self._n_ctx - self._agg_margin
+        short = s.pos + need + self._claims_of_others(s) - limit
+        if short <= 0:
+            return None
+        victims = sorted((o for o in self._live()
+                          if o is not s and o.pos > self._floor),
+                         key=lambda o: o.pos, reverse=True)
+        if sum(self._reclaimable(o, self._floor) for o in victims) < short:
+            return WAIT
+        for o in victims:
+            if short <= 0:
+                break
+            short -= self.compact(o, target=short, floor=self._floor)
+        return None if short <= 0 else WAIT
 
     def _roll_back_partial(self, s):
         """Undo a turn that did not finish. Engine thread only.
@@ -488,6 +667,7 @@ class Engine:
         """
         if s.state not in (SessionState.PENDING, SessionState.GENERATING):
             return
+        s.turn_need = 0
         target = s.pos_before_request
         if s.pos > target:
             C.llama_memory_seq_rm(self._alloc._mem, s.slot, target, s.pos)
@@ -617,6 +797,7 @@ class Engine:
         s.terminate(frame_type, reason)
         s.state = SessionState.IDLE
         s.produced = 0
+        s.turn_need = 0
         # The turn is committed  [notes: engine.Engine._finish_turn]
         s.pos_before_generation = s.pos_before_request
         # Its formatter checkpoint is now meaningless too. Nothing reads it
@@ -636,19 +817,24 @@ class Engine:
         """
         return s.pos >= s.budget * self.COMPACT_TRIGGER
 
-    def compact(self, s, keep_recent=True):
+    def compact(self, s, keep_recent=True, target=None, floor=0):
         """Drop whole oldest exchanges, shifting EVERY live absolute position.
+
+        target: stop once this many tokens are freed (default
+        TARGET_FREED_TOKENS). floor: skip any exchange whose removal would take
+        the session below this many positions.
 
         Rationale: NOTES.md, engine.Engine.compact
         """
+        target = self.TARGET_FREED_TOKENS if target is None else target
         # Keep the anchor (index 0)  [notes: engine.Engine.compact]
         droppable = s.turn_boundaries[1:-1] if keep_recent else s.turn_boundaries[1:]
         freed = 0
         for turn in list(droppable):
-            if freed >= self.TARGET_FREED_TOKENS:
+            if freed >= target:
                 break
             n = turn.end - turn.start
-            if n <= 0:
+            if n <= 0 or s.pos - n < floor:
                 continue
 
             # Invariant section 8 names but does not assert  [notes: engine.Engine.compact]
@@ -704,14 +890,17 @@ class Engine:
         guard = 0
         while sum(s.pos for s in live) >= limit and guard < 3 * len(live) + 4:
             guard += 1
-            over = sorted((s for s in live if s.pos > self._fair_share),
+            # Only sessions above the fair-share floor, and never below it: a
+            # small session is not shrunk to feed a greedy one (RQ2 M5). The
+            # old fallback to "the largest overall" did exactly that.
+            pool = sorted((s for s in live if s.pos > self._floor),
                           key=lambda s: s.pos, reverse=True)
-            pool = over or sorted(live, key=lambda s: s.pos, reverse=True)
             freed = 0
             for victim in pool:
-                freed = self.compact(victim)          # keep the recent turn
+                freed = self.compact(victim, floor=self._floor)   # keep the recent turn
                 if not freed:
-                    freed = self.compact(victim, keep_recent=False)   # last resort
+                    freed = self.compact(victim, keep_recent=False,   # last resort
+                                         floor=self._floor)
                 if freed:
                     break
             if not freed:

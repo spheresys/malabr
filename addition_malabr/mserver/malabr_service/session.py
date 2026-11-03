@@ -40,6 +40,21 @@ class OutputCap:
         # so a corrupted or hand-edited table still cannot exceed it.
         return max(MIN_CAP, min(int(cap), ABSOLUTE_CEILING))
 
+    def bound_from(self, pos):
+        """The most tokens one reply can produce if it starts at `pos`.
+
+        The cap is re-read at every token's position, so a reply that starts
+        under a small cap can run into a larger one further on. Admission
+        reserves the largest cap at or beyond `pos`, so the reservation holds
+        whatever the table looks like.
+        """
+        cap = self.for_position(pos)
+        if self._table is not None:
+            for position, _ in self._table:
+                if position > pos:
+                    cap = max(cap, self.for_position(position))
+        return cap
+
 
 # ----------------------------------------------------------------...  [notes: session.(module)]
 
@@ -60,6 +75,10 @@ class OutboxFull(RuntimeError):
 
 # Section 8 input cap  [notes: session.(module)]
 RESERVED_FOR_RESPONSE = 256
+
+# Starts the error text of a turn the server did not take. The panel shows the
+# rest and keeps neither the prompt nor a reply in its transcript.
+REFUSED = "[refused] "
 
 
 class Turn:
@@ -134,6 +153,17 @@ class Session:
         # Set by stop_generation(). Unlike `cancelled` this ends the TURN, not
         # the session.
         self.stop_requested = None
+
+        # Admission (Engine._admit). turn_need: positions this turn may still
+        # add, reserved when it was admitted. waiting_text: a turn that did not
+        # fit yet and is retried each round, from wait_since, until it fits or
+        # times out.
+        self.turn_need = 0
+        self.waiting_text = None
+        self.wait_since = None
+        self.wait_retry_at = 0.0
+        # Consecutive rounds in which this session's own decode failed.
+        self.decode_failures = 0
 
     # -- outbox ------------------------------------------------------------
 

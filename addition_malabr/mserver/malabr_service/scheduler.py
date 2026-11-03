@@ -16,8 +16,23 @@ MAX_CORRECTION = 8.0              # §9b leaves this unnamed; see observe_round
 STALE_VISIBILITY_TIMEOUT = 10.0
 
 # Consecutive failed engine rounds before giving up. Transient failures are
-# survivable; a systematic one should stop rather than spin.
+# survivable; a systematic one should stop rather than spin. Counts only
+# failures no single session can be blamed for, and only rounds that tried
+# work reset it: a deferred or idle round is not a success.
 MAX_CONSECUTIVE_ROUND_ERRORS = 20
+
+# Consecutive rounds in which one session's own decode failed before its turn
+# is rolled back with an error. Other sessions are not affected.
+MAX_SESSION_DECODE_FAILURES = 3
+
+# Fraction of each round's budget held back for prefill while a prompt is
+# waiting to be prefilled. Decode may use the rest. Without it a large page
+# got only what decode left, about 18 tok/s for two pages together (RQ2 M8).
+PREFILL_MIN_SHARE = 0.25
+
+# How long a turn that does not fit the shared pool may wait for room before
+# it is refused. Below the browser's 60 s frame-read timeout.
+ADMISSION_WAIT_SECONDS = 20.0
 
 # How long an idle engine round blocks waiting to be woken. This is a BACKSTOP:
 # every producer of work wakes the engine explicitly, so in normal operation the
@@ -150,11 +165,16 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
 
     picks, budget = [], float(budget_ms)
     spent = 0.0
+    # Held back for prefill while some prompt still needs it (PREFILL_MIN_SHARE).
+    # Decode spends `budget - held`; prefill gets whatever is left, never less
+    # than `held`. The first decode pick is still unconditional.
+    held = budget * PREFILL_MIN_SHARE if any(
+        len(s.inbox_tokens) > s.prefill_offset for s in pending) else 0.0
 
     # Foreground first and UNCONDITIONALLY  [notes: scheduler.build_batch]
     for s in sorted(fg, key=lambda s: -s.rounds_excluded):
         c = cost_curve.cost_ms_worst(s.pos)
-        if not picks or c <= budget:
+        if not picks or c <= budget - held:
             picks.append(s); budget -= c; spent += c
 
     # AGING PASS -- before cheapest-first gets to pass over the same s...  [notes: scheduler.build_batch]
@@ -165,7 +185,7 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
     for s in aged:
         c = cost_curve.cost_ms_worst(s.pos)
         # "or not picks" is a CORRECTION to §9a, not a restatement of it  [notes: scheduler.build_batch]
-        if c <= budget or not picks:
+        if c <= budget - held or not picks:
             picks.append(s); picked.add(id(s)); budget -= c; spent += c
 
     # NORMAL FILL -- cheapest-first  [notes: scheduler.build_batch]
@@ -173,7 +193,7 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
                         for s in runnable if id(s) not in picked),
                        key=lambda cs: cs[0])
     for c, s in remaining:
-        if c <= budget:
+        if c <= budget - held:
             picks.append(s); picked.add(id(s)); budget -= c; spent += c
 
     # Counted for foreground too: an fg member that lost this round must age
@@ -183,6 +203,11 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
 
     # -- §9b: prefill fills whatever budget is LEFT ------------------...  [notes: scheduler.build_batch]
     prefill_chunks = []
+    # Never less than the held share, even when one unconditional decode pick
+    # already overran the round: the round then runs over budget by at most
+    # that share, instead of starving the prompt.
+    budget = max(budget, held)
+    guaranteed = False      # the held share has gone to a prompt this round
     pending.sort(key=lambda s: s.key[1] != foreground_tab_id)
     for s in pending:
         remaining_toks = len(s.inbox_tokens) - s.prefill_offset
@@ -192,7 +217,12 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
         n = min(remaining_toks, affordable)
 
         # DIVERGENCE FROM §9b -- it says "if n < PREFILL_CHUNK_MIN and n <...  [notes: scheduler.build_batch]
-        if n < PREFILL_CHUNK_MIN and n < remaining_toks:
+        if n < PREFILL_CHUNK_MIN and n < remaining_toks and \
+                not (held and not guaranteed and n >= 1):
+            # The first waiting prompt (the visible tab's, if it has one) is
+            # exempt: it always gets the held share, however small. The tokens
+            # ride in the same batch as decode, so the per-call overhead the
+            # minimum chunk guards against does not arise.
             s.prefill_stalls += 1
             if s.prefill_stalls < MAX_PREFILL_STALLS:
                 continue
@@ -201,6 +231,7 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
         if n <= 0:
             continue
         s.prefill_stalls = 0
+        guaranteed = True
         chunk = s.inbox_tokens[s.prefill_offset:s.prefill_offset + n]
         prefill_chunks.append((s, chunk))
         c = cost_curve.prefill_ms(n, s.pos)

@@ -664,7 +664,10 @@ every earlier K/V vector. "One curve captures both memory and CPU"
 ### D14. Compaction drops whole middle exchanges, keeping the first and the latest
 
 **Decision.**
-- **When:** before each round, for any session at 95% of its budget.
+- **When:** before each round, for any session at 95% of its budget; and, since
+  2026-11-03, at admission when the new turn would not fit what is left of
+  the session (D29). Only the session's own history pays, and only if
+  dropping it is enough; otherwise nothing is dropped and the turn is refused.
 - **What:** whole exchanges, oldest first, from `turn_boundaries[1:-1]`,
   until at least 512 tokens are freed.
 - **How:** later positions shift down (K-shift), and the formatter drops the
@@ -703,7 +706,8 @@ compaction is the normal path, not an edge case (§8).
 - Test 48 fails in partitioned mode on a fresh question, and is left failing
   on purpose (M11).
 - A session holding only its anchor and one large turn can't be relieved
-  (M2).
+  (M2). Since 2026-11-03 such a turn is refused at admission with a clear
+  message, rather than admitted to fail (§12 test 81).
 - The guard's last resort drops the latest turn as well (M6, D15).
 
 **Evidence.**
@@ -726,10 +730,12 @@ compaction is the normal path, not an edge case (§8).
 
 **Decision.** In shared-KV mode, before each round, when the sum of all
 sessions' positions reaches n_ctx − 64:
-1. Compact the largest session above its fair share (n_ctx / n_seq_max). If
-   none is above, compact the largest overall.
+1. Compact the largest session above the fair-share floor (the fixed fair
+   share n_ctx / n_seq_max, plus 256), and never below that floor. If none is
+   above it, compact nobody. (Until 2026-11-03: above the fair share, and
+   otherwise the largest overall; see Changed, below.)
 2. If that victim has nothing to drop while keeping its latest turn, drop the
-   latest turn too.
+   latest turn too, still not below the floor.
 3. If compaction is spent, roll back PENDING turns, largest first, each with
    "server is at capacity — try again".
 4. Never touch a session that is generating.
@@ -748,8 +754,10 @@ round (`NOTES.md engine.Engine._run_round`).
 - *Kill a generating stream to make room.* Rejected: a worse trade than
   refusing a turn that has produced nothing (`engine.py:734-740`).
 - *A fair-share floor:* never shrink a session at or near its fair share to
-  feed a greedy one. Not adopted, and not recorded as a proposal anywhere.
-  M5 records the gap without choosing a fix.
+  feed a greedy one. **Adopted 2026-11-03** (see Decision, below, and D29).
+- *Fall back to the largest session overall when nobody is above the fair
+  share.* This was the old rule, and it was what shrank a small tab to feed
+  greedy ones (M5, R8). Removed.
 
 **Trade-off.**
 - It rejects turns under pressure (M7).
@@ -765,7 +773,22 @@ round (`NOTES.md engine.Engine._run_round`).
 - At production size the guard was never exercised: two greedy tabs couldn't
   fill the pool in 600 s (M8).
 
-**Status.** In place. The fairness gap (M5) is open; no floor is adopted.
+**Changed 2026-11-03: the fair-share floor.**
+- The floor is the **fixed** fair share, n_ctx / n_seq_max, plus one reply
+  (`RESERVED_FOR_RESPONSE`, 256): 768 at n_ctx 4,096 with 8 slots, 2,304 at
+  16,384. It is fixed on purpose. It does not grow when fewer sessions are
+  live, so a session's protection doesn't depend on how many tabs happen to
+  be open.
+- The guard picks only sessions above the floor, largest first.
+- It compacts them only down to the floor, never below.
+- The last resort (dropping the victim's latest turn) still exists, and it
+  also stops at the floor.
+- The floor protects a session from **others**. A session may still compact
+  its own history to make room for its own turn (D14, D29).
+
+**Status.** Changed 2026-11-03 (floor adopted; M5 closed by §12 test 82,
+which fails on the old code: 541 → 190). The guard is now a backstop behind
+admission (D29).
 
 **Code.**
 - `engine.py:692-732`: `_relieve_aggregate_pressure`.
@@ -940,14 +963,41 @@ yet (`design_doc/control_channel_audit.md`).
   measurement: it overran a 50 ms budget by 87 ms in 20% of rounds (same
   entry).
 
+**Changed 2026-11-03: a minimum prefill share.**
+- While any prompt is waiting to be prefilled, decode may spend at most 75%
+  of the round budget (`PREFILL_MIN_SHARE = 0.25`). The first decode pick is
+  still unconditional.
+- Prefill then gets whatever is left, and **never less than the held share**.
+- **The overrun:** when one unconditional decode pick already costs more than
+  the whole round (a visible tab deep in its context), prefill still gets its
+  share. That round runs over budget by at most 25% of the budget, **12.5 ms**
+  at the 50 ms round. This was accepted over starving the prompt.
+- **The chunk exemption:** at the calibrated prefill speed (about 200–280
+  tok/s worst case), a quarter of a 50 ms round buys only about 3 tokens.
+  That is below `PREFILL_CHUNK_MIN` (32), so the stall rule would still have
+  skipped the prompt; §12 test 86 caught exactly that. The **first** waiting
+  prompt each round (the visible tab's, if it has one) is therefore exempt
+  from the minimum chunk and always gets the held share, however small.
+  - Why the exemption is safe: the minimum chunk exists because a tiny
+    *separate* call is dominated by per-call overhead. These tokens ride in
+    the same batch as the round's decode tokens, so that overhead does not
+    arise.
+  - Other waiting prompts still follow the stall rule.
+
 **Trade-off.**
-- Under contention, large pages prefill slowly: two greedy tabs managed about
-  18 tok/s combined, against 147–208 tok/s calibrated (M8).
+- Under contention, large pages prefilled slowly before this change: two
+  greedy tabs managed about 18 tok/s combined, against 147–208 tok/s
+  calibrated (M8). The share bounds that from below; the reruns in
+  `RQ2_NOTES.md` give the measured effect.
+- Decode for other tabs gets at most 75% of a round while a prompt waits, and
+  a round can overrun by 12.5 ms. The effect on the published scheduling
+  figures (foreground TTFT, Jain) is in `RQ2_NOTES.md`.
 - A round that deferred a prefill must not sleep like an idle round (R1).
 
-**Evidence.** Tests 62 and 68.
+**Evidence.** Tests 62, 68 and 86 (86 fails on the old code: 0 tokens in the
+first round).
 
-**Status.** In place.
+**Status.** Changed 2026-11-03.
 
 **Code.**
 - `scheduler.py:184-207`.
@@ -1337,15 +1387,52 @@ before it reaches a decode.
 - *Let compaction deal with it.* Rejected: compaction can't help one prompt
   bigger than the whole budget (§8).
 
+**Changed 2026-11-03: admission control** (`engine.Engine._admit`, called
+from `_begin_turn`). A turn needs `prompt + the largest reply cap from its
+position on` more positions (`OutputCap.bound_from`).
+1. **Own limit** (hard in partitioned mode, the soft cap in shared mode). If
+   the turn doesn't fit what is left, the session compacts its own history,
+   but only if that frees enough. Otherwise the turn is **refused**:
+   "[refused] this conversation has no room left for that message".
+2. **Shared pool** (shared mode). Every other live session is counted at its
+   current size plus its admitted turn's reservation, and never less than the
+   fixed fair share. Room may come only from sessions above the floor (D15),
+   never below it, and never by dropping their latest turn. If it can't be
+   made, the turn **waits**:
+   - it is retried each round (every 25 ms) without blocking the round;
+   - the visible tab's waiting turn goes first, then others, oldest first;
+   - after 20 s (`ADMISSION_WAIT_SECONDS`, below the browser's 60 s frame
+     timeout) it is refused: "[refused] the server is at capacity";
+   - a newer message or Stop ends a waiting turn with its own terminal frame.
+3. **Refusals** start with `[refused] ` (`session.REFUSED`), including "no
+   free session slots". The panel shows the rest with "(not saved)", removes
+   the prompt from its stored transcript, and forgets a page attached with it.
+4. **Decode failures** that still happen are isolated per session (each
+   session retried alone, smallest first) and counted per session: three in a
+   row roll back that session's turn. The engine-wide stop counts only
+   unattributed errors, and only rounds that did work reset it (M3, M4).
+
+**Alternatives considered (this change).**
+- *Reserve every other session's current size* (rejected earlier, D15:
+  starved a third tab). The claim here is the fixed fair share or the current
+  size, whichever is larger, and the part above the floor can be reclaimed.
+- *Reserve a fair share for slots with no session yet.* Not adopted: it would
+  make shared mode behave like partitioned mode. A newcomer is admitted from
+  free or reclaimable room, or waits.
+- *Refuse immediately instead of waiting.* Not adopted: in shared mode the
+  shortfall is often transient (another turn finishing).
+
 **Trade-off.**
 - A foreground tab can be refused while background tabs hold every slot.
-- Gate 2 checks the prompt alone, not the session's position plus the prompt
-  (M1). That is how one greedy tab in partitioned mode caused 156,019 failed
-  rounds.
+- A turn may wait up to 20 s with no frame before it is refused.
+- Every live session's fair share is held for it even when it is idle, so a
+  greedy tab gets less of the pool than before.
 
-**Evidence.** Tests 07, 15, 38 and 64; `tests/greedy_tab.py`.
+**Evidence.** Tests 07, 15, 38, 64; 81–88 (all but 85 fail on the old code;
+85 checks the llama.cpp precondition for the per-session retry);
+`scripts/test_control_channel.py` case 2c; `tests/greedy_tab.py`.
 
-**Status.** In place. M1 is open.
+**Status.** Changed 2026-11-03. M1, M2, M3, M4, M5 closed in the server.
 
 **Code.**
 - `engine.py:89-104`: `get_or_create`.
@@ -1689,14 +1776,14 @@ Sources: `RQ1_NOTES.md` §4a; `RQ2_NOTES.md` §4a, §4c, §5.
 | D9 | — merged into D8 | — | — | — |
 | D10 | Origin owns; site decides leaving; rule 1; id check | Delete on navigation; login allow-list | Test 72; transcript keys 14/14; 03d | (a)(c)(d) in place; (b) rebuild 6 |
 | D11 | Private socket dir, peer check, die with parent | uid check; 0600 in /tmp | Tests 71, 75, 76, 77; 0/11 hangs | In place; browser check rebuild 5 |
-| D12 | Pool sized once; partitioned or shared | 0.8 × MemAvailable | RSS +21 MB; greedy tab 156,019 vs 0 | In place; M1, M3 open |
+| D12 | Pool sized once; partitioned or shared | 0.8 × MemAvailable | RSS +21 MB; greedy tab 156,019 vs 0 | In place; M1, M3 closed 2026-11-03 |
 | D13 | Tokens are the memory unit | RSS per tenant | ODQ §6: 107 KB/token | In place |
-| D14 | Drop middle exchanges, keep first and latest | Summarise; hibernate | Anchor 20/20 + neg. control; KL 0.003 (Qwen) | In place; M2, M6, M11 open |
-| D15 | Guard compacts the greediest | No guard (engine stopped) | Guard on 24/24 vs off: 43,643 fails | In place; M5 gap, no floor |
+| D14 | Drop middle exchanges, keep first and latest | Summarise; hibernate | Anchor 20/20 + neg. control; KL 0.003 (Qwen) | In place; self-compaction at admission; M6, M11 open |
+| D15 | Guard compacts the greediest, above a fixed fair-share floor | No guard (engine stopped); "largest overall" fallback | Guard on 24/24 vs off: 43,643 fails; test 82 | Changed 2026-11-03: floor adopted |
 | D16 | f16 default, q8_0 opt-in, q4_0 refused | q8_0 default | KL 0.0040 vs 0.0343; q4_0 0.63 | In place; stale comment |
 | D17 | Continuous batching under a round budget | Per-request scheduling; slot split | 2.95 s → 0.023 s HOL; test 05, 52 | In place (was deferred) |
 | D18 | Foreground first every round; aging | Priority at admission only | fg TTFT 0.44 vs 4.22 vs 16.55 s; Jain 0.631 | In place (engine only until `6dc6a0b`) |
-| D19 | Prefill from leftover budget | Full min chunk (87 ms overrun) | Tests 62, 68 | In place; M8 |
+| D19 | Prefill from leftover budget, never below a 25% share | Full min chunk (87 ms overrun) | Tests 62, 68, 86 | Changed 2026-11-03: share, 12.5 ms overrun, first-prompt chunk exemption |
 | D20 | CostCurve: worst case, closed loop | Extrapolation (41 vs 12.5 tok/s) | Tests 24, 41, 46, 63 | In place |
 | D21 | Cancel and free on tab close | Delivery-only | 453 → 0 tokens; 1.87–1.94× | Server in place; broken end to end (rebuild 9) |
 | D22 | Canaries, positive + negative control | "Say UNKNOWN" question | 160/160 caught, 0/80 false alarms | In place |
@@ -1706,7 +1793,7 @@ Sources: `RQ1_NOTES.md` §4a; `RQ2_NOTES.md` §4a, §4c, §5.
 | D26 | Nothing on disk | Hibernate; storage.local | Design rule; test 35 | In place |
 | D27 | Template-derived incremental prefill | Hardcoded ChatML | Tests 32, 44 | In place |
 | D28 | Server-owned, position-aware output cap | Caller-supplied cap; flat 512 | Tests 06, 20, 27, 31 | In place |
-| D29 | Fixed slots; refuse when full; two gates | Truncate; evict for fg | Tests 07, 15, 38, 64 | In place; M1 open |
+| D29 | Fixed slots; admission control (refuse or wait); two gates | Truncate; evict for fg | Tests 07, 15, 38, 64, 81–88 | Changed 2026-11-03: M1–M5 closed |
 | D30 | Commands ride `generate()` | New IDL verb (rebuild) | Tests 03c, 03d | In place; L7 |
 | D31 | Calibrated threads, duty throttle, cgroup backstop | Token-rate throttling (250% floor) | ODQ §6; §9 | In place |
 

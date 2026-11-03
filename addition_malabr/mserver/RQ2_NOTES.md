@@ -391,6 +391,36 @@ n_ctx 16,384. The level scales with n_ctx; the flatness doesn't depend on it.
 
 ---
 
+### 4g. After admission control (2026-11-04)
+
+Same scenarios as §4d, on the new code. The before columns come from §4d.
+Each cell gives the small tabs' TTFT (median / p95) and their median turn time.
+
+| Scenario | Before | After |
+|---|---|---|
+| Partitioned, no greedy tab | 1.23 / 2.59 s, 3.83 s | 0.55 / 1.16 s, 3.63 s |
+| Partitioned, 1 greedy tab | 2.07 / 597.97 s, 9.18 s; 156,019 failed rounds | 0.52 / 1.12 s, 4.27 s; 0 failed rounds |
+| Shared, no greedy tab | 0.80 / 1.36 s, 2.42 s | 0.32 / 0.49 s, 2.75 s |
+| Shared, 1 greedy, guard on | 2.34 / 4.21 s, 15.40 s | 0.48 / 1.11 s, 5.91 s |
+| Shared, 1 greedy, guard off | 2.16 / 4.08 s, 14.39 s | 0.47 / 1.05 s, 5.72 s |
+| Shared, 2 greedy, guard on | 2.49 / 4.01 s, 16.43 s | 0.59 / 1.26 s, 6.52 s |
+| Shared, 2 greedy, guard off | 3.75 / 5.86 s, 19.01 s | 0.69 / 1.32 s, 7.67 s |
+| Small pool 4,096, guard on | 1.84 / 2.79 s, 6.10 s; small tab cut 517 → 130 | 0.48 / 0.89 s, 4.91 s; nothing compacted |
+| Small pool 4,096, guard off | 43,643 failed rounds, engine stopped | 0.50 / 0.94 s, 5.30 s; 0 failed rounds |
+
+- Every after run had 0 engine round errors.
+- **The comparison flatters the change.** The greedy tab is now refused
+  instead of growing, so it stops prefilling pages:
+  - partitioned mode and the small pool: after one page (1,017 tokens);
+  - shared mode: after two pages (6,095 tokens). A third page plus the
+    largest reply cap doesn't fit the 8,192 soft cap, and own-turn
+    compaction keeps the latest exchange.
+- The huge error-frame counts in these runs (46k–329k) were the script
+  resending a refused page at once. It now pauses after a refusal
+  (`--refusal-pause`) and reports each greedy tab's admitted and refused pages.
+- These runs loaded `calibration.json` measured partitioned at depths up to
+  1,984 (`DESIGN_DECISIONS.md` D20). Later runs use a keyed calibration.
+
 ## 5. Where the published numbers came from
 
 | Number | Where published | Setup behind it |
@@ -412,6 +442,10 @@ shared-cache number.
 
 These are findings, not fixes. Each fix would change the memory design, so
 none is made without a decision.
+
+**Status 2026-11-04:** M1–M5 are closed by admission control
+(`DESIGN_DECISIONS.md` D29, `engine.Engine._admit`; tests 81–88). The
+reruns are in §4g. M6 and M7 still stand.
 
 - **M1. Gate 2 ignores the session's own position** (`engine.py:459-468`).
   In partitioned mode a nearly full session is admitted a prompt that only

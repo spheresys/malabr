@@ -18,6 +18,7 @@ visible from outside:
      from the server's "generate ... tab=<id>" lines)
   2. tab close: A and B hold both slots, so C is refused ("no free session
      slots"); after A's tab is closed, C is served
+     2c. the refused prompt is not kept in the panel's stored transcript
 
 Expected today: 0, 1 and 2a pass; 2b FAILS until rebuild item 9, because the
 browser's TAB_CLOSED names the closed tab's "recently closed" history entry,
@@ -64,6 +65,16 @@ def chat(p, prompt):
     new = log_text()[mark:]
     ids = re.findall(r"malabr: generate ext=\w+ tab=(-?\d+)", new)
     return (int(ids[-1]) if ids else None), new
+
+
+def stored_transcripts():
+    """Everything the extension keeps in chrome.storage.session, as text,
+    read from inside its service worker (content scripts can't read it)."""
+    sw = [x for x in http_json(tps.CDP) if x["type"] == "service_worker"]
+    if not sw:
+        return None
+    return WS(sw[0]["webSocketDebuggerUrl"]).evaluate(
+        "chrome.storage.session.get(null).then(o => JSON.stringify(o))")
 
 
 def foreground_after(b, tid, mark, timeout=10):
@@ -127,6 +138,11 @@ def main():
         # refused for lack of a slot never reaches the engine.
         _, new = chat(pc, "Reply with the single word CHARLIE.")
         full = "turn done" not in new and "no free session slots" in pc.text()
+        stored = stored_transcripts() or ""
+        check("2c. a refused turn is not kept in the stored transcript",
+              full and "CHARLIE" not in stored and "BRAVO" in stored,
+              f"refused prompt stored={'CHARLIE' in stored}; "
+              f"a served one stored={'BRAVO' in stored}")
         b.call("Target.closeTarget", {"targetId": tid_a})
         time.sleep(3.0)
         id_c, new = chat(pc, "Reply with the single word DELTA.")

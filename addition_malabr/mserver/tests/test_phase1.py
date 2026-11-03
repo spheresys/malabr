@@ -921,19 +921,21 @@ def t40b_shared_kv_aggregate_guard():
         ask(e, big, f"Tell me a short fact number {i}.")
     ask(e, small, "Hi.")
     big_before, small_before = sb.pos, ss.pos
-    fair = e._fair_share
 
     # Tighten the pool so the current total is over the limit, then relieve.
+    # The floor goes between the two sizes: the fixture's real floor (fair
+    # share 1,024 + 256) is above both, and the guard compacts no one below it.
     e._n_ctx = big_before + small_before - 1
+    e._floor = fair = (big_before + small_before) // 2
     e._relieve_aggregate_pressure([sb, ss])
 
     total_after = sb.pos + ss.pos
-    small_untouched = ss.pos == small_before          # small was below fair share
+    small_untouched = ss.pos == small_before          # small was below the floor
     big_shrank = sb.pos < big_before
     under_limit = total_after < e._n_ctx - e._agg_margin or sb.pos <= fair
     record("40b", "shared-KV aggregate guard compacts the greedy session, not the small one",
-           small_untouched and big_shrank and under_limit,
-           f"big {big_before}->{sb.pos}, small {small_before}->{ss.pos}, fair={fair}")
+           small_untouched and big_shrank and under_limit and sb.pos >= fair,
+           f"big {big_before}->{sb.pos}, small {small_before}->{ss.pos}, floor={fair}")
 
 
 def t40c_agg_guard_last_resort_on_pending_turn():
@@ -1489,7 +1491,10 @@ def t68_deferred_round_is_not_treated_as_idle():
             self.budget = 4096          # pos is 0, so compaction never triggers
 
     alloc, e = FIX.new_engine()
-    e.cost_curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    # Prefill slow enough that a whole round buys less than one token. With a
+    # faster curve the first waiting prompt is never deferred: it always gets
+    # the held share (scheduler.PREFILL_MIN_SHARE), so no round is deferred.
+    e.cost_curve = eng.CostCurve(DECODE_CURVE, [[32, 10.0], [512, 10.0]])
     sessions = [S(1, 4000), S(2, 4000)]          # two contenders, none running
 
     # Drive _run_round the way the loop does, with the real registry replaced
@@ -2144,6 +2149,320 @@ def t79_browser_control_header_accepted():
            accepted and not let_through,
            f"accepted={accepted}; near misses let through: {let_through}")
 
+
+
+# ---------------------------------------------------------------------------
+# Admission control, the fair-share floor, decode isolation (RQ2 M1-M5, M8).
+# Each was written to FAIL on the code before 2026-11-03 (RQ2_NOTES.md §6).
+# ---------------------------------------------------------------------------
+
+REFUSED_MARK = "[refused] "
+
+
+def _text_of_tokens(fix, n, word=" alpha"):
+    """Text that tokenizes to about n tokens."""
+    f = fix.formatter()
+    text = word.strip()
+    while len(f._tokenize(text, parse_special=False)) < n:
+        text += word
+    return text
+
+
+def _sess(e, fix, tab, origin="https://a.test"):
+    key = ("a" * 32, tab, origin)
+    s, _ = e.get_or_create(key, fix.formatter, eng.OutputCap([(0, 24)]))
+    return key, s
+
+
+def _steps(e, n, outboxes=()):
+    """Run n engine steps; collect frames per outbox and any exceptions."""
+    frames = {id(o): [] for o in outboxes}
+    errors = []
+    for _ in range(n):
+        try:
+            e._step()
+        except Exception as exc:              # the old engine raised out of _step
+            errors.append(f"{type(exc).__name__}: {exc}")
+        for o in outboxes:
+            while not o.empty():
+                frames[id(o)].append(o.get_nowait())
+    return frames, errors
+
+
+def _terminal(frames):
+    return [f for f in frames if f[0] in (eng.FRAME_COMPLETE, eng.FRAME_ERROR)]
+
+
+def t81_admission_checks_the_conversations_own_size():
+    """M1 + M2: a turn that cannot fit what is LEFT of a full partition is
+    refused at admission, with a clear message, instead of being admitted and
+    failing every round. The session stays usable."""
+    fix = Fixture(n_seq_max=2, n_ctx=1024, kv_unified=False)    # 512 cells each
+    try:
+        _, e = fix.new_engine(shared_kv=False)
+        key, s = _sess(e, fix, 1)
+        force_turn(e, s, "Remember this.", _text_of_tokens(fix, 150))   # anchor
+        force_turn(e, s, "And this.", _text_of_tokens(fix, 200))        # recent
+        part = fix.n_ctx // fix.n_seq_max
+        big = _text_of_tokens(fix, max(10, part - s.pos + 20), " beta")  # fits gate 1
+        pos0 = s.pos
+        ob = e.submit(key, big)
+        fr, errs = _steps(e, 40, [ob])
+        term = _terminal(fr[id(ob)])
+        refused = (len(term) == 1 and term[0][0] == eng.FRAME_ERROR
+                   and term[0][1].startswith(REFUSED_MARK))
+        ob2 = e.submit(key, "Say OK.")
+        fr2, errs2 = _steps(e, 200, [ob2])
+        served = [f[0] for f in _terminal(fr2[id(ob2)])] == [eng.FRAME_COMPLETE]
+        record(81, "a turn that can't fit what's left of the conversation is refused, "
+               "not admitted to fail", refused and not errs and served and not errs2,
+               f"pos {pos0}/{part}; terminal={[t[1][:60] for t in term]}; "
+               f"round errors {len(errs)}; next short turn served={served}")
+    finally:
+        fix.close()
+
+
+def t82_guard_never_shrinks_a_session_at_its_fair_share():
+    """M5: the shared-pool guard must not cut a session at or near its fixed
+    fair share (n_ctx/n_seq_max) to feed greedy ones that have nothing
+    droppable. Before: a tab 5 tokens over its share was cut 517 -> 130."""
+    fix = Fixture(n_seq_max=4, n_ctx=2048, kv_unified=True)     # fair share 512
+    try:
+        _, e = fix.new_engine(shared_kv=True)
+        _, small = _sess(e, fix, 1)
+        force_turn(e, small, "Hi.", _text_of_tokens(fix, 100))
+        for i in range(3):
+            force_turn(e, small, f"Q{i}?", _text_of_tokens(fix, 100))
+        force_turn(e, small, "Last?", _text_of_tokens(fix, 60))
+        for tab in (2, 3):
+            _, g = _sess(e, fix, tab)
+            force_turn(e, g, "Read this page.", _text_of_tokens(fix, 730))  # anchor only
+        before = small.pos
+        total = sum(x.pos for x in e._sessions.values())
+        e._relieve_aggregate_pressure(list(e._sessions.values()))
+        record(82, "the guard never shrinks a session at or near its fair share",
+               small.pos == before and total >= fix.n_ctx - 64,
+               f"small tab {before} -> {small.pos} (fair share {fix.n_ctx // fix.n_seq_max}); "
+               f"pool sum {total}/{fix.n_ctx}")
+    finally:
+        fix.close()
+
+
+def _overflow_setup():
+    """A healthy prompt on A, and on B a prompt chunk that overflows B's
+    512-cell partition, decoded in ONE round (build_batch is pinned)."""
+    fix = Fixture(n_seq_max=2, n_ctx=1024, kv_unified=False)
+    _, e = fix.new_engine(shared_kv=False)
+    ka, a = _sess(e, fix, 1)
+    kb, b = _sess(e, fix, 2)
+    force_turn(e, b, "Remember this.", _text_of_tokens(fix, 480))
+    part = fix.n_ctx // fix.n_seq_max
+    for s, text in ((a, "Say OK."), (b, "And this?")):
+        s.pos_before_request = s.pos_before_generation = s.pos
+        s.formatter_cp_before_request = s.formatter.checkpoint()
+        s.inbox_tokens = s.formatter.user_turn(text)
+        s.prefill_offset = 0
+        s.state = eng.SessionState.PENDING
+    b.inbox_tokens = b.inbox_tokens + [b.inbox_tokens[-1]] * (part - b.pos + 8)
+    return fix, e, a, b
+
+
+def _pinned_batch(a, b):
+    def bb(sessions, curve, fg):
+        dec = [a] if a.state == eng.SessionState.GENERATING and not a.cancelled else []
+        pre = [(a, a.inbox_tokens[a.prefill_offset:])] \
+            if a.state == eng.SessionState.PENDING else []
+        if b.state == eng.SessionState.PENDING:
+            pre.append((b, b.inbox_tokens[b.prefill_offset:]))
+        return dec, pre, 10.0
+    return bb
+
+
+def t83_one_failing_session_does_not_fail_the_round():
+    """M4: a decode that fails for one session (B overflows its partition)
+    must not stop the other session in the same round."""
+    fix, e, a, b = _overflow_setup()
+    real = eng.build_batch
+    eng.build_batch = _pinned_batch(a, b)
+    try:
+        a0, b0 = a.pos, b.pos
+        err = None
+        try:
+            e._run_round()
+        except Exception as exc:
+            err = f"{type(exc).__name__}: {exc}"
+        mem = fix.mem
+        cells_ok = (C.llama_memory_seq_pos_max(mem, b.slot) == b.pos - 1
+                    and C.llama_memory_seq_pos_max(mem, a.slot) == a.pos - 1)
+        record(83, "one session's failed decode does not fail the others in the round",
+               err is None and a.pos > a0 and a.state == eng.SessionState.GENERATING
+               and b.pos == b0 and cells_ok,
+               f"error={err}; A {a0}->{a.pos} ({a.state}); B {b0}->{b.pos}; "
+               f"cells match positions={cells_ok}")
+    finally:
+        eng.build_batch = real
+        fix.close()
+
+
+def t84_decode_failures_are_counted_per_session():
+    """M3: after a few failed rounds the FAILING session's turn ends with an
+    error; the engine keeps running and the other session keeps generating."""
+    fix, e, a, b = _overflow_setup()
+    real = eng.build_batch
+    eng.build_batch = _pinned_batch(a, b)
+    try:
+        ob = queue.Queue(maxsize=eng.MAX_OUTBOX_TOKENS)
+        b.outbox = ob
+        a0 = a.pos
+        fr, errs = _steps(e, 6, [ob])
+        term = _terminal(fr[id(ob)])
+        ok = (len(term) == 1 and term[0][0] == eng.FRAME_ERROR
+              and b.state == eng.SessionState.IDLE and not errs
+              and a.pos > a0 + 1 and e.round_errors == 0)
+        record(84, "decode failures are counted per session, not for the engine", ok,
+               f"B terminal={[t[1][:50] for t in term]} state={b.state}; "
+               f"A {a0}->{a.pos}; exceptions out of _step {len(errs)}; "
+               f"engine round_errors={e.round_errors}")
+    finally:
+        eng.build_batch = real
+        fix.close()
+
+
+def t85_failed_decode_leaves_no_partial_cells():
+    """The precondition for t83's retry, a property of llama.cpp rather than of
+    MALABR: a batch that fails leaves neither sequence any new cells, on
+    either cache type, and the healthy part decodes on its own afterwards."""
+    details, ok = [], True
+    for unified in (False, True):
+        fix = Fixture(n_seq_max=2, n_ctx=512, kv_unified=unified)
+        try:
+            _, e = fix.new_engine(shared_kv=unified)
+            mem = fix.mem
+            tok = fix.formatter()._tokenize("hello", parse_special=False)[0]
+            fill = 240 if not unified else 480
+            e._decode_batch([(tok, i, 0, i == fill - 1) for i in range(fill)])
+            items = [(tok, i, 1, False) for i in range(10)] + \
+                    [(tok, fill + i, 0, i == 39) for i in range(40)]
+            failed = False
+            try:
+                e._decode_batch(items)
+            except RuntimeError:
+                failed = True
+            after = (C.llama_memory_seq_pos_max(mem, 0), C.llama_memory_seq_pos_max(mem, 1))
+            e._decode_batch([(tok, i, 1, i == 9) for i in range(10)])
+            healthy = C.llama_memory_seq_pos_max(mem, 1) == 9
+            good = failed and after == (fill - 1, -1) and healthy
+            ok = ok and good
+            details.append(f"{'unified' if unified else 'partitioned'}: failed={failed} "
+                           f"pos_max after={after} healthy retry={healthy}")
+        finally:
+            fix.close()
+    record(85, "a failed llama_decode leaves no partial cells (llama.cpp precondition)",
+           ok, "; ".join(details))
+
+
+def t86_prefill_keeps_a_minimum_share_of_the_round():
+    """M8: with decode able to fill the whole round, a waiting prompt still
+    gets a chunk in the FIRST round, sized from a held-back share of the
+    budget, instead of stalling until decode leaves room."""
+    class S:
+        def __init__(self, tab, pos, state, inbox=0):
+            self.key = ("a" * 32, tab, "https://x.test"); self.pos = pos
+            self.state = state; self.cancelled = False
+            self.inbox_tokens = [1] * inbox; self.prefill_offset = 0
+            self.rounds_excluded = 0; self.prefill_stalls = 0
+    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    per = curve.cost_ms_worst(4000)
+    n = int(eng.ROUND_LATENCY_BUDGET_MS // per) + 2         # decode alone overfills
+    runnable = [S(10 + i, 4000, eng.SessionState.GENERATING) for i in range(n)]
+    page = S(1, 0, eng.SessionState.PENDING, inbox=3000)
+    _, pre, _ = eng.build_batch(runnable + [page], curve, -1)
+    got = sum(len(c) for _, c in pre)
+    share = curve.prefill_tokens_affordable(0.25 * eng.ROUND_LATENCY_BUDGET_MS, 0)
+    record(86, "a waiting prompt gets a prefill chunk in the first round, even "
+           "when decode could fill it", got >= max(1, share),
+           f"{n} decoding sessions at {per:.1f} ms each; prefill chunk {got} tokens "
+           f"(a quarter of the round buys {share})")
+
+
+def _pool_setup(fix, e, greedy_tokens):
+    """One greedy session holding only an anchor (nothing droppable)."""
+    kg, g = _sess(e, fix, 9)
+    force_turn(e, g, "Read this page.", _text_of_tokens(fix, greedy_tokens))
+    e.control_connected = True
+    return kg, g
+
+
+def t87_waiting_turns_do_not_block_and_the_visible_tab_goes_first():
+    """A turn that doesn't fit the shared pool WAITS (no frame, not started)
+    while a small turn elsewhere is served; once room frees, the visible tab's
+    waiting turn is admitted before an older background one."""
+    fix = Fixture(n_seq_max=4, n_ctx=2048, kv_unified=True)
+    try:
+        _, e = fix.new_engine(shared_kv=True)
+        kg, g = _pool_setup(fix, e, 830)
+        kw1, w1 = _sess(e, fix, 1)
+        kw2, w2 = _sess(e, fix, 2)
+        kbg, bg = _sess(e, fix, 3)
+        e.foreground_tab_id = 2
+        big = _text_of_tokens(fix, 600, " gamma")
+        started = []
+        real_begin = e._begin_turn
+
+        def spy(s, text):
+            real_begin(s, text)
+            started.append(s.key[1])
+        e._begin_turn = spy
+        ob1 = e.submit(kw1, big)
+        time.sleep(0.01)
+        ob2 = e.submit(kw2, big)
+        ob3 = e.submit(kbg, "Say OK.")
+        fr, errs = _steps(e, 120, [ob1, ob2, ob3])
+        small_done = [f[0] for f in _terminal(fr[id(ob3)])] == [eng.FRAME_COMPLETE]
+        waited = (not _terminal(fr[id(ob1)]) and not _terminal(fr[id(ob2)])
+                  and w1.pos == 0 and w2.pos == 0)
+        e.cancel(kg, "tab closed")
+        end = time.time() + 3.0
+        while time.time() < end and len([t for t in started if t in (1, 2)]) < 2:
+            _steps(e, 1)
+            time.sleep(0.01)
+        order = [t for t in started if t in (1, 2)]
+        record(87, "a turn that doesn't fit waits without blocking others; the visible "
+               "tab's waiting turn goes first", small_done and waited and not errs
+               and order[:2] == [2, 1],
+               f"small turn served={small_done}; big turns waited={waited} "
+               f"(pos {w1.pos}, {w2.pos}); admission order after room freed={order}; "
+               f"exceptions {len(errs)}")
+    finally:
+        fix.close()
+
+
+def t88_a_turn_that_waits_too_long_is_refused_clearly():
+    """A waiting turn that never finds room is refused with a clear message
+    (the panel drops refused turns from its transcript), not left hanging or
+    admitted to overflow the pool."""
+    fix = Fixture(n_seq_max=4, n_ctx=2048, kv_unified=True)
+    saved = getattr(eng, "ADMISSION_WAIT_SECONDS", None)
+    try:
+        _, e = fix.new_engine(shared_kv=True)
+        _pool_setup(fix, e, 830)
+        kw, w = _sess(e, fix, 1)
+        _sess(e, fix, 2); _sess(e, fix, 3)
+        eng.ADMISSION_WAIT_SECONDS = 0.2
+        ob = e.submit(kw, _text_of_tokens(fix, 600, " gamma"))
+        fr, errs = _steps(e, 5, [ob])
+        time.sleep(0.3)
+        fr2, errs2 = _steps(e, 5, [ob])
+        term = _terminal(fr[id(ob)] + fr2[id(ob)])
+        ok = (len(term) == 1 and term[0][0] == eng.FRAME_ERROR
+              and term[0][1].startswith(REFUSED_MARK) and "capacity" in term[0][1]
+              and w.pos == 0 and not errs and not errs2)
+        record(88, "a turn that waits too long for room is refused with a clear message",
+               ok, f"terminal={[t[1][:70] for t in term]}; pos {w.pos}")
+    finally:
+        if saved is not None:
+            eng.ADMISSION_WAIT_SECONDS = saved
+        fix.close()
 
 # ---------------------------------------------------------------------------
 # Declared SKIPs -- need a real browser, not omitted silently

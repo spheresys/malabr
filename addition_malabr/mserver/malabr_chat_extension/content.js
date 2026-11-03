@@ -223,6 +223,9 @@
     d.appendChild(s); d.appendChild(i);
     return d;
   }
+  // Starts the error text of a turn the server refused (session.REFUSED).
+  const REFUSED = "[refused] ";
+
   function note(el, text, cls) {
     const m = document.createElement("div");
     m.className = "meta " + cls; m.textContent = text;
@@ -564,6 +567,18 @@
       flushPaint(s);
       s.bodyEl.classList.remove("caret");
       const { think, body } = splitThink(s.raw);
+      if (error && error.startsWith(REFUSED)) {
+        // The server did not take this turn, so the model has no trace of it.
+        // Keep the transcript in step: drop the prompt, store no reply, and
+        // forget a page attached with it (the model never saw that page).
+        note(s.turn, error.slice(REFUSED.length) + " (not saved)", "err");
+        if (transcript[s.tIndex]?.who === "you") transcript.splice(s.tIndex, 1);
+        pageHash = s.hashBefore;
+        save();
+        live.delete(id);
+        if (inFlight === id) { inFlight = null; setBusy(false); }
+        return;
+      }
       if (error) {
         const stopped = /stop/i.test(error), sup = /supersed/i.test(error);
         note(s.turn, stopped ? "stopped" : sup ? "replaced by your next message" : error,
@@ -696,6 +711,7 @@
 
     let prompt = typed;
     let chip = null;
+    const hashBefore = pageHash;
     if (usePage.checked) {
       const body = pageText(typed);
       // Send the page ONCE per session  [notes: content.js clear]
@@ -716,6 +732,7 @@
       c.className = "chip"; c.textContent = chip;
       you.insertBefore(c, you.firstChild);
     }
+    const tIndex = transcript.length;
     transcript.push({ who: "you", text: typed }); save(true);
 
     const turn = render("malabr", "");
@@ -727,7 +744,7 @@
         inFlight = null; setBusy(false); return;
       }
       live.set(id, { turn, bodyEl: turn.querySelector(".body"), thinkEl: null,
-                     raw: "", raf: 0 });
+                     raw: "", raf: 0, tIndex, hashBefore });
       inFlight = id;
     });
   }

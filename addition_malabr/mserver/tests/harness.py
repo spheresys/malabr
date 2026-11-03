@@ -323,7 +323,9 @@ def force_turn(e, s, user, reply):
     toks = s.formatter.user_turn(user)
     msg_index = len(s.formatter._messages) - 1
     toks = toks + s.formatter._tokenize(reply, parse_special=False)
-    e._decode_batch([(t, start + i, s.slot, i == len(toks) - 1) for i, t in enumerate(toks)])
+    items = [(t, start + i, s.slot, i == len(toks) - 1) for i, t in enumerate(toks)]
+    for i in range(0, len(items), 512):          # the fixture's n_batch
+        e._decode_batch(items[i:i + 512])
     s.pos = start + len(toks)
     s.turn_boundaries.append(Turn(start, s.pos, "exchange", msg_index))
     s.formatter.assistant_generated(reply)

@@ -16,6 +16,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .config import list_models, load_config, resolve_model
+from .session import REFUSED
 from .protocol import (
     FRAME_COMPLETE, FRAME_ERROR, FRAME_TOKEN, MAX_HEADER_LEN,
     MSG_EXT_UNLOADED, MSG_FOREGROUND, MSG_LIVE_TABS, MSG_TAB_CLOSED,
@@ -455,7 +456,8 @@ class MalabrServer:
               file=sys.stderr, flush=True)
         if session is None:
             # §7's named limitation  [notes: runtime.MalabrServer.handle_generate]
-            self._send(conn, FRAME_ERROR, "no free session slots")
+            self._send(conn, FRAME_ERROR, REFUSED + "no free session slots "
+                       "-- close another tab's chat and try again")
             return
         if created and env.tab_id != -1 and env.is_foreground_seed \
                 and eng.foreground_tab_id == -1:

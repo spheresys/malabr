@@ -769,12 +769,13 @@ caught it as "template broke the prefix property".
 
 #### engine.Engine._relieve_aggregate_pressure
 
-Victim = the largest session ABOVE its fair share (n_ctx/n_seq_max), so
-a small or foreground session is never shrunk to feed a greedy one. The
-fair shares sum to exactly n_ctx, so an over-limit total always has such
-a session -- unless several are stuck at the anchor+one-turn floor, in
-which case fall back to the largest droppable one so a decode still
-cannot hit "no memory slot".
+Victim = the largest session ABOVE THE FAIR-SHARE FLOOR (the fixed
+n_ctx/n_seq_max plus one reply), compacted only down to that floor. Until
+2026-11-03 the victim was anyone above the bare fair share, with a fallback
+to "the largest droppable session"; that fallback cut a small tab 517 -> 130
+to feed two greedy tabs with nothing droppable (RQ2 M5). With admission
+control (Engine._admit) a turn that doesn't fit no longer starts, so this
+guard is a backstop, and it may now find nothing to do: that is correct.
 
 Compaction could not claw the pool back under n_ctx: the iteration
 bound was hit, or every session is down to its anchor. Returning
@@ -854,6 +855,30 @@ longer a prefix of the freshly rendered conversation).
 Retrying cannot fix this -- every subsequent turn hits the
 same wall -- so end the session cleanly instead of failing
 the round forever.
+
+#### engine.Engine._admit
+
+Admission control (RQ2 M1, M2, M5; DESIGN_DECISIONS D29). A turn needs its
+prompt plus the largest reply cap from its position on. Two checks:
+
+1. Its own limit. Before 2026-11-03 gate 2 looked at the prompt alone, so a
+   nearly full partitioned session was admitted a prompt that only fits an
+   empty one, and every round then failed (156,019 times in one run). Now the
+   session's own history pays first -- and only if dropping it is enough, so
+   a turn that will be refused anyway costs the conversation nothing.
+2. The shared pool. Other sessions are counted at max(fixed fair share,
+   current size + what their admitted turn still reserves). Reserving their
+   fair share even when they're idle is what keeps a small tab's next turn
+   from being squeezed out by a greedy one; reserving only their current
+   size starved newcomers (D15), and reserving a share for EMPTY slots would
+   make shared mode partitioned mode. Room is taken only from sessions above
+   the floor, never below it, never their latest turn. If it can't be made,
+   the turn WAITS (Engine._try_begin) rather than being refused at once,
+   because in shared mode a shortfall is usually transient.
+
+The floor protects a session from OTHERS. Compacting its own history to
+make room for its own turn is allowed (and is what partitioned mode relies
+on: there every session is always "at its fair share").
 
 #### engine.Engine._begin_turn
 
