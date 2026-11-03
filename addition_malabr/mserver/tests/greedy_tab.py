@@ -107,9 +107,9 @@ def main():
     in_agg = [False]
     real_compact, real_agg, real_step = e.compact, e._relieve_aggregate_pressure, e._step
 
-    def compact_hook(s, keep_recent=True):
+    def compact_hook(s, keep_recent=True, **kw):
         before = s.pos
-        freed = real_compact(s, keep_recent)
+        freed = real_compact(s, keep_recent, **kw)
         if freed:
             events.append({"t": round(time.time() - T0, 2), "tab": s.key[1], "freed": freed,
                            "before": before, "after": s.pos, "keep_recent": keep_recent,
