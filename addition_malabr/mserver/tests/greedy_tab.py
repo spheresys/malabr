@@ -82,6 +82,9 @@ def main():
                     help="pool size; smaller than production so the pool can actually "
                          "fill (and the guard act) within minutes on this CPU")
     ap.add_argument("--page", type=int, default=None, help="page size in tokens")
+    ap.add_argument("--refusal-pause", type=float, default=2.0,
+                    help="seconds a greedy tab waits after a refused page before "
+                         "sending the next, as a person would (0: resend at once)")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
     shared = a.mode == "shared"
@@ -92,10 +95,12 @@ def main():
 
     fix = Fixture(n_seq_max=N_SEQ, n_ctx=n_ctx, n_threads=3, kv_unified=shared)
     alloc, e = fix.new_engine(shared_kv=shared, session_budget=budget)
-    result = cal.load(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                   "calibration.json"))
-    if result:
-        cal.apply_to_engine(result, e, eng)
+    # A calibration measured for this run's own configuration (keyed; see
+    # harness.Fixture.use_measured_calibration). Before 2026-11-04 this loaded
+    # calibration.json whatever configuration it was measured under.
+    _cal, _path = fix.use_measured_calibration(shared)
+    cal.apply_to_engine(_cal, e, eng)
+    print(f"  calibration: {_path}", flush=True)
 
     T0 = time.time()
     events, errors, turns, timeline = [], [], [], []
@@ -136,6 +141,7 @@ def main():
     page = page_text(fix.formatter(), page_tokens)
     stop = threading.Event()
     fill_done = []
+    refused_once = set()        # greedy tabs that have had a page refused
 
     def run_turn(k, prompt):
         t_submit = time.time()
@@ -171,8 +177,15 @@ def main():
         while not stop.is_set():
             r = run_turn(k, f"Here is the text of a page:\n\n{page}\n\n"
                             f"Summarise part {i + 1} of it in one sentence.")
-            turns.append({"tab": k[1], "turn": i, "t": round(time.time() - T0, 2), **r})
+            with e._reg_lock:
+                s = e._sessions.get(k)
+                pos = s.pos if s else None
+            turns.append({"tab": k[1], "turn": i, "t": round(time.time() - T0, 2),
+                          "pos_after": pos, **r})
             i += 1
+            if (r["error"] or "").startswith(eng.REFUSED):
+                refused_once.add(k)
+                stop.wait(a.refusal_pause)
 
     def sampler():
         while not stop.is_set():
@@ -200,6 +213,10 @@ def main():
                 held = [e._sessions[k].pos for k in greedy if k in e._sessions]
             if held and min(held) >= 0.9 * budget:
                 break
+            # A tab whose page was refused can't grow any further, so waiting
+            # for 90% would only run out the clock.
+            if len(refused_once) == len(greedy):
+                break
             time.sleep(0.5)
         fill_done.append(round(time.time() - T0, 2))
         for t in smalls:
@@ -218,7 +235,8 @@ def main():
           f"page {page_tokens} tok, {time.time() - T0:.0f}s) ===".replace(f"n_ctx {N_CTX}", f"n_ctx {n_ctx}"))
     if greedy:
         print(f"  phase 1 (greedy tabs alone, until each holds 90% of its budget): "
-              f"ended at {fill_done[0]}s" + ("" if fill_done[0] < 599 else " -- TIMED OUT"))
+              f"ended at {fill_done[0]}s" + ("" if fill_done[0] < 599 else " -- TIMED OUT")
+              + (" (every greedy tab refused a page)" if len(refused_once) == len(greedy) else ""))
     tabs = sorted({k[1] for k in small + greedy})
     peak = {t: max((x["pos"].get(t, 0) for x in timeline), default=0) for t in tabs}
     print("  tab   role     peak tokens  compactions (session / aggregate)  freed")
@@ -243,9 +261,17 @@ def main():
         print(f"  small tabs: {len(st)} turns, TTFT median {statistics.median(ttft):.2f}s "
               f"p95 {p95:.2f}s max {max(ttft):.2f}s; turn time median "
               f"{statistics.median(tot) if tot else float('nan'):.2f}s")
-    gt = [x for x in turns if x["tab"] >= 10]
-    if gt:
-        print(f"  greedy tabs: {len(gt)} page turns, {sum(1 for x in gt if x['error'])} errored")
+    for g in greedy:
+        gt = [x for x in turns if x["tab"] == g[1]]
+        ok = [x for x in gt if not x["error"]]
+        ref = [x for x in gt if (x["error"] or "").startswith(eng.REFUSED)]
+        other = [x for x in gt if x["error"] and x not in ref]
+        first_ref = ref[0] if ref else None
+        print(f"  greedy tab {g[1]}: {len(gt)} pages sent, {len(ok)} admitted, "
+              f"{len(ref)} refused, {len(other)} other errors"
+              + (f"; first refusal at {first_ref['t']}s holding {first_ref['pos_after']} "
+                 f"tokens: {first_ref['error'][len(eng.REFUSED):][:60]}" if first_ref else "")
+              + (f"; other: {other[0]['error'][:60]}" if other else ""))
     if a.json:
         with open(a.json, "w") as fh:
             json.dump({"label": label, "mode": a.mode, "greedy": a.greedy, "guard": a.guard,
