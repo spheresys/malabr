@@ -1,0 +1,133 @@
+[2026-11-04 06:17:11] git 83e1ae9ca6612; OLD engine = 610c233, its tests and calibration.py from HEAD
+[2026-11-04 06:17:11] old bench baseline_bench
+[2026-11-04 06:19:01] old bench pipeline_bench
+[2026-11-04 06:21:30] old bench relative_repeat
+[2026-11-04 06:22:56] old bench cancellation_bench
+[2026-11-04 06:23:30] --system malabr --tag old --mode partitioned --workload W1
+[2026-11-04 06:30:11] --system malabr --tag old --mode shared --workload W1
+[2026-11-04 06:44:33] --system llamacpp --mode partitioned --workload W1
+[2026-11-04 06:46:18] --system llamacpp --mode shared --workload W1
+[2026-11-04 06:48:08] --system ollama --workload W1
+[2026-11-04 06:49:52] --system malabr --tag old --mode partitioned --workload W2
+[2026-11-04 06:53:46] --system malabr --tag old --mode shared --workload W2
+[2026-11-04 06:56:46] --system llamacpp --mode partitioned --workload W2
+[2026-11-04 06:58:58] --system llamacpp --mode shared --workload W2
+[2026-11-04 07:00:42] --system ollama --workload W2
+[2026-11-04 07:02:49] --system malabr --tag old --mode partitioned --workload W5
+[2026-11-04 07:16:16] --system malabr --tag old --mode shared --workload W5
+[2026-11-04 07:31:36] --system llamacpp --mode partitioned --workload W5
+[2026-11-04 07:38:42] --system llamacpp --mode shared --workload W5
+[2026-11-04 07:45:55] --system ollama --workload W5
+[2026-11-04 07:53:16] --system malabr --tag old --mode partitioned --workload W4
+[2026-11-04 08:20:29] --system malabr --tag old --mode shared --workload W4 --trials 8
+[2026-11-04 10:04:08] DRIVE DROPPED 10:01:24 during old shared W4 (trials 0-2 finished, see console.txt; no JSON). Process hung on the dead mount; killed by pid. Rerun this benchmark at the end.
+[2026-11-04 10:04:08] FAILED rc=143: --system malabr --tag old --mode shared --workload W4 --trials 8
+malabr:   turn done (eos) produced~3B pos=6985
+malabr:   turn done (eos) produced~3B pos=7481
+update: applying K-shift
+graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
+malabr:   turn done (eos) produced~3B pos=6987
+[2026-11-04 10:04:08] --system llamacpp --mode partitioned --workload W4
+[2026-11-04 10:09:45] --system llamacpp --mode shared --workload W4 --trials 8
+[2026-11-04 11:02:29] --system ollama --workload W4
+[2026-11-04 11:08:57] --system llamacpp --mode partitioned --workload R1
+[2026-11-04 11:09:30] --system llamacpp --mode shared --workload R1
+[2026-11-04 11:10:04] --system ollama --workload R1
+[2026-11-04 11:10:39] chrome start
+[2026-11-04 11:10:39] chrome relative_8tabs_0
+[2026-11-04 11:11:29] chrome relative_8tabs_0 exit 1
+[2026-11-04 11:11:29] chrome relative_8tabs_1
+[2026-11-04 11:12:08] chrome relative_8tabs_1 exit 1
+[2026-11-04 11:12:08] chrome relative_8tabs_2
+[2026-11-04 11:12:45] chrome relative_8tabs_2 exit 1
+[2026-11-04 11:12:45] chrome relative_8tabs_3
+[2026-11-04 11:13:22] chrome relative_8tabs_3 exit 1
+[2026-11-04 11:13:22] chrome relative_8tabs_4
+[2026-11-04 11:13:59] chrome relative_8tabs_4 exit 1
+[2026-11-04 11:13:59] chrome relative_8tabs_5
+[2026-11-04 11:14:37] chrome relative_8tabs_5 exit 1
+[2026-11-04 11:14:37] chrome relative_4tabs_0
+[2026-11-04 11:14:59] chrome relative_4tabs_0 exit 1
+[2026-11-04 11:14:59] chrome relative_4tabs_1
+[2026-11-04 11:15:22] chrome relative_4tabs_1 exit 1
+[2026-11-04 11:15:22] chrome relative_4tabs_2
+[2026-11-04 11:15:43] chrome relative_4tabs_2 exit 1
+[2026-11-04 11:15:43] chrome relative_4tabs_3
+[2026-11-04 11:16:06] chrome relative_4tabs_3 exit 1
+[2026-11-04 11:16:06] chrome relative_4tabs_4
+[2026-11-04 11:16:29] chrome relative_4tabs_4 exit 1
+[2026-11-04 11:16:29] chrome relative_4tabs_5
+[2026-11-04 11:16:51] chrome relative_4tabs_5 exit 1
+[2026-11-04 11:16:51] chrome relative_8tabs_stagger_0
+[2026-11-04 11:18:42] chrome relative_8tabs_stagger_0 exit 1
+[2026-11-04 11:18:42] chrome relative_8tabs_stagger_1
+[2026-11-04 11:20:41] chrome relative_8tabs_stagger_1 exit 1
+[2026-11-04 11:20:41] chrome relative_8tabs_stagger_2
+[2026-11-04 11:22:35] chrome relative_8tabs_stagger_2 exit 1
+[2026-11-04 11:22:35] chrome relative_8tabs_stagger_3
+[2026-11-04 11:24:50] chrome relative_8tabs_stagger_3 exit 1
+[2026-11-04 11:24:50] chrome relative_8tabs_stagger_4
+[2026-11-04 11:26:24] chrome relative_8tabs_stagger_4 exit 1
+[2026-11-04 11:26:24] chrome relative_8tabs_stagger_5
+[2026-11-04 11:27:05] chrome relative_8tabs_stagger_5 exit 1
+[2026-11-04 11:27:05] chrome cancel_8tabs
+[2026-11-04 11:36:20] chrome memory
+[2026-11-04 12:00:27] chrome rss_1
+[2026-11-04 12:15:15] chrome rss_2
+[2026-11-04 12:34:13] completed: chrome rss_2 (run under memory pressure, swap full)
+[2026-11-04 12:34:13] chrome isolation
+[2026-11-04 12:35:13] completed: chrome isolation
+
+=== Added at the pause. A run's completed time is when the next step began. ===
+[2026-11-04 06:19:01] completed: old bench baseline_bench
+[2026-11-04 06:21:30] completed: old bench pipeline_bench
+[2026-11-04 06:22:56] completed: old bench relative_repeat
+[2026-11-04 06:23:30] completed: old bench cancellation_bench
+[2026-11-04 06:30:11] completed: --system malabr --tag old --mode partitioned --workload W1
+[2026-11-04 06:44:33] completed: --system malabr --tag old --mode shared --workload W1
+[2026-11-04 06:46:18] completed: --system llamacpp --mode partitioned --workload W1
+[2026-11-04 06:48:08] completed: --system llamacpp --mode shared --workload W1
+[2026-11-04 06:49:52] completed: --system ollama --workload W1
+[2026-11-04 06:53:46] completed: --system malabr --tag old --mode partitioned --workload W2
+[2026-11-04 06:56:46] completed: --system malabr --tag old --mode shared --workload W2
+[2026-11-04 06:58:58] completed: --system llamacpp --mode partitioned --workload W2
+[2026-11-04 07:00:42] completed: --system llamacpp --mode shared --workload W2
+[2026-11-04 07:02:49] completed: --system ollama --workload W2
+[2026-11-04 07:16:16] completed: --system malabr --tag old --mode partitioned --workload W5
+[2026-11-04 07:31:36] completed: --system malabr --tag old --mode shared --workload W5
+[2026-11-04 07:38:42] completed: --system llamacpp --mode partitioned --workload W5
+[2026-11-04 07:45:55] completed: --system llamacpp --mode shared --workload W5
+[2026-11-04 07:53:16] completed: --system ollama --workload W5
+[2026-11-04 08:20:29] completed: --system malabr --tag old --mode partitioned --workload W4
+[2026-11-04 10:04:08] NOT COMPLETED (drive dropped 10:01, killed, no JSON; trials 0-2 in console.txt): --system malabr --tag old --mode shared --workload W4 --trials 8
+[2026-11-04 10:09:45] completed: --system llamacpp --mode partitioned --workload W4
+[2026-11-04 11:02:29] completed: --system llamacpp --mode shared --workload W4 --trials 8
+[2026-11-04 11:08:57] completed: --system ollama --workload W4
+[2026-11-04 11:09:30] completed: --system llamacpp --mode partitioned --workload R1
+[2026-11-04 11:10:04] completed: --system llamacpp --mode shared --workload R1
+[2026-11-04 11:10:39] completed: --system ollama --workload R1
+[2026-11-04 11:11:29] completed: chrome relative_8tabs_0 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:12:08] completed: chrome relative_8tabs_1 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:12:45] completed: chrome relative_8tabs_2 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:13:22] completed: chrome relative_8tabs_3 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:13:59] completed: chrome relative_8tabs_4 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:14:37] completed: chrome relative_8tabs_5 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:14:59] completed: chrome relative_4tabs_0 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:15:22] completed: chrome relative_4tabs_1 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:15:43] completed: chrome relative_4tabs_2 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:16:06] completed: chrome relative_4tabs_3 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:16:29] completed: chrome relative_4tabs_4 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:16:51] completed: chrome relative_4tabs_5 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:18:42] completed: chrome relative_8tabs_stagger_0 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:20:41] completed: chrome relative_8tabs_stagger_1 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:22:35] completed: chrome relative_8tabs_stagger_2 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:24:50] completed: chrome relative_8tabs_stagger_3 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:26:24] completed: chrome relative_8tabs_stagger_4 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:27:05] completed: chrome relative_8tabs_stagger_5 (printed numbers kept in the .txt; JSON save crashed: script bug)
+[2026-11-04 11:36:20] completed: chrome cancel_8tabs
+[2026-11-04 12:00:27] completed: chrome memory
+[2026-11-04 12:15:15] completed: chrome rss_1 (run under memory pressure, swap full)
+[2026-11-04 12:35:57] rss_1, rss_2: under memory pressure (swap full). Their growth figures are not a headline.
+[2026-11-04 12:35:57] DEFERRED (not skipped): chrome rss_3, rss_4, rss_5. Run after the 14:00 resume, fresh Chrome and empty swap, before W3.
+[2026-11-04 12:35:57] UNFINISHED, run once after resume: --system malabr --tag old --mode shared --workload W4 --trials 8
+[2026-11-04 12:35:57] PAUSED at 2026-11-04 12:35:57, next: deferred chrome rss_3 (then rss_4, rss_5), then W3 first config: --system malabr --tag old --mode partitioned --workload W3 --greedy 0

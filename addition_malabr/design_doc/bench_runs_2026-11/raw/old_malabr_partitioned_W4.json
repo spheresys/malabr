@@ -1,0 +1,372 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "malabr",
+   "--tag",
+   "old",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W4"
+  ],
+  "tag": "old",
+  "workload": "W4",
+  "system_info": {
+   "system": "malabr",
+   "mode": "partitioned",
+   "kv_unified": false,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 2048,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": false,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/mserver/tests/bench_calibration_partitioned_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     44.72478986292451,
+     32.24542606434177
+    ],
+    [
+     256,
+     37.6570382932313,
+     37.13766420316783
+    ],
+    [
+     512,
+     32.83179867558794,
+     32.80552274909325
+    ],
+    [
+     1024,
+     24.883660953352027,
+     24.59614104876856
+    ],
+    [
+     1536,
+     20.261082588018144,
+     20.233680342378165
+    ],
+    [
+     1984,
+     17.71656317406616,
+     17.66616623714562
+    ]
+   ]
+  },
+  "seconds": 1633.0571875572205,
+  "finished": "2026-11-04 08:20:29",
+  "mem_available_kb": 10529996,
+  "loadavg": [
+   3.8916015625,
+   3.939453125,
+   3.7861328125
+  ]
+ },
+ "result": {
+  "limit": 2048,
+  "fill_turns": 7,
+  "control": [
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **QUARTZ-776669**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **COBALT-523002**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-406150**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MACKEREL-614522**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **GLACIER-479627**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **FALCON-470043**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-494099**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-815627**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **JUNIPER-223078**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-577156**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **BADGER-819148**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **SAFFRON-473827**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **QUARTZ-784253**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **PELICAN-231052**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **BADGER-330879**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-853348**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MARIGOLD-399456**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-867863**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **TOPAZ-552596**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-578371**."
+   }
+  ],
+  "overflow": [
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **HARPOON-338659**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 77.61810111999512,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-021207**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.39880156517029,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-680904**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.91273593902588,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **OBSIDIAN-726747**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.57415533065796,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-918633**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.35462260246277,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-904033**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.09888100624084,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **JUNIPER-876000**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.19771599769592,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-722386**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.76268267631531,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **SAFFRON-807433**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.70897936820984,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-522144**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.06353282928467,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-404338**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 78.87085938453674,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MARIGOLD-190261**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.75342869758606,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MACKEREL-160791**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.28342151641846,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-999249**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.24173331260681,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-542427**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.97874474525452,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **BADGER-368551**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.65229034423828,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-203314**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.82915759086609,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-827510**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.9684705734253,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-559888**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 80.46310687065125,
+    "compactions": 2
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MARIGOLD-802462**.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 79.40886044502258,
+    "compactions": 2
+   }
+  ],
+  "summary": {
+   "control_recalled": 20,
+   "overflow_recalled": 20,
+   "overflow_refused_or_failed": 0,
+   "n": 20
+  }
+ }
+}

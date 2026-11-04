@@ -1,0 +1,42 @@
+  tab 0: origin_ok=True availability=available
+  tab 1: origin_ok=True availability=available
+  tab 2: origin_ok=True availability=available
+  tab 3: origin_ok=True availability=available
+  tab 4: origin_ok=True availability=available
+  tab 5: origin_ok=True availability=available
+  using 6 usable tab(s)
+=== RQ2 vs Chrome: 6 tabs ===
+
+--- A. contextWindow as more sessions are held open ---
+  sessions alive: 1   contextWindow=9216     usage=0
+  sessions alive: 2   contextWindow=9216     usage=0
+  sessions alive: 3   contextWindow=9216     usage=0
+  sessions alive: 4   contextWindow=9216     usage=0
+  sessions alive: 5   contextWindow=9216     usage=0
+  sessions alive: 6   contextWindow=9216     usage=0
+
+  window is CONSTANT as sessions multiply -> aggregate is NOT divided: each session claims a full window independently
+  6 sessions x 9216 tokens = 55,296 tokens claimable in total
+
+--- B. behaviour at context overflow ---
+  contextWindow      : 9216
+  append rounds       : 4 x ~12000 chars
+  contextoverflow ev  : 1
+  final usage         : 8208
+  error               : None
+  still answered      : 'dog\n\n\n\n'
+  earliest content kept: False
+
+--- C. does one greedy session degrade its neighbours? ---
+  control (all normal)   run 2: median TTFT 5.54s over 5 tabs
+  control (all normal)   run 3: median TTFT 4.48s over 5 tabs
+  control (all normal)   run 4: median TTFT 4.73s over 5 tabs
+  control (all normal)   run 5: median TTFT 4.74s over 5 tabs
+  one greedy neighbour   run 1: median TTFT 5.05s over 5 tabs
+  one greedy neighbour   run 2: median TTFT 5.18s over 5 tabs
+  one greedy neighbour   run 3: median TTFT 5.06s over 5 tabs
+  one greedy neighbour   run 4: median TTFT 5.22s over 5 tabs
+  control (all normal)   median 4.74s (n=4)
+  one greedy neighbour   median 5.12s (n=4)
+
+  A greedy neighbour changes everyone else's TTFT by 1.08x

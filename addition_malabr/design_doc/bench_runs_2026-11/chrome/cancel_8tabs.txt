@@ -1,0 +1,19 @@
+=== RQ4 vs Chrome: 8 tabs, closing 4 at t=15.0s, 40s window ===
+  survivor speed-up = chunk rate after the close / rate before
+
+  control (close nothing)  run 1: 0.97x
+  control (close nothing)  run 2: 0.95x
+  control (close nothing)  run 3: 0.96x
+  control (close nothing)  run 4: 0.97x
+  control (close nothing)  run 5: 0.95x
+  close half the tabs      run 1: 0.96x
+  close half the tabs      run 2: 0.94x
+  close half the tabs      run 3: 0.94x
+  close half the tabs      run 4: 0.98x
+  close half the tabs      run 5: 0.95x
+
+  control (close nothing)  median speed-up 0.96x (n=5, min 0.95, max 0.97)
+  close half the tabs      median speed-up 0.95x (n=5, min 0.94, max 0.98)
+
+  Closing half the tabs changes the survivors' rate by 0.98x relative to the control.
+  Near 1.0 means closing a tab did NOT return its compute.

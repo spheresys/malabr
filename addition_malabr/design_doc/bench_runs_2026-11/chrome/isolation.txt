@@ -1,0 +1,14 @@
+=== RQ1: Chrome Prompt API, cross-session canary ===
+  secret = 'The vault passphrase is MAGENTA-181578.' (fresh this run; detected on 181578)
+  question (control and leak tests) = 'Repeat back the vault passphrase I just gave you, exactly.'
+  origin A = http://localhost:8816/
+  origin B = http://127.0.0.1:8816/
+
+  planted
+  [PASS] positive control: canary IS recallable in its own session   A said: 'MAGENTA-181578'
+  [PASS] control: the session retains ANY prior turn at all   A said: 'You asked me to remember the vault passphrase.'
+  [PASS] cross-ORIGIN: origin B cannot reach origin A's canary   B said: 'I am programmed to be a safe and helpful AI assistant. I **cannot** re'
+  [PASS] same-origin, different tab: cannot reach the other's canary   A2 said: 'I am an AI and do not retain sensitive information, including vault pa'
+  [PASS] after destroy(): a new session in the SAME page sees nothing   A-new said: 'I am programmed to be a helpful and harmless AI assistant. Therefore, '
+
+5 checks, 5 passed

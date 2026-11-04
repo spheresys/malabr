@@ -1,0 +1,207 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "shared",
+   "--workload",
+   "W4",
+   "--trials",
+   "8"
+  ],
+  "tag": "",
+  "workload": "W4",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--kv-unified",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 16384,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "16384",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmpjznu_nth.llama.log"
+  },
+  "seconds": 3163.669411420822,
+  "finished": "2026-11-04 11:02:29",
+  "mem_available_kb": 10904000,
+  "loadavg": [
+   2.98779296875,
+   3.0673828125,
+   3.28173828125
+  ]
+ },
+ "result": {
+  "limit": 16384,
+  "fill_turns": 50,
+  "control": [
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **QUARTZ-776669**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **COBALT-523002**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-406150**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MACKEREL-614522**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **GLACIER-479627**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **FALCON-470043**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-494099**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-815627**."
+   }
+  ],
+  "overflow": [
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **HARPOON-338659**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 380.78272700309753,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-021207**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 384.65659379959106,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-680904**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 393.45596837997437,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **OBSIDIAN-726747**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 383.7435188293457,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-918633**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16762 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 384.4164562225342,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **ORCHID-904033**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 442.08816385269165,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **JUNIPER-876000**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16764 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 386.73272585868835,
+    "compactions": 0
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-722386**.",
+    "fill_failures": 3,
+    "first_fill_failure": {
+     "turn": 33,
+     "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (16763 tokens) exceeds the available context size (16384 tokens), try increasing it\",\"type\":\"exceed_context_si"
+    },
+    "seconds": 386.70976090431213,
+    "compactions": 0
+   }
+  ],
+  "summary": {
+   "control_recalled": 8,
+   "overflow_recalled": 8,
+   "overflow_refused_or_failed": 8,
+   "n": 8
+  }
+ }
+}

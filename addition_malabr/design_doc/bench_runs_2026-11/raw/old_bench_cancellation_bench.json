@@ -1,0 +1,14 @@
+{
+  "delivery-only": {
+    "decode_after_close": 865,
+    "wasted_on_closed": 453,
+    "survivors_finished": 21.66452680400107,
+    "survivors_done": 4
+  },
+  "reclaim (MALABR)": {
+    "decode_after_close": 406,
+    "wasted_on_closed": 0,
+    "survivors_finished": 10.99131355999998,
+    "survivors_done": 4
+  }
+}

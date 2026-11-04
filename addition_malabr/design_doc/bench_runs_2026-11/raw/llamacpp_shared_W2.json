@@ -1,0 +1,151 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "shared",
+   "--workload",
+   "W2"
+  ],
+  "tag": "",
+  "workload": "W2",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--kv-unified",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 16384,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "16384",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmpwd4bl1gi.llama.log"
+  },
+  "seconds": 103.84739661216736,
+  "finished": "2026-11-04 07:00:42",
+  "mem_available_kb": 10773328,
+  "loadavg": [
+   3.43408203125,
+   3.85400390625,
+   3.68212890625
+  ]
+ },
+ "result": {
+  "close": [
+   {
+    "survivors_finish": 6.3868459229997825,
+    "wasted_after_close": 4,
+    "closed_at": 1.906331385998783,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 6.454168504998961,
+    "wasted_after_close": 4,
+    "closed_at": 1.975464129998727,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 6.601344179998705,
+    "wasted_after_close": 4,
+    "closed_at": 1.9382333270004892,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 6.630908233997616,
+    "wasted_after_close": 4,
+    "closed_at": 2.0172408769976755,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 6.443758086003072,
+    "wasted_after_close": 4,
+    "closed_at": 1.925220626002556,
+    "survivor_tokens": 384
+   }
+  ],
+  "control": [
+   {
+    "survivors_finish": 9.470756034999795,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.326437562998763,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.47309402099927,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.449803415001952,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.05553044199769,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   }
+  ],
+  "summary": {
+   "survivors_finish_close": {
+    "median": 6.454168504998961,
+    "min": 6.3868459229997825,
+    "max": 6.630908233997616,
+    "sd": 0.10655651420625974,
+    "n": 5
+   },
+   "survivors_finish_control": {
+    "median": 9.449803415001952,
+    "min": 9.05553044199769,
+    "max": 9.47309402099927,
+    "sd": 0.17806676884089573,
+    "n": 5
+   },
+   "speed_up": {
+    "median": 1.4350250134967404,
+    "min": 1.4053181887240347,
+    "max": 1.482853375387449,
+    "sd": 0.028731268075719792,
+    "n": 5
+   },
+   "wasted_after_close": {
+    "median": 4,
+    "min": 4,
+    "max": 4,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}

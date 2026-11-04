@@ -1,0 +1,123 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "ollama",
+   "--workload",
+   "W2"
+  ],
+  "tag": "",
+  "workload": "W2",
+  "system_info": {
+   "system": "ollama",
+   "mode": "fixed (no unified option)",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "num_ctx_per_session": 2048,
+   "limit_per_session": 2048,
+   "threads": 3,
+   "version": "0.40.14",
+   "log": "/tmp/tmp9ixsl3_s.ollama.log"
+  },
+  "seconds": 127.3309874534607,
+  "finished": "2026-11-04 07:02:49",
+  "mem_available_kb": 10600200,
+  "loadavg": [
+   3.22119140625,
+   3.603515625,
+   3.607421875
+  ]
+ },
+ "result": {
+  "close": [
+   {
+    "survivors_finish": 10.971199935000186,
+    "wasted_after_close": null,
+    "closed_at": 1.4482879280003544,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 11.489061293999839,
+    "wasted_after_close": null,
+    "closed_at": 1.4951832839979033,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 11.002976963998663,
+    "wasted_after_close": null,
+    "closed_at": 1.4739060920001066,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 11.123433533000934,
+    "wasted_after_close": null,
+    "closed_at": 1.5410819880016788,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 11.554986695999105,
+    "wasted_after_close": null,
+    "closed_at": 1.5833002120016317,
+    "survivor_tokens": 384
+   }
+  ],
+  "control": [
+   {
+    "survivors_finish": 9.109123351998278,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.270597375998477,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.292856269999902,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.727772189999087,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 9.603830771000503,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   }
+  ],
+  "summary": {
+   "survivors_finish_close": {
+    "median": 11.123433533000934,
+    "min": 10.971199935000186,
+    "max": 11.554986695999105,
+    "sd": 0.27504024007788885,
+    "n": 5
+   },
+   "survivors_finish_control": {
+    "median": 9.292856269999902,
+    "min": 9.109123351998278,
+    "max": 9.727772189999087,
+    "sd": 0.25583790750275154,
+    "n": 5
+   },
+   "speed_up": {
+    "median": 0.8311416554314003,
+    "min": 0.8069064250566794,
+    "max": 0.8745296280270648,
+    "sd": 0.024747991165508507,
+    "n": 5
+   },
+   "wasted_after_close": null
+  }
+ }
+}

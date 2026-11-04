@@ -1,0 +1,327 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "ollama",
+   "--workload",
+   "W4"
+  ],
+  "tag": "",
+  "workload": "W4",
+  "system_info": {
+   "system": "ollama",
+   "mode": "fixed (no unified option)",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "num_ctx_per_session": 2048,
+   "limit_per_session": 2048,
+   "threads": 3,
+   "version": "0.40.14",
+   "log": "/tmp/tmpz2apojsi.ollama.log"
+  },
+  "seconds": 387.68821358680725,
+  "finished": "2026-11-04 11:08:57",
+  "mem_available_kb": 10598376,
+  "loadavg": [
+   3.08447265625,
+   3.04931640625,
+   3.1884765625
+  ]
+ },
+ "result": {
+  "limit": 2048,
+  "fill_turns": 7,
+  "control": [
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **QUARTZ-776669**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **COBALT-523002**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MAGENTA-406150**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MACKEREL-614522**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **GLACIER-479627**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **FALCON-470043**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **LAVENDER-494099**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-815627**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **JUNIPER-223078**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-577156**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **BADGER-819148**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **SAFFRON-473827**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **QUARTZ-784253**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **PELICAN-231052**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **BADGER-330879**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-853348**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **MARIGOLD-399456**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is: **CRIMSON-867863**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **TOPAZ-552596**."
+   },
+   {
+    "recalled": true,
+    "error": null,
+    "said": "The vault passphrase is **WALRUS-578371**."
+   }
+  ],
+  "overflow": [
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 52.869057178497314,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.660596370697021,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.673710823059082,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.616602659225464,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.882184267044067,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.779993295669556,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.942587614059448,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.83171272277832,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.887719631195068,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.83079218864441,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.790581226348877,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.774384260177612,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.754581212997437,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.80371356010437,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.741934299468994,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.703083038330078,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.754083633422852,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.957726001739502,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.778862953186035,
+    "compactions": 0
+   },
+   {
+    "recalled": false,
+    "error": null,
+    "said": "OK.",
+    "fill_failures": 0,
+    "first_fill_failure": null,
+    "seconds": 15.808820724487305,
+    "compactions": 0
+   }
+  ],
+  "summary": {
+   "control_recalled": 20,
+   "overflow_recalled": 0,
+   "overflow_refused_or_failed": 0,
+   "n": 20
+  }
+ }
+}

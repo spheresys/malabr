@@ -1,0 +1,48 @@
+{
+  "foreground first": {
+    "fifo": {
+      "ttft_p50": 5.900814625998464,
+      "ttft_p95": 10.49245055099891,
+      "ttft_foreground": 0.11698058499678154,
+      "makespan": 11.905497812997055,
+      "answered": 8
+    },
+    "parallel": {
+      "ttft_p50": 2.9245768490000046,
+      "ttft_p95": 3.4581745819996286,
+      "ttft_foreground": 0.40507807999892975,
+      "makespan": 13.299355727998773,
+      "answered": 8
+    },
+    "malabr": {
+      "ttft_p50": 2.9290294110032846,
+      "ttft_p95": 3.506780684001569,
+      "ttft_foreground": 0.4048873630017624,
+      "makespan": 13.195554816000367,
+      "answered": 8
+    }
+  },
+  "foreground last": {
+    "fifo": {
+      "ttft_p50": 6.307789436999883,
+      "ttft_p95": 11.13752023899724,
+      "ttft_foreground": 11.13752023899724,
+      "makespan": 12.629542757000308,
+      "answered": 8
+    },
+    "parallel": {
+      "ttft_p50": 3.016767645996879,
+      "ttft_p95": 3.5940135229975567,
+      "ttft_foreground": 3.5940135229975567,
+      "makespan": 13.443421967996983,
+      "answered": 8
+    },
+    "malabr": {
+      "ttft_p50": 3.172420343998965,
+      "ttft_p95": 3.5460075010014407,
+      "ttft_foreground": 0.39714104700033204,
+      "makespan": 13.577359784998407,
+      "answered": 8
+    }
+  }
+}

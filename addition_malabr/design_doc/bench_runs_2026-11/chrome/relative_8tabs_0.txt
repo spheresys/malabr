@@ -1,0 +1,25 @@
+
+=== Chrome built-in Prompt API, 8 tabs ===
+  foreground TTFT :   7.16s  (tab 7, brought to front)
+  median TTFT     :  24.16s
+  p95 TTFT        :  39.54s
+
+  RELATIVE SCORE (foreground / median): 0.30
+  RELATIVE SCORE excluding create(): 0.26   (fg 6.04s / median 23.04s)
+  The second line is the one comparable to MALABR, whose
+  harness creates the session before starting its clock.
+
+  inter-chunk p50 (s)       : 0.073
+  inter-chunk p95 (s)       : 0.162
+  foreground chunk gap p95  : 0.242
+  background chunk gap p95  : 0.131
+  stalls >1s  fg / bg       : 0 / 0
+  chars/s aggregate         : 37.8
+  Jain fairness (chars/s)   : 0.982
+  (streams capped at 40 chunks; CPU Nano is slow to finish)
+Traceback (most recent call last):
+  File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/chrome_relative_bench.py", line 311, in <module>
+    sys.exit(main())
+  File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/chrome_relative_bench.py", line 296, in main
+    if a.json:
+AttributeError: 'list' object has no attribute 'json'

@@ -1,0 +1,164 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "R1"
+  ],
+  "tag": "",
+  "workload": "R1",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--no-kv-unified",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 2048,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "16384",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--no-kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmpxhc4w1l6.llama.log"
+  },
+  "seconds": 33.05943965911865,
+  "finished": "2026-11-04 11:09:30",
+  "mem_available_kb": 10824516,
+  "loadavg": [
+   3.103515625,
+   3.0576171875,
+   3.18408203125
+  ]
+ },
+ "result": {
+  "rows": [
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": false,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   }
+  ],
+  "summary": {
+   "holder_recalled": 19,
+   "leaked": 0,
+   "n": 20
+  }
+ }
+}

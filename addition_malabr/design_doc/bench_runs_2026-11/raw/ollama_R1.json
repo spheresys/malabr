@@ -1,0 +1,142 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "ollama",
+   "--workload",
+   "R1"
+  ],
+  "tag": "",
+  "workload": "R1",
+  "system_info": {
+   "system": "ollama",
+   "mode": "fixed (no unified option)",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "num_ctx_per_session": 2048,
+   "limit_per_session": 2048,
+   "threads": 3,
+   "version": "0.40.14",
+   "log": "/tmp/tmprsyz__vi.ollama.log"
+  },
+  "seconds": 34.56075358390808,
+  "finished": "2026-11-04 11:10:39",
+  "mem_available_kb": 10838780,
+  "loadavg": [
+   3.27587890625,
+   3.11962890625,
+   3.19482421875
+  ]
+ },
+ "result": {
+  "rows": [
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": false,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   },
+   {
+    "holder": true,
+    "other": false,
+    "other_said": "Sure! Please provide the vault passphrase you gave me, and I'll repeat it exactl"
+   }
+  ],
+  "summary": {
+   "holder_recalled": 19,
+   "leaked": 0,
+   "n": 20
+  }
+ }
+}
