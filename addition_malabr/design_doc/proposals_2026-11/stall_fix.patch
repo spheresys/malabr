@@ -1,0 +1,71 @@
+--- a/addition_malabr/mserver/malabr_service/scheduler.py	2026-11-03 22:57:21.504919507 +0530
++++ b/addition_malabr/mserver/malabr_service/scheduler.py	2026-11-04 05:43:05.599849409 +0530
+@@ -182,11 +182,17 @@
+     aged = sorted([s for s in runnable
+                    if id(s) not in picked and s.rounds_excluded >= MAX_CONSECUTIVE_EXCLUSIONS],
+                   key=lambda s: -s.rounds_excluded)
++    # The longest-skipped session may spend the prefill share too, so the aging
++    # bound holds while a prompt is prefilling (the round runs over by at most
++    # one decode pick). Without it, one foreground pick used up the decode
++    # share and background tabs stopped for seconds.
++    aged_served = False
+     for s in aged:
+         c = cost_curve.cost_ms_worst(s.pos)
+         # "or not picks" is a CORRECTION to §9a, not a restatement of it  [notes: scheduler.build_batch]
+-        if c <= budget - held or not picks:
++        if c <= budget - held or not picks or (held and not aged_served):
+             picks.append(s); picked.add(id(s)); budget -= c; spent += c
++            aged_served = True
+ 
+     # NORMAL FILL -- cheapest-first  [notes: scheduler.build_batch]
+     remaining = sorted(((cost_curve.cost_ms_worst(s.pos), s)
+--- a/addition_malabr/mserver/tests/test_phase1.py	2026-11-04 00:37:06.859577788 +0530
++++ b/addition_malabr/mserver/tests/test_phase1.py	2026-11-04 03:06:14.848192735 +0530
+@@ -2551,6 +2551,32 @@
+            f"{c.mem_available_bytes // 1024 ** 2} MiB, {c.kv_bytes_per_token} B/token")
+ 
+ 
++def t93_aging_bound_holds_while_a_prompt_prefills():
++    """While a prompt is prefilling, a background tab that is decoding must still
++    get a token within the aging bound. Measured before the fix: 24-48 rounds
++    skipped and 3-5 gaps over 1 s in pipeline_bench."""
++    class S:
++        def __init__(self, tab, state, ntok=0):
++            self.key = ("a" * 32, tab, "https://x.test"); self.pos = 90
++            self.state = state; self.cancelled = False
++            self.inbox_tokens = [1] * ntok; self.prefill_offset = 0
++            self.prefill_stalls = 0; self.rounds_excluded = 0
++            self.budget = 4096
++
++    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
++    fg = S(8, eng.SessionState.GENERATING)
++    bg = [S(t, eng.SessionState.GENERATING) for t in (1, 2, 3)]
++    waiting = S(4, eng.SessionState.PENDING, ntok=100000)
++    worst = 0
++    for _ in range(100):
++        eng.build_batch([fg] + bg + [waiting], curve, 8)
++        worst = max(worst, max(s.rounds_excluded for s in bg))
++    # The bound plus one round for each session that aged alongside it.
++    limit = eng.MAX_CONSECUTIVE_EXCLUSIONS + len(bg)
++    record(93, "the aging bound holds while another tab's prompt is prefilling",
++           worst <= limit, f"worst skip {worst} rounds, limit {limit}")
++
++
+ BROWSER_ONLY = [
+     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),
+     (14, "stale header visibility loses to the control-channel push"),
+--- a/addition_malabr/mserver/DESIGN_DECISIONS.md	2026-11-04 01:28:16.456000608 +0530
++++ b/addition_malabr/mserver/DESIGN_DECISIONS.md	2026-11-04 03:06:14.849327353 +0530
+@@ -1020,6 +1020,12 @@
+ - `scheduler.py:184-207`.
+ - `engine.py:275-281`.
+ 
++**Changed 2026-11-04 (aging and the prefill share).** The aging pass had to fit
++inside the decode share. While any prompt was prefilling, the foreground pick
++used that share up, so background tabs were skipped 24–48 rounds, against a bound
++of 5, giving 3–5 gaps over 1 s in `pipeline_bench`. Now one aged session per round
++may spend the held share as well. The round can run over by one more decode pick.
++
+ ### D20. CostCurve: measured costs per position, worst case for cutoffs, closed loop
+ 
+ **Decision.** At startup the server calibrates this machine, or loads

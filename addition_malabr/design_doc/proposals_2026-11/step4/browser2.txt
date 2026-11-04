@@ -1,0 +1,9 @@
+  [PASS] 1. first question attaches the page and is served   page attached (4000 chars)
+Reply with the single word ALPHA.
+MALABR
+
+ALPHA
+  [PASS] 2. the drop is reported in the panel
+  [PASS] 3. the next question re-reads the page
+
+3/3 passed   (log: /tmp/malabr_pagereread.log)

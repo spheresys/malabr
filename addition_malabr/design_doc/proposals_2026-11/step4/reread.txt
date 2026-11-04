@@ -1,0 +1,8 @@
+partitioned page  900 depth    0: 8.26 s with, 0.07 s without, re-read costs 8.19 s (n=5; with min 8.14 max 8.32)
+partitioned page  900 depth 1000: 19.65 s with, 0.34 s without, re-read costs 19.31 s (n=5; with min 19.52 max 19.82)
+shared      page  900 depth    0: 8.27 s with, 0.07 s without, re-read costs 8.20 s (n=5; with min 8.15 max 8.34)
+shared      page  900 depth 1000: 28.17 s with, 0.34 s without, re-read costs 27.83 s (n=5; with min 27.92 max 28.24)
+shared      page  900 depth 4000: 82.51 s with, 1.34 s without, re-read costs 81.17 s (n=5; with min 82.24 max 82.76)
+shared      page 3000 depth    0: 79.70 s with, 0.09 s without, re-read costs 79.62 s (n=5; with min 77.72 max 79.84)
+shared      page 3000 depth 1000: 162.90 s with, 0.34 s without, re-read costs 162.55 s (n=5; with min 162.32 max 163.07)
+shared      page 3000 depth 4000: 328.23 s with, 1.35 s without, re-read costs 326.88 s (n=5; with min 327.48 max 329.26)

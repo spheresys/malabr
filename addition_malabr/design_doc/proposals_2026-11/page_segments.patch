@@ -1,0 +1,783 @@
+--- a/addition_malabr/mserver/DESIGN_DECISIONS.md	2026-11-04 01:28:16.456000608 +0530
++++ b/addition_malabr/mserver/DESIGN_DECISIONS.md	2026-11-04 05:43:05.588253895 +0530
+@@ -743,6 +743,23 @@
+ - `session.py:65`: `Turn`.
+ - `formatter.py`: `ChatFormatter.drop_messages`.
+ 
++**Proposed change (page segments): a page is its own exchange.**
++- The panel sends the page and the question as two parts (`runtime.PAGE_PREFIX`).
++  The page goes in as a user message with a reply the server writes
++  (`session.PAGE_ACK`), so templates that require alternating roles accept it.
++- Compaction drops, in order: pages a newer page replaced; middle exchanges,
++  oldest first; the current page. The anchor is now the first exchange that is
++  not a page.
++- A page at the very start of a conversation is cut so the KV is left as if the
++  question had come first. Dropping it naively left the page reply's closing
++  marker at position 0, and the model then replied with garbage (test 94).
++- A session compacting for its own new turn may also drop the latest exchange,
++  since the new turn becomes the latest. Other sessions still can't drop it.
++- The server keeps no page text. `status` names the page in context; when it no
++  longer matches, the panel re-reads the page with the next question.
++- **Trade-offs.** Re-reading costs prefill again. A follow-up with page text
++  unticked has no page. A re-read page sits after the earlier answers.
++
+ ### D15. The shared-pool guard compacts the greediest session first
+ 
+ **Decision.** In shared-KV mode, before each round, when the sum of all
+--- a/addition_malabr/mserver/malabr_chat_extension/content.js	2026-11-03 22:57:21.515159141 +0530
++++ b/addition_malabr/mserver/malabr_chat_extension/content.js	2026-11-04 00:45:10.107847496 +0530
+@@ -69,7 +69,7 @@
+   async function serverStatus() {
+     try {
+       const r = await meta("status");
+-      return r && r.ok ? { session: !!r.session, id: r.id || null } : null;
++      return r && r.ok ? { session: !!r.session, id: r.id || null, page: r.page ?? null } : null;
+     } catch (e) { return null; }
+   }
+ 
+@@ -98,6 +98,10 @@
+       transcript.forEach((m) => render(m.who, m.text, m.think, m.meta));
+     }
+     convId = st.id;
++    if (pageHash !== null && String(st.page) !== String(pageHash)) {
++      pageHash = null; pageDropped = true;
++      note(log.lastElementChild || log, "the page was dropped from the model's memory to make room — it is re-read with your next question while \"include page text\" is on", "note");
++    }
+     save();
+   }
+ 
+@@ -225,6 +229,7 @@
+   }
+   // Starts the error text of a turn the server refused (session.REFUSED).
+   const REFUSED = "[refused] ";
++  const PAGE_PREFIX = "\u0000MALABR-PAGE ";
+ 
+   function note(el, text, cls) {
+     const m = document.createElement("div");
+@@ -240,6 +245,9 @@
+ 
+   // ---- page text -------------------------------------------------...  [notes: content.js hashStr]
+   let pageHash = null;
++  // The server dropped the page to make room (status no longer names it), so
++  // the next question re-reads it.
++  let pageDropped = false;
+   function hashStr(s) {
+     let h = 5381;
+     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+@@ -573,7 +581,7 @@
+         // forget a page attached with it (the model never saw that page).
+         note(s.turn, error.slice(REFUSED.length) + " (not saved)", "err");
+         if (transcript[s.tIndex]?.who === "you") transcript.splice(s.tIndex, 1);
+-        pageHash = s.hashBefore;
++        pageHash = s.hashBefore; pageDropped = s.droppedBefore;
+         save();
+         live.delete(id);
+         if (inFlight === id) { inFlight = null; setBusy(false); }
+@@ -711,16 +719,21 @@
+ 
+     let prompt = typed;
+     let chip = null;
+-    const hashBefore = pageHash;
++    const hashBefore = pageHash, droppedBefore = pageDropped;
+     if (usePage.checked) {
+       const body = pageText(typed);
+       // Send the page ONCE per session  [notes: content.js clear]
+       const h = body ? hashStr(body) : null;
+       if (body && h !== pageHash) {
+-        prompt = `Here is the text of the page the user is viewing (${location.href}):\n\n`
+-               + body + `\n\n---\nUser question: ${typed}`;
+-        chip = `page ${pageHash === null ? "attached" : "re-attached (changed)"} (${body.length} chars)`;
+-        pageHash = h;
++        // The page travels as its own part, so the server can drop it and the
++        // panel can re-read it (runtime PAGE_PREFIX). NUL is the separator.
++        prompt = PAGE_PREFIX + h + "\n"
++               + `Here is the text of the page the user is viewing (${location.href}):\n\n`
++               + body.replace(/\u0000/g, "") + "\u0000" + typed;
++        chip = `page ${pageHash !== null ? "re-attached (changed)"
++                       : pageDropped ? "re-read (it had been dropped to make room)"
++                       : "attached"} (${body.length} chars)`;
++        pageHash = h; pageDropped = false;
+       } else if (body) {
+         chip = "page already in context";
+       }
+@@ -744,7 +757,7 @@
+         inFlight = null; setBusy(false); return;
+       }
+       live.set(id, { turn, bodyEl: turn.querySelector(".body"), thinkEl: null,
+-                     raw: "", raf: 0, tIndex, hashBefore });
++                     raw: "", raf: 0, tIndex, hashBefore, droppedBefore });
+       inFlight = id;
+     });
+   }
+--- a/addition_malabr/mserver/malabr_service/engine.py	2026-11-03 22:57:21.503160844 +0530
++++ b/addition_malabr/mserver/malabr_service/engine.py	2026-11-04 05:43:05.583869289 +0530
+@@ -21,8 +21,8 @@
+                         ROUND_LATENCY_BUDGET_MS, SOLO_ROUND_BUDGET_MS,
+                         STALE_VISIBILITY_TIMEOUT, build_batch)
+ from .session import (ABSOLUTE_CEILING, MAX_OUTBOX_TOKENS, MIN_CAP,  # noqa: F401
+-                      OutboxFull, OutputCap, REFUSED, RESERVED_FOR_RESPONSE,
+-                      Session, SessionState, Turn)
++                      OutboxFull, OutputCap, PAGE_ACK, PagedPrompt, REFUSED,
++                      RESERVED_FOR_RESPONSE, Session, SessionState, Turn)
+ from .slots import SlotAllocator, SlotWipeError  # noqa: F401
+ 
+ 
+@@ -168,6 +168,12 @@
+             s = self._sessions.get(key)
+             return s.conv_id if s is not None and s.state != SessionState.DEAD else None
+ 
++    def page_in_context(self, key):
++        """Hash of the page the live session for `key` holds, or None."""
++        with self._reg_lock:
++            s = self._sessions.get(key)
++            return s.page_hash if s is not None and s.state != SessionState.DEAD else None
++
+     def all_keys(self):
+         with self._reg_lock:
+             return [k for k, s in self._sessions.items()
+@@ -237,8 +243,10 @@
+         self.wake()
+         return True
+ 
+-    def submit(self, key, text):
+-        """Queue a new prompt and return THIS request's outbox.
++    def submit(self, key, text, page=None):
++        """Queue a new prompt and return THIS request's outbox. `page` is
++        (hash, text) for a page sent with the question; it becomes its own,
++        droppable exchange.
+ 
+         Rationale: NOTES.md, engine.Engine.submit
+         """
+@@ -252,7 +260,7 @@
+         s.pending_outbox = outbox
+         # Do NOT touch pos or KV here -- that is engine-thread work. Only the
+         # flag is set; the loop performs the rollback at its next top.
+-        s.pending_replace = text
++        s.pending_replace = PagedPrompt(page[0], page[1], text) if page else text
+         # Flag first, wake second -- never the other way round (see _run).
+         self.wake()
+         return outbox
+@@ -567,7 +575,29 @@
+         # Snapshot 2 is set for real when prefill completes (see _run_round)  [notes: engine.Engine._begin_turn]
+         s.pos_before_generation = s.pos
+         s.formatter_cp_before_request = s.formatter.checkpoint()
+-        s.inbox_tokens = s.formatter.user_turn(text)
++        s.turn_page = None
++        if isinstance(text, PagedPrompt):
++            # The page first, as an exchange of its own, then the question.
++            first = not s.formatter._rendered
++            page_tokens = s.formatter.written_exchange(text.page, PAGE_ACK)
++            question = s.formatter.user_turn(text.question)
++            s.inbox_tokens = page_tokens + question
++            # A page at the very start of the conversation must leave the KV
++            # as if the question had come first: not a stray closing marker
++            # from the page's reply at position 0, and any BOS kept.
++            lead, tail = 0, 0
++            if first:
++                # The drop keeps page_tokens[:lead] and takes question[:tail], so
++                # what stays must be exactly `alone`. lead is 1 when the first
++                # token (BOS or a role marker) is shared by both renders.
++                alone = s.formatter.first_turn_tokens(text.question)
++                lead = 1 if alone[0] == page_tokens[0] else 0
++                tail = len(question) - (len(alone) - lead)
++                if tail < 0 or question[tail:] != alone[lead:]:
++                    lead = tail = None          # not separable: keep the page
++            s.turn_page = (text.page_hash, len(page_tokens), lead, tail)
++        else:
++            s.inbox_tokens = s.formatter.user_turn(text)
+         # Section 8 gate 2, the static half: a prompt no conversation of this
+         # budget could ever take  [notes: engine.Engine._begin_turn]
+         max_input = s.budget - RESERVED_FOR_RESPONSE
+@@ -587,6 +617,7 @@
+             s.formatter_cp_before_request = None
+             s.state = SessionState.IDLE
+             s.inbox_tokens = []
++            s.turn_page = None
+             if verdict == WAIT:
+                 raise AdmissionWait()
+             raise ValueError(verdict)
+@@ -616,10 +647,10 @@
+         return sum(max(self._fair_share, o.pos + self._outstanding(o))
+                    for o in self._live() if o is not s)
+ 
+-    def _reclaimable(self, s, floor):
+-        """Tokens compact(s, floor=floor) could free, keeping the recent turn."""
++    def _reclaimable(self, s, floor, keep_recent=True):
++        """Tokens compact(s, keep_recent, floor=floor) could free."""
+         pos, freed = s.pos, 0
+-        for turn in s.turn_boundaries[1:-1]:
++        for turn in self._drop_order(s, keep_recent):
+             n = turn.end - turn.start
+             if n > 0 and pos - n >= floor:
+                 pos -= n; freed += n
+@@ -634,11 +665,12 @@
+         # 1. The session's own limit: hard in partitioned mode, the soft cap in
+         # shared mode. Its OWN history pays first; nothing is dropped unless
+         # dropping it is enough.
++        # The latest exchange may go too: the new turn becomes the latest.
+         short = s.pos + need - s.budget
+         if short > 0:
+-            if self._reclaimable(s, floor=0) < short:
++            if self._reclaimable(s, floor=0, keep_recent=False) < short:
+                 return REFUSED_FULL
+-            self.compact(s, target=short)
++            self.compact(s, keep_recent=False, target=short)
+             if s.pos + need > s.budget:
+                 return REFUSED_FULL
+         if not self._shared_kv:
+@@ -674,6 +706,7 @@
+             s.pos = target
+         # No turn is in flight now -- keep pos_before_generation pinned to...  [notes: engine.Engine._roll_back_partial]
+         s.pos_before_generation = s.pos_before_request
++        s.turn_page = None
+         # The formatter must roll back with the KV, not after it.
+         if s.formatter_cp_before_request is not None:
+             s.formatter.restore(s.formatter_cp_before_request)
+@@ -776,8 +809,23 @@
+ 
+         # BOOKKEEPING FIRST -- before any emit that can raise OutboxFull o...  [notes: engine.Engine._finish_turn]
+         # msg_index is this turn's USER message: len()-1, not len()  [notes: engine.Engine._finish_turn]
++        start = s.pos_before_request
++        if s.turn_page is not None:
++            # The page's own exchange; its user message is the first one this
++            # request added (the checkpoint, shifted by any compaction since).
++            page_hash, n_page, lead, tail = s.turn_page
++            if lead is None:            # can't be separated: an ordinary exchange
++                s.turn_boundaries.append(Turn(start, start + n_page, "exchange",
++                                              s.formatter_cp_before_request))
++            else:
++                s.turn_boundaries.append(Turn(start + lead, start + n_page + tail, "page",
++                                              s.formatter_cp_before_request, page_hash))
++                s.page_hash = page_hash
++                n_page += tail
++            s.turn_page = None
++            start += n_page
+         s.turn_boundaries.append(
+-            Turn(s.pos_before_request, s.pos, "exchange",
++            Turn(start, s.pos, "exchange",
+                  len(s.formatter._messages) - 1))
+         s.formatter.assistant_generated(reply)
+ 
+@@ -827,10 +875,8 @@
+         Rationale: NOTES.md, engine.Engine.compact
+         """
+         target = self.TARGET_FREED_TOKENS if target is None else target
+-        # Keep the anchor (index 0)  [notes: engine.Engine.compact]
+-        droppable = s.turn_boundaries[1:-1] if keep_recent else s.turn_boundaries[1:]
+         freed = 0
+-        for turn in list(droppable):
++        for turn in self._drop_order(s, keep_recent):
+             if freed >= target:
+                 break
+             n = turn.end - turn.start
+@@ -872,9 +918,25 @@
+                 s.formatter_cp_before_request -= 2
+ 
+             s.turn_boundaries.remove(turn)
++            if turn.role == "page":
++                pages = [t for t in s.turn_boundaries if t.role == "page"]
++                s.page_hash = pages[-1].page_hash if pages else None
+             freed += n
+         return freed
+ 
++    @staticmethod
++    def _drop_order(s, keep_recent):
++        """What compaction may drop, in the order it drops it: pages a newer
++        page replaced, then middle exchanges oldest first, then the current
++        page. Never the anchor (the first exchange that is not a page), and
++        never the latest exchange when keep_recent. A dropped page can be
++        re-read; a dropped exchange cannot."""
++        # Keep the anchor  [notes: engine.Engine.compact]
++        exchanges = [t for t in s.turn_boundaries if t.role != "page"]
++        pages = [t for t in s.turn_boundaries if t.role == "page"]
++        middle = exchanges[1:-1] if keep_recent else exchanges[1:]
++        return pages[:-1] + middle + pages[-1:]
++
+     def _relieve_aggregate_pressure(self, sessions):
+         """Shared-KV: keep Sigma(live pos) under n_ctx by compacting.
+ 
+--- a/addition_malabr/mserver/malabr_service/formatter.py	2026-09-22 22:14:12.277543190 +0530
++++ b/addition_malabr/mserver/malabr_service/formatter.py	2026-11-04 05:42:10.892680771 +0530
+@@ -116,6 +116,18 @@
+         self._messages.append(("assistant", self._think_suffix + text))
+         self._rendered += text
+ 
++    def written_exchange(self, user_text, assistant_text):
++        """Record a user message with a reply the SERVER wrote (not generated),
++        and return the tokens to prefill for both."""
++        tokens = self.user_turn(user_text)
++        self.assistant_generated(assistant_text)
++        return tokens + self._tokenize(assistant_text)
++
++    def first_turn_tokens(self, text):
++        """The tokens `text` would be as the first message of a conversation."""
++        full = self._apply([("user", text)], True) + self._think_suffix
++        return self._tokenize(full, add_special=True)
++
+     def _expected_render(self):
+         """The text that SHOULD currently be in the KV.
+ 
+--- a/addition_malabr/mserver/malabr_service/runtime.py	2026-11-03 22:57:21.514595175 +0530
++++ b/addition_malabr/mserver/malabr_service/runtime.py	2026-11-04 00:44:45.760298071 +0530
+@@ -27,6 +27,11 @@
+ # Chat-panel control commands, tunnelled through generate() (see handle_generate).
+ # A prompt that begins with this is a command, never a turn.
+ META_PREFIX = "\x00MALABR::"
++# A question sent with its page: PAGE_PREFIX + hash + "\n" + page + "\x00" +
++# question. The page becomes its own exchange, which compaction may drop
++# (engine.Engine._drop_order); `status` says which page the model holds.
++PAGE_PREFIX = "\x00MALABR-PAGE "
++MAX_PAGE_HASH_CHARS = 64
+ 
+ # Section 7: this pool is a WAITING ROOM, not compute  [notes: runtime.(module)]
+ CLIENT_POOL_WORKERS = 64
+@@ -440,11 +445,23 @@
+             self._handle_meta(conn, env, text[len(META_PREFIX):])
+             return
+ 
++        page = None
++        if text.startswith(PAGE_PREFIX):
++            page_hash, sep, rest = text[len(PAGE_PREFIX):].partition("\n")
++            body, sep2, question = rest.partition("\x00")
++            page_hash = page_hash.strip()
++            if not (sep and sep2 and page_hash and question.strip()) \
++                    or len(page_hash) > MAX_PAGE_HASH_CHARS:
++                self._send(conn, FRAME_ERROR, "malformed page request")
++                return
++            page, text = (page_hash, body), question
++
+         eng = self._engine
+         # RULE 1: cross-origin eviction  [notes: runtime.MalabrServer.handle_generate]
+         doomed = eng.evict_other_origins(env.extension_id, env.tab_id, env.origin)
+         print(f"malabr: generate ext={env.extension_id[:6]} tab={env.tab_id} "
+               f"origin={env.origin} vis={env.visibility} chars={len(text)} "
++              f"{f'page={len(page[1])} ' if page else ''}"
+               f"evicted={len(doomed)}", file=sys.stderr, flush=True)
+         # Wait for the eviction we just asked for to actually complete  [notes: runtime.MalabrServer.handle_generate]
+         eng.wait_for_teardown(doomed)
+@@ -464,7 +481,7 @@
+             # Visibility is a SEED for a NEW session only, and only while the...  [notes: runtime.MalabrServer.handle_generate]
+             eng.foreground_tab_id = env.tab_id
+ 
+-        outbox = eng.submit(env.session_key, text)
++        outbox = eng.submit(env.session_key, text, page=page)
+         if outbox is None:
+             self._send(conn, FRAME_ERROR, "session unavailable")
+             return
+@@ -526,7 +543,8 @@
+             # Read-only, and handled here, before rule 1, so asking never
+             # evicts or creates anything.  [notes: runtime.MalabrServer._handle_meta]
+             cid = self._engine.conversation_id(env.session_key)
+-            self._reply_json(conn, {"ok": True, "session": cid is not None, "id": cid})
++            self._reply_json(conn, {"ok": True, "session": cid is not None, "id": cid,
++                                    "page": self._engine.page_in_context(env.session_key)})
+             return
+ 
+         if command == "new":
+--- a/addition_malabr/mserver/malabr_service/session.py	2026-11-03 22:57:21.505048564 +0530
++++ b/addition_malabr/mserver/malabr_service/session.py	2026-11-04 00:44:14.620386013 +0530
+@@ -80,6 +80,24 @@
+ # rest and keeps neither the prompt nor a reply in its transcript.
+ REFUSED = "[refused] "
+ 
++# The reply the server writes for a page, so the page is a whole exchange
++# (user + assistant) like any other: templates that require roles to
++# alternate (gemma) accept it, and compaction drops it the same way.
++PAGE_ACK = "I have read the page."
++
++
++class PagedPrompt:
++    """A question sent with the page it is about. The page becomes its own
++    exchange, which compaction may drop; the panel re-reads it when told
++    (runtime `status` reports the page in context)."""
++
++    __slots__ = ("page_hash", "page", "question")
++
++    def __init__(self, page_hash, page, question):
++        self.page_hash = page_hash
++        self.page = page
++        self.question = question
++
+ 
+ class Turn:
+     """One complete exchange (user delta + generated response) in KV.
+@@ -87,13 +105,14 @@
+     Rationale: NOTES.md, session.Turn
+     """
+ 
+-    __slots__ = ("start", "end", "role", "msg_index")
++    __slots__ = ("start", "end", "role", "msg_index", "page_hash")
+ 
+-    def __init__(self, start, end, role, msg_index):
++    def __init__(self, start, end, role, msg_index, page_hash=None):
+         self.start = start
+         self.end = end
+-        self.role = role
++        self.role = role                # "exchange", or "page" (droppable)
+         self.msg_index = msg_index      # index of the USER message in formatter
++        self.page_hash = page_hash      # set for role "page"
+ 
+     def __repr__(self):
+         return f"Turn({self.start},{self.end},{self.role},m={self.msg_index})"
+@@ -134,6 +153,10 @@
+ 
+         # Section 8: completed exchanges, oldest first  [notes: session.Session.__init__]
+         self.turn_boundaries = []
++        # The page the model holds now (its hash, as the panel sent it), and
++        # the page riding with the turn in flight: (hash, its token count).
++        self.page_hash = None
++        self.turn_page = None
+         # Partitioned KV  [notes: session.Session.__init__]
+         self.budget = session_budget
+ 
+--- a/addition_malabr/mserver/tests/harness.py	2026-11-04 00:37:06.782893732 +0530
++++ b/addition_malabr/mserver/tests/harness.py	2026-11-04 03:08:16.951527857 +0530
+@@ -174,9 +174,10 @@
+     return "".join(p for k, p in frames if k == eng.FRAME_TOKEN)
+ 
+ 
+-def ask(engine, key, prompt, limit=400):
++def ask(engine, key, prompt, limit=400, page=None):
+     """Submit a prompt, run to completion, return the generated text."""
+-    outbox = engine.submit(key, prompt)
++    outbox = (engine.submit(key, prompt, page=page) if page
++              else engine.submit(key, prompt))
+     if outbox is None:
+         return None
+     return text_of(drive(engine, outbox, limit=limit))
+--- a/addition_malabr/mserver/tests/page_reread_cost.py	1970-01-01 05:30:00.000000000 +0530
++++ b/addition_malabr/mserver/tests/page_reread_cost.py	2026-11-04 03:08:16.974258813 +0530
+@@ -0,0 +1,72 @@
++"""What re-reading a dropped page costs: first-token time with the page minus
++without it, at the same depth, on an otherwise idle engine.
++"""
++import argparse, json, os, statistics, sys, time
++
++sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
++from harness import Fixture, force_turn  # noqa: E402
++from malabr_service import engine as eng  # noqa: E402
++
++KEY = ("a" * 32, 1, "https://a.test")
++
++
++def text_of(f, n):
++    t = "alpha"
++    while len(f._tokenize(t, parse_special=False)) < n:
++        t += " alpha"
++    return t
++
++
++def ttft(e, ob):
++    t0 = time.perf_counter(); first = None
++    while True:
++        e._step()
++        while not ob.empty():
++            kind, _ = ob.get_nowait()
++            if kind == eng.FRAME_TOKEN and first is None:
++                first = time.perf_counter() - t0
++            elif kind in (eng.FRAME_COMPLETE, eng.FRAME_ERROR):
++                return first, kind
++
++
++def trial(fix, shared, budget, depth, page, q):
++    _, e = fix.new_engine(shared_kv=shared, session_budget=budget)
++    s, _ = e.get_or_create(KEY, fix.formatter, eng.OutputCap([(0, 8)]))
++    filler = text_of(fix.formatter(), 450)
++    while s.pos < depth:
++        force_turn(e, s, filler, "ok")
++    ob = e.submit(KEY, q, page=page) if page else e.submit(KEY, q)
++    got = ttft(e, ob)
++    e.cancel(KEY, "done"); e._step()
++    return got
++
++
++def main():
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--n", type=int, default=5)
++    ap.add_argument("--json")
++    a = ap.parse_args()
++    rows = []
++    for mode, budget, depths in (("partitioned", 2048, (0, 1000)), ("shared", 8192, (0, 1000, 4000))):
++        shared = mode == "shared"
++        fix = Fixture(n_seq_max=8, n_ctx=16384, n_threads=3, kv_unified=shared)
++        fix.use_measured_calibration(shared)
++        f = fix.formatter()
++        for tokens in (900, 3000) if shared else (900,):
++            page = ("h", text_of(f, tokens))
++            for d in depths:
++                w = [trial(fix, shared, budget, d, page, "Say hi.")[0] for _ in range(a.n)]
++                wo = [trial(fix, shared, budget, d, None, "Say hi.")[0] for _ in range(a.n)]
++                m, n = statistics.median(w), statistics.median(wo)
++                rows.append({"mode": mode, "page": tokens, "depth": d, "with": w, "without": wo,
++                             "extra_median": m - n})
++                print(f"{mode:<11} page {tokens:>4} depth {d:>4}: {m:.2f} s with, {n:.2f} s without, "
++                      f"re-read costs {m - n:.2f} s (n={a.n}; with min {min(w):.2f} max {max(w):.2f})",
++                      flush=True)
++        fix.close()
++    if a.json:
++        json.dump(rows, open(a.json, "w"))
++
++
++if __name__ == "__main__":
++    main()
+--- a/addition_malabr/mserver/tests/test_phase1.py	2026-11-04 00:37:06.859577788 +0530
++++ b/addition_malabr/mserver/tests/test_phase1.py	2026-11-04 05:43:05.587774287 +0530
+@@ -201,11 +201,11 @@
+     e.get_or_create(ka, FIX.formatter, eng.OutputCap([(0, 16)]))
+     rnew, _ = _meta_reply(srv, ka, "status")
+     cases = {
+-        "other origin, same tab: none": rb == {"ok": True, "session": False, "id": None},
++        "other origin, same tab: none": rb == {"ok": True, "session": False, "id": None, "page": None},
+         "own session: an id": ra.get("session") is True and isinstance(ra.get("id"), str)
+                               and len(ra["id"]) == 16,
+         "id stable across asks": ra2 == ra,
+-        "after teardown: none": rgone == {"ok": True, "session": False, "id": None},
++        "after teardown: none": rgone == {"ok": True, "session": False, "id": None, "page": None},
+         "new session, same key: new id": rnew.get("session") is True
+                                          and rnew.get("id") not in (None, ra.get("id")),
+         "one clean terminal frame": tb == ta == [eng.FRAME_COMPLETE],
+@@ -2201,8 +2201,8 @@
+     try:
+         _, e = fix.new_engine(shared_kv=False)
+         key, s = _sess(e, fix, 1)
+-        force_turn(e, s, "Remember this.", _text_of_tokens(fix, 150))   # anchor
+-        force_turn(e, s, "And this.", _text_of_tokens(fix, 200))        # recent
++        # Only the anchor: a later exchange could be dropped for this turn.
++        force_turn(e, s, "Remember this.", _text_of_tokens(fix, 350))
+         part = fix.n_ctx // fix.n_seq_max
+         big = _text_of_tokens(fix, max(10, part - s.pos + 20), " beta")  # fits gate 1
+         pos0 = s.pos
+@@ -2551,6 +2551,140 @@
+            f"{c.mem_available_bytes // 1024 ** 2} MiB, {c.kv_bytes_per_token} B/token")
+ 
+ 
++# ---------------------------------------------------------------------------
++# 94-99: a page is its own exchange, which compaction may drop
++# ---------------------------------------------------------------------------
++
++def _ask_frames(e, k, prompt, page=None):
++    return drive(e, e.submit(k, prompt, page=page) if page else e.submit(k, prompt))
++
++
++def t94_page_is_a_droppable_exchange_and_the_first_question_survives():
++    alloc, e = FIX.new_engine()
++    k, s = _sess(e, FIX, 1)
++    ask(e, k, "Say hello.", page=("h1", _text_of_tokens(FIX, 200)))
++    roles = [t.role for t in s.turn_boundaries]
++    held = e.page_in_context(k)
++    freed = e.compact(s, target=1)
++    after = [t.role for t in s.turn_boundaries]
++    ok = s.formatter.verify_against_full()
++    # Not just "no crash": a stray marker left at position 0 gave empty replies.
++    follow = ask(e, k, "Say goodbye.")
++    record(94, "a page is its own exchange; compaction drops it and keeps the first question",
++           roles == ["page", "exchange"] and held == "h1" and freed >= 200
++           and after == ["exchange"] and e.page_in_context(k) is None
++           and ok and "oodbye" in follow,
++           f"roles {roles} -> {after}, freed {freed}, page {held} -> "
++           f"{e.page_in_context(k)}, next reply {follow!r}")
++
++
++def t95_replaced_page_goes_first_current_page_last():
++    alloc, e = FIX.new_engine()
++    k, s = _sess(e, FIX, 1)
++    ask(e, k, "Say one.", page=("h1", _text_of_tokens(FIX, 60)))
++    ask(e, k, "Say two.")
++    ask(e, k, "Say three.", page=("h2", _text_of_tokens(FIX, 60, word=" beta")))
++    ask(e, k, "Say four.")
++    order = [(t.role, t.page_hash) for t in e._drop_order(s, True)]
++    want = [("page", "h1"), ("exchange", None), ("exchange", None), ("page", "h2")]
++    e.compact(s, target=1)
++    kept = e.page_in_context(k)
++    n_pages = sum(t.role == "page" for t in s.turn_boundaries)
++    record(95, "compaction drops a replaced page first, the current page last",
++           order == want and kept == "h2" and n_pages == 1
++           and s.formatter.verify_against_full(), f"order {order}; page in context {kept}")
++
++
++def t96_own_turn_may_drop_the_previous_exchange():
++    """Part 5: the new turn becomes the latest, so the previous exchange need not
++    survive it. Before, anchor + one large exchange could take nothing more."""
++    fix = Fixture(n_seq_max=2, n_ctx=2048, kv_unified=False)     # 1,024 cells each
++    try:
++        _, e = fix.new_engine(shared_kv=False)
++        k, s = _sess(e, fix, 1)
++        ask(e, k, "Say hi.")
++        anchor = s.turn_boundaries[0]
++        big = _text_of_tokens(fix, 500)
++        ask(e, k, big + " one")
++        frames = _ask_frames(e, k, big + " two")
++        record(96, "a turn may compact its own previous exchange to fit",
++               not any(f == eng.FRAME_ERROR for f, _ in frames)
++               and len(s.turn_boundaries) == 2 and s.turn_boundaries[0] is anchor
++               and s.formatter.verify_against_full(),
++               f"terminal {_terminal(frames)[:1]}, {len(s.turn_boundaries)} exchanges, pos {s.pos}")
++    finally:
++        fix.close()
++
++
++def t97_second_page_admitted_by_dropping_the_first():
++    """The partitioned greedy case: page + cap on top of a page used to be
++    refused for good, since a first turn is never dropped."""
++    fix = Fixture(n_seq_max=2, n_ctx=2048, kv_unified=False)
++    try:
++        _, e = fix.new_engine(shared_kv=False)
++        k, s = _sess(e, fix, 1)
++        ask(e, k, "Say one.", page=("h1", _text_of_tokens(fix, 600)))
++        frames = _ask_frames(e, k, "Say two.",
++                             page=("h2", _text_of_tokens(fix, 600, word=" beta")))
++        roles = [t.role for t in s.turn_boundaries]
++        record(97, "a second large page is admitted by dropping the first",
++               not any(f == eng.FRAME_ERROR for f, _ in frames)
++               and e.page_in_context(k) == "h2" and roles == ["exchange", "page", "exchange"]
++               and s.formatter.verify_against_full(),
++               f"{_terminal(frames)[:1]}, roles {roles}, page {e.page_in_context(k)}, pos {s.pos}")
++    finally:
++        fix.close()
++
++
++def t98_secret_in_a_page_stays_in_its_session_and_goes_with_the_page():
++    alloc, e = FIX.new_engine()
++    page = ("h1", f"A note on this page: {CANARY}")
++    ka, sa = _sess(e, FIX, 1)                       # positive control
++    own = ask(e, ka, LEAK_QUESTION, page=page)
++    kb, sb = _sess(e, FIX, 2, "https://b.test")     # another session
++    other = ask(e, kb, LEAK_QUESTION)
++    kc, sc = _sess(e, FIX, 3, "https://c.test")     # same page, then dropped
++    ask(e, kc, "Say hello.", page=page)
++    e.compact(sc, target=1)
++    alive = ask(e, kc, "What is 2 + 2?")            # or "gone" could mean "broken"
++    dropped = ask(e, kc, LEAK_QUESTION)
++    record(98, "a secret in a page reaches its holder, no other session, and goes with the page",
++           recalls_canary(own) and not recalls_canary(other) and not recalls_canary(dropped)
++           and "4" in alive,
++           f"holder {recalls_canary(own)}, other {recalls_canary(other)}, "
++           f"after drop {recalls_canary(dropped)}")
++
++
++def t99_page_request_on_the_wire():
++    alloc, e = FIX.new_engine()
++    srv = rt.MalabrServer(_MetaCfg(), e, FIX.formatter, eng.OutputCap([(0, 24)]))
++    k = key(tab=1)
++
++    def gen(text):
++        data = text.encode()
++        conn = _FakeConn(data)
++        srv.handle_generate(conn, pr.ClientEnvelope(pr.ROUTE_GENERATE, k[0], k[1], k[2],
++                                                    "foreground", len(data)))
++        return _parse_frames(conn.buf)
++
++    good = f"{rt.PAGE_PREFIX}-12345\nSome page text.\nMore of it.\x00Say hello."
++    e.start()
++    try:
++        ok_frames = gen(good)
++        status, _ = _meta_reply(srv, k, "status")
++        s = e._sessions[k]
++        roles = [t.role for t in s.turn_boundaries]
++        bad = [gen(f"{rt.PAGE_PREFIX}-1\nno separator"), gen(f"{rt.PAGE_PREFIX}\nx\x00q"),
++               gen(f"{rt.PAGE_PREFIX}{'9' * 65}\nx\x00q")]
++    finally:
++        e.stop()
++    malformed = all(any(ft == eng.FRAME_ERROR and "malformed" in p for ft, p in f) for f in bad)
++    record(99, "a page request is split on the wire; status names the page; malformed is refused",
++           any(ft == eng.FRAME_COMPLETE for ft, _ in ok_frames) and status.get("page") == "-12345"
++           and roles == ["page", "exchange"] and malformed,
++           f"status page {status.get('page')!r}, roles {roles}, malformed refused {malformed}")
++
++
+ BROWSER_ONLY = [
+     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),
+     (14, "stale header visibility loses to the control-channel push"),
+@@ -2572,6 +2706,8 @@
+     (72, "panel redraws a saved transcript only if 'status' names the same "
+          "conversation; re-asks on a back/forward-cache return and after each "
+          "reply (scripts/test_panel_status.py, run by hand)"),
++    (100, "the panel re-reads a page the server dropped "
++          "(scripts/test_page_reread.py, run by hand)"),
+     (80, "the real browser's control channel reaches the server: activating a "
+          "tab moves the foreground, closing one frees its slot "
+          "(scripts/test_control_channel.py, run by hand)"),
+--- a/addition_malabr/scripts/test_page_reread.py	1970-01-01 05:30:00.000000000 +0530
++++ b/addition_malabr/scripts/test_page_reread.py	2026-11-04 05:43:05.587977574 +0530
+@@ -0,0 +1,81 @@
++#!/usr/bin/env python3
++"""Real browser: a page the server dropped is re-read with the next question.
++
++  1. first question: the page is attached
++  2. a long question fits only if the page is dropped; the panel is told
++  3. next question: the page is re-read, and the server holds it again
++"""
++import os, shutil, subprocess, sys, time
++
++sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
++from nano_cdp import WS, http_json  # noqa: E402
++import test_panel_status as tps  # noqa: E402
++
++LOG = "/tmp/malabr_pagereread.log"
++PROFILE = "/tmp/malabr-pagereread-profile"
++tps.PROFILE = PROFILE
++# Partitioned, 2 slots of 2,048: the panel's largest page (about 1,000 tokens)
++# fits, and matters.
++ENV = {**tps.ENV, "MALABR_N_SEQ_MAX": "2", "MALABR_N_CTX": "4096", "MALABR_SHARED_KV": "0",
++       "MALABR_QUICK_CALIBRATION": "1", "MALABR_CALIBRATION_PATH": "/tmp/malabr_pagereread_cal.json"}
++PARAS = " ".join(f"Paragraph {i} is about the migration of birds across the northern sea, "
++                 f"their nesting grounds and the seasons they follow." for i in range(40))
++RESULTS = []
++
++
++def check(name, ok, detail=""):
++    RESULTS.append((name, ok))
++    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"   {detail}" if detail else ""), flush=True)
++
++
++def main():
++    if tps.server_pids():
++        sys.exit(f"a MALABR server is already running ({tps.server_pids()}); stop it first")
++    shutil.rmtree(PROFILE, ignore_errors=True)
++    tps.serve()
++    log = open(LOG, "w")
++    env = {**os.environ, **ENV, "EXTENSION_DIR": os.path.abspath(tps.EXT),
++           "USER_DATA_DIR": PROFILE, "RUN_LOG": LOG + ".runs"}
++    chrome = tps.launch(log, env)
++    try:
++        ver = http_json(tps.CDP, "/json/version", timeout=60)
++        if not tps.socket_ready(240):
++            check("model server came up", False, f"see {LOG}")
++            return 1
++        b = WS(ver["webSocketDebuggerUrl"])
++        tid = b.call("Target.createTarget", {"url": tps.A})["targetId"]
++        time.sleep(2.0)
++        t = [x for x in http_json(tps.CDP) if x["id"] == tid][0]
++        ws = WS(t["webSocketDebuggerUrl"])
++        p = tps.Panel(ws)
++        ws.call("Runtime.evaluate", {"expression":
++                f"document.body.insertAdjacentHTML('beforeend', '<article><p>{PARAS}</p></article>')"})
++        if not p.wait_ready(60):
++            check("panel injected", False)
++            return 1
++        p.ask("Reply with the single word ALPHA.")
++        first = p.text()
++        check("1. first question attaches the page and is served",
++              "page attached" in first and "refused" not in first and "gate" not in first, first[:120])
++        p.ask("Reply with the single word BRAVO. " + "filler " * 900)
++        second = p.text()
++        check("2. the drop is reported in the panel", "dropped from the model's memory" in second)
++        p.ask("Reply with the single word CHARLIE.")
++        third = p.text()
++        check("3. the next question re-reads the page", "re-read" in third)
++        ok = sum(1 for _, o in RESULTS if o)
++        print(f"\n{ok}/{len(RESULTS)} passed   (log: {LOG})")
++        return 0 if ok == len(RESULTS) else 1
++    finally:
++        chrome.terminate()
++        try:
++            chrome.wait(timeout=10)
++        except subprocess.TimeoutExpired:
++            chrome.kill()
++        end = time.time() + 20
++        while tps.server_pids() and time.time() < end:
++            time.sleep(0.5)
++
++
++if __name__ == "__main__":
++    sys.exit(main())
