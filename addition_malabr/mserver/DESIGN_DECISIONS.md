@@ -1020,6 +1020,12 @@ first round).
 - `scheduler.py:184-207`.
 - `engine.py:275-281`.
 
+**Changed 2026-11-04 (aging and the prefill share).** The aging pass had to fit
+inside the decode share. While any prompt was prefilling, the foreground pick
+used that share up, so background tabs were skipped 24–48 rounds, against a bound
+of 5, giving 3–5 gaps over 1 s in `pipeline_bench`. Now one aged session per round
+may spend the held share as well. The round can run over by one more decode pick.
+
 ### D20. CostCurve: measured costs per position, worst case for cutoffs, closed loop
 
 **Decision.** At startup the server calibrates this machine, or loads

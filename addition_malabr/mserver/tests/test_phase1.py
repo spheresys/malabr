@@ -2551,6 +2551,32 @@ def t92_sizing_reports_unclamped_n_ctx():
            f"{c.mem_available_bytes // 1024 ** 2} MiB, {c.kv_bytes_per_token} B/token")
 
 
+def t93_aging_bound_holds_while_a_prompt_prefills():
+    """While a prompt is prefilling, a background tab that is decoding must still
+    get a token within the aging bound. Measured before the fix: 24-48 rounds
+    skipped and 3-5 gaps over 1 s in pipeline_bench."""
+    class S:
+        def __init__(self, tab, state, ntok=0):
+            self.key = ("a" * 32, tab, "https://x.test"); self.pos = 90
+            self.state = state; self.cancelled = False
+            self.inbox_tokens = [1] * ntok; self.prefill_offset = 0
+            self.prefill_stalls = 0; self.rounds_excluded = 0
+            self.budget = 4096
+
+    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    fg = S(8, eng.SessionState.GENERATING)
+    bg = [S(t, eng.SessionState.GENERATING) for t in (1, 2, 3)]
+    waiting = S(4, eng.SessionState.PENDING, ntok=100000)
+    worst = 0
+    for _ in range(100):
+        eng.build_batch([fg] + bg + [waiting], curve, 8)
+        worst = max(worst, max(s.rounds_excluded for s in bg))
+    # The bound plus one round for each session that aged alongside it.
+    limit = eng.MAX_CONSECUTIVE_EXCLUSIONS + len(bg)
+    record(93, "the aging bound holds while another tab's prompt is prefilling",
+           worst <= limit, f"worst skip {worst} rounds, limit {limit}")
+
+
 BROWSER_ONLY = [
     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),
     (14, "stale header visibility loses to the control-channel push"),

@@ -182,11 +182,17 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
     aged = sorted([s for s in runnable
                    if id(s) not in picked and s.rounds_excluded >= MAX_CONSECUTIVE_EXCLUSIONS],
                   key=lambda s: -s.rounds_excluded)
+    # The longest-skipped session may spend the prefill share too, so the aging
+    # bound holds while a prompt is prefilling (the round runs over by at most
+    # one decode pick). Without it, one foreground pick used up the decode
+    # share and background tabs stopped for seconds.
+    aged_served = False
     for s in aged:
         c = cost_curve.cost_ms_worst(s.pos)
         # "or not picks" is a CORRECTION to §9a, not a restatement of it  [notes: scheduler.build_batch]
-        if c <= budget - held or not picks:
+        if c <= budget - held or not picks or (held and not aged_served):
             picks.append(s); picked.add(id(s)); budget -= c; spent += c
+            aged_served = True
 
     # NORMAL FILL -- cheapest-first  [notes: scheduler.build_batch]
     remaining = sorted(((cost_curve.cost_ms_worst(s.pos), s)
