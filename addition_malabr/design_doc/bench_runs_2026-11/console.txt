@@ -342,3 +342,26 @@ wrote new_malabr_partitioned_W5.json (796s)
   W5 run 3: {'0': 2530, '1': 2536, '2': 2538, '4': 2542, '6': 2546, '8': 2550}
   W5 run 4: {'0': 2530, '1': 2536, '2': 2538, '4': 2542, '6': 2546, '8': 2550}
 wrote new_malabr_shared_W5.json (926s)
+wrote new_malabr_partitioned_R1.json (37s)
+wrote new_malabr_shared_R1.json (39s)
+  W4 trial 0: control True overflow True err None fails 0 69s
+  W4 trial 1: control True overflow True err None fails 0 71s
+  W4 trial 2: control True overflow True err None fails 0 71s
+  W4 trial 3: control True overflow True err None fails 0 71s
+  W4 trial 4: control True overflow True err None fails 0 72s
+  W4 trial 5: control True overflow True err None fails 0 73s
+  W4 trial 6: control True overflow True err None fails 0 71s
+  W4 trial 7: control True overflow True err None fails 0 71s
+  W4 trial 8: control True overflow True err None fails 0 72s
+  W4 trial 9: control True overflow True err None fails 0 71s
+  W4 trial 10: control True overflow True err None fails 0 71s
+  W4 trial 11: control True overflow True err None fails 0 72s
+  W4 trial 12: control True overflow True err None fails 0 71s
+  W4 trial 13: control True overflow True err None fails 0 71s
+  W4 trial 14: control True overflow True err None fails 0 73s
+  W4 trial 15: control True overflow True err None fails 0 72s
+  W4 trial 16: control True overflow True err None fails 0 71s
+  W4 trial 17: control True overflow True err None fails 0 71s
+  W4 trial 18: control True overflow True err None fails 0 70s
+  W4 trial 19: control True overflow True err None fails 0 71s
+wrote new_malabr_partitioned_W4.json (1464s)
