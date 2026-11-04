@@ -131,3 +131,23 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-04 12:35:57] DEFERRED (not skipped): chrome rss_3, rss_4, rss_5. Run after the 14:00 resume, fresh Chrome and empty swap, before W3.
 [2026-11-04 12:35:57] UNFINISHED, run once after resume: --system malabr --tag old --mode shared --workload W4 --trials 8
 [2026-11-04 12:35:57] PAUSED at 2026-11-04 12:35:57, next: deferred chrome rss_3 (then rss_4, rss_5), then W3 first config: --system malabr --tag old --mode partitioned --workload W3 --greedy 0
+[2026-11-05 02:20:35] RESUME state: machine rebooted about 02:05 (up 8 min at check); nothing ran since the 12:36 pause. /tmp lost; OLD tree rebuilt, engine files identical to 610c233. Swap: 4095 0 4095. Disk: /dev/sda1 469G 180G 266G 41% /media/chaitu/chaitanya.
+[2026-11-05 02:20:35] FREEZE: stall fix applied; suite partitioned 89/90 (t48), shared 90/90; tag design-freeze-2026-11 = 35e90668b6d4.
+[2026-11-05 02:20:36] OVERNIGHT start. build 35e90668b6d4 machine chaitu-11thGenIntelRCoreTMi5113. calibrations in /media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4
+[2026-11-05 02:20:36] DROPPED by decision: OLD shared W4 rerun; reported from the 3 trials in console.txt, n=3
+[2026-11-05 02:20:39] start (try 1): calibrate partitioned 16384 | swap 0% avail 8072MB load 2.16
+[2026-11-05 02:22:54] completed: calibrate partitioned 16384 | try 1, 
+[2026-11-05 02:22:57] start (try 1): calibrate shared 16384 | swap 1% avail 8397MB load 3.00
+[2026-11-05 02:33:58] completed: calibrate shared 16384 | try 1, 
+[2026-11-05 02:34:01] start (try 1): calibrate partitioned 4096 | swap 1% avail 8420MB load 3.00
+[2026-11-05 02:34:41] completed: calibrate partitioned 4096 | try 1, 
+[2026-11-05 02:34:44] start (try 1): calibrate shared 4096 | swap 1% avail 8498MB load 4.21
+[2026-11-05 02:36:39] run failed rc=1 (try 1): calibrate shared 4096 | sched_reserve: reserve took 4.88 ms, sched copies = 1 decode: failed to find a memory slot for batch of size 256 ~llama_context:        CPU compute buffer size is 312.7637 MiB, matches expectation of 312.7637 MiB 
+[2026-11-05 02:36:52] start (try 2): calibrate shared 4096 | swap 1% avail 8518MB load 3.77
+[2026-11-05 02:38:43] run failed rc=1 (try 2): calibrate shared 4096 | sched_reserve: reserve took 4.62 ms, sched copies = 1 decode: failed to find a memory slot for batch of size 256 ~llama_context:        CPU compute buffer size is 312.7637 MiB, matches expectation of 312.7637 MiB 
+[2026-11-05 02:38:53] FAILED: calibrate shared 4096 | after 2 tries, rc=1
+[2026-11-05 02:38:53] saved: fresh calibration on the frozen build (3459c3f872060)
+[2026-11-05 02:38:56] start (try 1): new --mode partitioned --workload W1 | swap 1% avail 8286MB load 2.45
+[2026-11-05 02:43:07] completed: new --mode partitioned --workload W1 | try 1, 
+[2026-11-05 02:43:10] start (try 1): new --mode shared --workload W1 | swap 1% avail 8179MB load 3.35
+[2026-11-05 02:46:55] completed: new --mode shared --workload W1 | try 1, 
