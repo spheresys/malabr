@@ -45,6 +45,7 @@ from malabr_service import engine as eng                         # noqa: E402
 from pipeline_bench import PROMPTS, summarise                    # noqa: E402
 
 N_CTX, N_SEQ, THREADS = 16384, 8, 3
+ARRIVAL_GAP = 0.02
 TOOLS = os.path.expanduser("~/malabr_bench_tools")
 LLAMA_SERVER = os.path.join(TOOLS, "llama/llama-b12078/llama-server")
 OLLAMA = os.path.join(TOOLS, "ollama/bin/ollama")
@@ -410,6 +411,7 @@ def one_burst(sys_, tabs, cap, fg_tab, nonce, close=(), on_ready=None):
         th = threading.Thread(target=client, args=(i, t))
         th.start()
         threads.append(th)
+        time.sleep(ARRIVAL_GAP)         # tab order is arrival order, on every system
     if close:
         # Mid-answer on every system: once each doomed tab has its first token.
         deadline = time.time() + 60
@@ -487,10 +489,26 @@ SMALL_QUESTIONS = ["What is the capital of France?", "Give me one tip for sleepi
                    "Write one sentence about the sea.", "What is 12 times 12?"]
 
 
+_VOCAB = []
+
+
+def count_tokens(text):
+    """Tokens in `text`, from the model's own tokenizer (metadata load only)."""
+    if not _VOCAB:
+        C.llama_backend_init()
+        mp = C.llama_model_default_params()
+        mp.vocab_only = True
+        _VOCAB.append(C.llama_model_get_vocab(C.llama_model_load_from_file(MODEL_PATH.encode(), mp)))
+    raw = text.encode()
+    buf = (C.llama_token * (len(raw) + 8))()
+    return C.llama_tokenize(_VOCAB[0], raw, len(raw), buf, len(buf), False, False)
+
+
 def page_text(tokens, nonce):
-    # About 9 tokens to the sentence; the nonce keeps a prompt cache out of it.
-    n = tokens // 9
-    return " ".join(f"Section {i} of report {nonce} records the tide table." for i in range(n))
+    """A page of about `tokens` tokens. The nonce keeps a prompt cache out of it."""
+    line = "Section {} of the report records the tide table for that week."
+    per_line = count_tokens(" ".join(line.format(i + 100) for i in range(20))) / 20
+    return f"Report {nonce}. " + " ".join(line.format(i) for i in range(int(tokens / per_line)))
 
 
 def w3_run(sys_, a, greedy_n, page_tokens, seed):

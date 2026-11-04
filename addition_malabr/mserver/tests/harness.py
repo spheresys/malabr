@@ -53,7 +53,8 @@ class Fixture:
             raise RuntimeError(f"cannot load model at {MODEL_PATH}")
         cp = C.llama_context_default_params()
         cp.n_ctx, cp.n_seq_max = n_ctx, n_seq_max
-        cp.n_batch, cp.n_threads = 512, n_threads
+        # Both, as app.build does: a batch runs on n_threads_batch.
+        cp.n_batch, cp.n_threads, cp.n_threads_batch = 512, n_threads, n_threads
         # Mirror production's KV element type so the suite can be run under
         # whatever the server would actually allocate (MALABR_KV_TYPE=q8_0).
         _kv = {"f16": "GGML_TYPE_F16", "q8_0": "GGML_TYPE_Q8_0"}.get(
