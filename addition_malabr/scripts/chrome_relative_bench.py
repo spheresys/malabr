@@ -191,11 +191,15 @@ def main():
         time.sleep(0.5)
 
         results, threads = {}, []
+        # Fresh each run, so nothing on Chrome's side can reuse an earlier run's work.
+        nonce = os.urandom(4).hex()
+        print(f"  prompt nonce {nonce}", flush=True)
 
         def run(i, ws):
             try:
                 results[i] = ws.evaluate(
-                    RUN_JS % (json.dumps(PROMPTS[i % len(PROMPTS)]), MAX_CHUNKS),
+                    RUN_JS % (json.dumps(f"[{nonce}] {PROMPTS[i % len(PROMPTS)]}"),
+                              MAX_CHUNKS),
                     timeout=1200)
             except Exception as e:                      # noqa: BLE001
                 results[i] = {"error": str(e)}
@@ -270,8 +274,8 @@ def main():
         for i, r in results.items():
             if not isinstance(r, dict):
                 continue
-            a = r.get("arrivals_ms") or []
-            g = gaps(a)
+            arrivals = r.get("arrivals_ms") or []
+            g = gaps(arrivals)
             allg += g
             n = sum(1 for x in g if x > STALL_S)
             if i == fg: fgg += g; sfg += n
