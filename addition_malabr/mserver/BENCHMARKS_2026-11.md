@@ -65,8 +65,8 @@ Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive 
 
 | System | n | Survivors finish, control s | Survivors finish, close s | Speed-up (control ÷ close) | Tokens after close | Closed at s |
 |---|---|---|---|---|---|---|
-| MALABR NEW, partitioned | not run |  |  |  |  |  |  |
-| MALABR NEW, shared | not run |  |  |  |  |  |  |
+| MALABR NEW, partitioned | 5 | 23.58 ± 0.63 (22.97–24.35) | 14.45 ± 0.61 (13.69–15.07) | 1.64 ± 0.10 (1.54–1.77) | 0.0 ± 0.0 (0.0–0.0) | 7.24 ± 0.52 (6.77–7.82) |
+| MALABR NEW, shared | 5 | 20.92 ± 0.58 (20.13–21.67) | 12.02 ± 0.32 (11.56–12.38) | 1.74 ± 0.07 (1.68–1.82) | 0.0 ± 0.0 (0.0–0.0) | 4.61 ± 0.18 (4.39–4.82) |
 | MALABR OLD, partitioned | 5 | 24.17 ± 0.62 (23.63–24.84) | 14.56 ± 0.61 (14.15–15.61) | 1.66 ± 0.04 (1.59–1.70) | 0.0 ± 0.0 (0.0–0.0) | 7.59 ± 0.15 (7.46–7.84) |
 | MALABR OLD, shared | 5 | 17.58 ± 1.51 (16.50–20.10) | 12.21 ± 0.65 (11.72–13.32) | 1.45 ± 0.18 (1.25–1.72) | 0.0 ± 0.0 (0.0–0.0) | 7.71 ± 0.43 (7.37–8.45) |
 | llama.cpp, partitioned | 5 | 9.37 ± 0.14 (9.27–9.59) | 11.09 ± 0.23 (10.73–11.32) | 0.84 ± 0.01 (0.84–0.86) | 4.2 ± 0.4 (4.0–5.0) | 1.47 ± 0.06 (1.38–1.54) |

@@ -151,3 +151,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 02:43:07] completed: new --mode partitioned --workload W1 | try 1, 
 [2026-11-05 02:43:10] start (try 1): new --mode shared --workload W1 | swap 1% avail 8179MB load 3.35
 [2026-11-05 02:46:55] completed: new --mode shared --workload W1 | try 1, 
+[2026-11-05 02:46:57] saved: MALABR NEW W1 (52a9d3782af86)
+[2026-11-05 02:47:00] start (try 1): new --mode partitioned --workload W2 | swap 1% avail 8309MB load 3.22
+[2026-11-05 02:50:51] completed: new --mode partitioned --workload W2 | try 1, 
+[2026-11-05 02:50:54] start (try 1): new --mode shared --workload W2 | swap 1% avail 8520MB load 3.07
+[2026-11-05 02:54:14] completed: new --mode shared --workload W2 | try 1, 
