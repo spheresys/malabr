@@ -102,8 +102,8 @@ RSS in MB of the server process (Ollama: server + runner), restarted per run, wi
 
 | System | n | 0 sessions | 1 sessions | 2 sessions | 4 sessions | 6 sessions | 8 sessions | Growth 0→8 | Limit per session |
 |---|---|---|---|---|---|---|---|---|---|
-| MALABR NEW, partitioned | not run |  |  |  |  |  |  |  |  |
-| MALABR NEW, shared | not run |  |  |  |  |  |  |  |  |
+| MALABR NEW, partitioned | 5 | 2530 | 2536 | 2538 | 2542 | 2546 | 2549 | 19 ± 0 (19–20) | 2,048 |
+| MALABR NEW, shared | 5 | 2530 | 2536 | 2538 | 2542 | 2546 | 2550 | 20 ± 0 (20–20) | 8,192 |
 | MALABR OLD, partitioned | 5 | 2524 | 2530 | 2532 | 2536 | 2540 | 2543 | 20 ± 0 (19–20) | 2,048 |
 | MALABR OLD, shared | 5 | 2524 | 2530 | 2532 | 2536 | 2540 | 2544 | 20 ± 0 (20–20) | 8,192 |
 | llama.cpp, partitioned | 5 | 2474 | 2504 | 2655 | 2955 | 3256 | 3557 | 1083 ± 0 (1083–1083) | 2,048 |
