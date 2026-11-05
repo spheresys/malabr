@@ -77,7 +77,15 @@ Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive 
 
 3 small tabs chat (6 turns, 48-token cap, 1 s apart) while greedy tabs load pages, with a 120 s head start or until each greedy tab is refused. Pause 2 s after a refusal. Greedy counts are totals over the n runs. File names give tag, system, mode, greedy tabs, pool and guard.
 
-Not run yet.
+| Run | n | n_ctx | Page tokens | Small TTFT median s | Small TTFT p95 s | Small turn s | Small errors | Failed rounds | Tokens compacted | Greedy pages (all runs) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| llamacpp_partitioned_W3_g0 | 5 | 16384 | 900 | 0.93 ± 0.01 (0.91–0.95) | 1.12 ± 0.02 (1.11–1.16) | 1.73 ± 0.04 (1.69–1.79) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
+| llamacpp_shared_W3_g0 | 5 | 16384 | 3000 | 0.89 ± 0.34 (0.68–1.50) | 1.37 ± 0.58 (1.05–2.41) | 1.85 ± 0.30 (1.67–2.37) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
+| new_malabr_partitioned_W3_g0 | 5 | 16384 | 900 | 0.58 ± 0.04 (0.54–0.63) | 1.23 ± 0.04 (1.17–1.27) | 1.06 ± 0.03 (1.03–1.11) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| new_malabr_shared_W3_g0 | 5 | 16384 | 3000 | 0.56 ± 0.04 (0.51–0.61) | 1.05 ± 0.05 (1.01–1.12) | 1.08 ± 0.09 (0.95–1.17) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| old_malabr_partitioned_W3_g0 | 5 | 16384 | 900 | 0.66 ± 0.03 (0.62–0.71) | 1.55 ± 0.20 (1.34–1.75) | 1.13 ± 0.03 (1.09–1.17) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| old_malabr_shared_W3_g0 | 5 | 16384 | 3000 | 0.61 ± 0.06 (0.54–0.67) | 1.50 ± 0.25 (1.30–1.91) | 1.04 ± 0.06 (0.96–1.10) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| ollama_W3_g0 | 5 | 16384 | 900 | 0.94 ± 0.03 (0.92–0.99) | 1.12 ± 0.02 (1.10–1.15) | 1.74 ± 0.01 (1.72–1.75) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
 
 ## W4: premise at overflow (RQ2)
 

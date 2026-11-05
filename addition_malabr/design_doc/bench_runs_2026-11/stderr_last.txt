@@ -537,316 +537,113 @@ graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n
 sched_reserve:        CPU compute buffer size =   320.75 MiB
 sched_reserve: graph nodes  = 986
 sched_reserve: graph splits = 1
-sched_reserve: reserve took 3.02 ms, sched copies = 1
-malabr:   turn done (eos) produced~42B pos=48
-malabr:   turn done (eos) produced~42B pos=90
-malabr:   turn done (eos) produced~43B pos=49
-malabr:   turn done (eos) produced~3B pos=544
-malabr:   turn done (eos) produced~3B pos=1039
-malabr:   turn done (eos) produced~3B pos=1534
-malabr:   turn done (eos) produced~3B pos=2029
-malabr:   turn done (eos) produced~3B pos=2524
-malabr:   turn done (eos) produced~3B pos=3019
-malabr:   turn done (eos) produced~3B pos=3514
-malabr:   turn done (eos) produced~3B pos=4009
-malabr:   turn done (eos) produced~3B pos=4504
-malabr:   turn done (eos) produced~3B pos=4999
-malabr:   turn done (eos) produced~3B pos=5495
-malabr:   turn done (eos) produced~3B pos=5991
-malabr:   turn done (eos) produced~3B pos=6487
-malabr:   turn done (eos) produced~3B pos=6983
-malabr:   turn done (eos) produced~3B pos=7479
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6985
-malabr:   turn done (eos) produced~3B pos=7481
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6987
-malabr:   turn done (eos) produced~3B pos=7483
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6989
-malabr:   turn done (eos) produced~3B pos=7485
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6991
-malabr:   turn done (eos) produced~3B pos=7487
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6993
-malabr:   turn done (eos) produced~3B pos=7489
-malabr:   turn done (eos) produced~43B pos=7532
-malabr:   turn done (eos) produced~42B pos=48
-malabr:   turn done (eos) produced~42B pos=90
-malabr:   turn done (eos) produced~44B pos=48
-malabr:   turn done (eos) produced~3B pos=543
-malabr:   turn done (eos) produced~3B pos=1038
-malabr:   turn done (eos) produced~3B pos=1533
-malabr:   turn done (eos) produced~3B pos=2028
-malabr:   turn done (eos) produced~3B pos=2523
-malabr:   turn done (eos) produced~3B pos=3018
-malabr:   turn done (eos) produced~3B pos=3513
-malabr:   turn done (eos) produced~3B pos=4008
-malabr:   turn done (eos) produced~3B pos=4503
-malabr:   turn done (eos) produced~3B pos=4998
-malabr:   turn done (eos) produced~3B pos=5494
-malabr:   turn done (eos) produced~3B pos=5990
-malabr:   turn done (eos) produced~3B pos=6486
-malabr:   turn done (eos) produced~3B pos=6982
-malabr:   turn done (eos) produced~3B pos=7478
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6984
-malabr:   turn done (eos) produced~3B pos=7480
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6986
-malabr:   turn done (eos) produced~3B pos=7482
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6988
-malabr:   turn done (eos) produced~3B pos=7484
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6990
-malabr:   turn done (eos) produced~3B pos=7486
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6992
-malabr:   turn done (eos) produced~3B pos=7488
-malabr:   turn done (eos) produced~44B pos=7530
-malabr:   turn done (eos) produced~43B pos=47
-malabr:   turn done (eos) produced~43B pos=89
-malabr:   turn done (eos) produced~42B pos=48
-malabr:   turn done (eos) produced~3B pos=543
-malabr:   turn done (eos) produced~3B pos=1038
-malabr:   turn done (eos) produced~3B pos=1533
-malabr:   turn done (eos) produced~3B pos=2028
-malabr:   turn done (eos) produced~3B pos=2523
-malabr:   turn done (eos) produced~3B pos=3018
-malabr:   turn done (eos) produced~3B pos=3513
-malabr:   turn done (eos) produced~3B pos=4008
-malabr:   turn done (eos) produced~3B pos=4503
-malabr:   turn done (eos) produced~3B pos=4998
-malabr:   turn done (eos) produced~3B pos=5494
-malabr:   turn done (eos) produced~3B pos=5990
-malabr:   turn done (eos) produced~3B pos=6486
-malabr:   turn done (eos) produced~3B pos=6982
-malabr:   turn done (eos) produced~3B pos=7478
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6984
-malabr:   turn done (eos) produced~3B pos=7480
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6986
-malabr:   turn done (eos) produced~3B pos=7482
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6988
-malabr:   turn done (eos) produced~3B pos=7484
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6990
-malabr:   turn done (eos) produced~3B pos=7486
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6992
-malabr:   turn done (eos) produced~3B pos=7488
-malabr:   turn done (eos) produced~42B pos=7530
-malabr:   turn done (eos) produced~44B pos=50
-malabr:   turn done (eos) produced~44B pos=93
-malabr:   turn done (eos) produced~44B pos=49
-malabr:   turn done (eos) produced~3B pos=544
-malabr:   turn done (eos) produced~3B pos=1039
-malabr:   turn done (eos) produced~3B pos=1534
-malabr:   turn done (eos) produced~3B pos=2029
-malabr:   turn done (eos) produced~3B pos=2524
-malabr:   turn done (eos) produced~3B pos=3019
-malabr:   turn done (eos) produced~3B pos=3514
-malabr:   turn done (eos) produced~3B pos=4009
-malabr:   turn done (eos) produced~3B pos=4504
-malabr:   turn done (eos) produced~3B pos=4999
-malabr:   turn done (eos) produced~3B pos=5495
-malabr:   turn done (eos) produced~3B pos=5991
-malabr:   turn done (eos) produced~3B pos=6487
-malabr:   turn done (eos) produced~3B pos=6983
-malabr:   turn done (eos) produced~3B pos=7479
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6985
-malabr:   turn done (eos) produced~3B pos=7481
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6987
-malabr:   turn done (eos) produced~3B pos=7483
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6989
-malabr:   turn done (eos) produced~3B pos=7485
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6991
-malabr:   turn done (eos) produced~3B pos=7487
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6993
-malabr:   turn done (eos) produced~3B pos=7489
-malabr:   turn done (eos) produced~44B pos=7532
-malabr:   turn done (eos) produced~43B pos=48
-malabr:   turn done (eos) produced~43B pos=90
-malabr:   turn done (eos) produced~43B pos=47
-malabr:   turn done (eos) produced~3B pos=542
-malabr:   turn done (eos) produced~3B pos=1037
-malabr:   turn done (eos) produced~3B pos=1532
-malabr:   turn done (eos) produced~3B pos=2027
-malabr:   turn done (eos) produced~3B pos=2522
-malabr:   turn done (eos) produced~3B pos=3017
-malabr:   turn done (eos) produced~3B pos=3512
-malabr:   turn done (eos) produced~3B pos=4007
-malabr:   turn done (eos) produced~3B pos=4502
-malabr:   turn done (eos) produced~3B pos=4997
-malabr:   turn done (eos) produced~3B pos=5493
-malabr:   turn done (eos) produced~3B pos=5989
-malabr:   turn done (eos) produced~3B pos=6485
-malabr:   turn done (eos) produced~3B pos=6981
-malabr:   turn done (eos) produced~3B pos=7477
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6983
-malabr:   turn done (eos) produced~3B pos=7479
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6985
-malabr:   turn done (eos) produced~3B pos=7481
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6987
-malabr:   turn done (eos) produced~3B pos=7483
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6989
-malabr:   turn done (eos) produced~3B pos=7485
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6991
-malabr:   turn done (eos) produced~3B pos=7487
-malabr:   turn done (eos) produced~43B pos=7529
-malabr:   turn done (eos) produced~42B pos=48
-malabr:   turn done (eos) produced~42B pos=90
-malabr:   turn done (eos) produced~42B pos=48
-malabr:   turn done (eos) produced~3B pos=543
-malabr:   turn done (eos) produced~3B pos=1038
-malabr:   turn done (eos) produced~3B pos=1533
-malabr:   turn done (eos) produced~3B pos=2028
-malabr:   turn done (eos) produced~3B pos=2523
-malabr:   turn done (eos) produced~3B pos=3018
-malabr:   turn done (eos) produced~3B pos=3513
-malabr:   turn done (eos) produced~3B pos=4008
-malabr:   turn done (eos) produced~3B pos=4503
-malabr:   turn done (eos) produced~3B pos=4998
-malabr:   turn done (eos) produced~3B pos=5494
-malabr:   turn done (eos) produced~3B pos=5990
-malabr:   turn done (eos) produced~3B pos=6486
-malabr:   turn done (eos) produced~3B pos=6982
-malabr:   turn done (eos) produced~3B pos=7478
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6984
-malabr:   turn done (eos) produced~3B pos=7480
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6986
-malabr:   turn done (eos) produced~3B pos=7482
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6988
-malabr:   turn done (eos) produced~3B pos=7484
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6990
-malabr:   turn done (eos) produced~3B pos=7486
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6992
-malabr:   turn done (eos) produced~42B pos=7034
-malabr:   turn done (eos) produced~44B pos=48
-malabr:   turn done (eos) produced~44B pos=90
-malabr:   turn done (eos) produced~43B pos=50
-malabr:   turn done (eos) produced~3B pos=545
-malabr:   turn done (eos) produced~3B pos=1040
-malabr:   turn done (eos) produced~3B pos=1535
-malabr:   turn done (eos) produced~3B pos=2030
-malabr:   turn done (eos) produced~3B pos=2525
-malabr:   turn done (eos) produced~3B pos=3020
-malabr:   turn done (eos) produced~3B pos=3515
-malabr:   turn done (eos) produced~3B pos=4010
-malabr:   turn done (eos) produced~3B pos=4505
-malabr:   turn done (eos) produced~3B pos=5000
-malabr:   turn done (eos) produced~3B pos=5496
-malabr:   turn done (eos) produced~3B pos=5992
-malabr:   turn done (eos) produced~3B pos=6488
-malabr:   turn done (eos) produced~3B pos=6984
-malabr:   turn done (eos) produced~3B pos=7480
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6986
-malabr:   turn done (eos) produced~3B pos=7482
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6988
-malabr:   turn done (eos) produced~3B pos=7484
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6990
-malabr:   turn done (eos) produced~3B pos=7486
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6992
-malabr:   turn done (eos) produced~3B pos=7488
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6994
-malabr:   turn done (eos) produced~3B pos=7490
-malabr:   turn done (eos) produced~43B pos=7533
-malabr:   turn done (eos) produced~42B pos=49
-malabr:   turn done (eos) produced~42B pos=92
-malabr:   turn done (eos) produced~42B pos=49
-malabr:   turn done (eos) produced~3B pos=544
-malabr:   turn done (eos) produced~3B pos=1039
-malabr:   turn done (eos) produced~3B pos=1534
-malabr:   turn done (eos) produced~3B pos=2029
-malabr:   turn done (eos) produced~3B pos=2524
-malabr:   turn done (eos) produced~3B pos=3019
-malabr:   turn done (eos) produced~3B pos=3514
-malabr:   turn done (eos) produced~3B pos=4009
-malabr:   turn done (eos) produced~3B pos=4504
-malabr:   turn done (eos) produced~3B pos=4999
-malabr:   turn done (eos) produced~3B pos=5495
-malabr:   turn done (eos) produced~3B pos=5991
-malabr:   turn done (eos) produced~3B pos=6487
-malabr:   turn done (eos) produced~3B pos=6983
-malabr:   turn done (eos) produced~3B pos=7479
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6985
-malabr:   turn done (eos) produced~3B pos=7481
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6987
-malabr:   turn done (eos) produced~3B pos=7483
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6989
-malabr:   turn done (eos) produced~3B pos=7485
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6991
-malabr:   turn done (eos) produced~3B pos=7487
-update: applying K-shift
-graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-malabr:   turn done (eos) produced~3B pos=6993
-malabr:   turn done (eos) produced~3B pos=7489
-malabr:   turn done (eos) produced~42B pos=7532
+sched_reserve: reserve took 2.64 ms, sched copies = 1
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~89B pos=267
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=320
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~89B pos=267
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~23B pos=320
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~35B pos=44
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~134B pos=115
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~51B pos=163
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~48B pos=210
+malabr:   turn done (eos) produced~89B pos=267
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~72B pos=262
+malabr:   turn done (eos) produced~23B pos=320
+malabr:   turn done (eos) produced~23B pos=315
+malabr:   turn done (eos) produced~23B pos=315
 ~llama_context:        CPU compute buffer size is 320.7520 MiB, matches expectation of 320.7520 MiB
