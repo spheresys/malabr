@@ -365,3 +365,12 @@ wrote new_malabr_shared_R1.json (39s)
   W4 trial 18: control True overflow True err None fails 0 70s
   W4 trial 19: control True overflow True err None fails 0 71s
 wrote new_malabr_partitioned_W4.json (1464s)
+  W4 trial 0: control True overflow True err None fails 0 1916s
+  W4 trial 1: control True overflow True err None fails 0 1923s
+  W4 trial 2: control True overflow True err None fails 0 1921s
+  W4 trial 3: control True overflow True err None fails 0 1925s
+  W4 trial 4: control True overflow True err None fails 0 1920s
+  W4 trial 5: control True overflow True err None fails 1 1925s
+  W4 trial 6: control True overflow True err None fails 0 1921s
+  W4 trial 7: control True overflow True err None fails 0 1909s
+wrote new_malabr_shared_W4.json (15378s)

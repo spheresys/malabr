@@ -89,7 +89,7 @@ n = 20, except the two where one trial fills 8–16k tokens: n = 8.
 | System | n | Limit per session | Control recalled | Overflow recalled | Failures | Compactions | Time per trial |
 |---|---|---|---|---|---|---|---|
 | MALABR NEW, partitioned | 20 | 2,048 | 20/20 | 20/20 | 0 of 20 had a failed turn | 4.0 ± 0.0 (4.0–4.0) | 71 ± 1 (69–73) s |
-| MALABR NEW, shared | not run |  |  |  |  |  |  |
+| MALABR NEW, shared | 8 | 8,192 | 8/8 | 8/8 | 1 of 8 had a failed turn: timeout | 5.0 ± 0.0 (5.0–5.0) | 1920 ± 5 (1909–1925) s |
 | MALABR OLD, partitioned | 20 | 2,048 | 20/20 | 20/20 | 0 of 20 had a failed turn | 2.0 ± 0.0 (2.0–2.0) | 80 ± 1 (78–80) s |
 | MALABR OLD, shared ‡ | 3 | 8,192 | 3/3 | 3/3 | 3 of 3 had 3 failed fill turns | – | 21–31 min per trial |
 | llama.cpp, partitioned | 20 | 2,048 | 20/20 | 18/20 | 20 of 20 had a failed turn: HTTP 400: {"error":{"code":400,"message":"request (2500 tokens) exceed | 0.0 ± 0.0 (0.0–0.0) | 15 ± 0 (13–16) s |
