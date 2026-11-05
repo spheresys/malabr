@@ -1,0 +1,230 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "ollama",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2",
+   "--n-ctx",
+   "4096",
+   "--page",
+   "900"
+  ],
+  "tag": "",
+  "workload": "W3",
+  "system_info": {
+   "system": "ollama",
+   "mode": "fixed (no unified option)",
+   "n_ctx": 4096,
+   "parallel": 8,
+   "num_ctx_per_session": 512,
+   "limit_per_session": 512,
+   "threads": 3,
+   "version": "0.40.14",
+   "log": "/tmp/tmprh38ibth.ollama.log"
+  },
+  "seconds": 100.5669264793396,
+  "finished": "2026-11-06 04:17:09",
+  "mem_available_kb": 10555632,
+  "loadavg": [
+   2.74169921875,
+   2.8603515625,
+   2.75244140625
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 0.2509613037109375,
+    "small_turns": 18,
+    "small_ttft_median": 0.8030284643173218,
+    "small_ttft_p95": 1.1406469345092773,
+    "small_turn_median": 1.7376651763916016,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 0.25098323822021484,
+    "small_turns": 18,
+    "small_ttft_median": 0.8189710378646851,
+    "small_ttft_p95": 1.2114543914794922,
+    "small_turn_median": 1.84145987033844,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 0.250779390335083,
+    "small_turns": 18,
+    "small_ttft_median": 0.7480731010437012,
+    "small_ttft_p95": 1.1413683891296387,
+    "small_turn_median": 1.75678288936615,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 0.2509167194366455,
+    "small_turns": 18,
+    "small_ttft_median": 0.7242618799209595,
+    "small_ttft_p95": 1.1960277557373047,
+    "small_turn_median": 1.8573956489562988,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 0.2510051727294922,
+    "small_turns": 18,
+    "small_ttft_median": 0.7930256128311157,
+    "small_ttft_p95": 1.2037522792816162,
+    "small_turn_median": 1.8331294059753418,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "HTTP 400: {\"error\":\"request (884 tokens) exceeds the available context size (512 tokens), try increasing it\"}"
+      }
+     }
+    }
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 0.7930256128311157,
+    "min": 0.7242618799209595,
+    "max": 0.8189710378646851,
+    "sd": 0.039726659886227825,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.1960277557373047,
+    "min": 1.1406469345092773,
+    "max": 1.2114543914794922,
+    "sd": 0.03479364315398065,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 1.8331294059753418,
+    "min": 1.7376651763916016,
+    "max": 1.8573956489562988,
+    "sd": 0.05413951235180976,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": null
+  }
+ }
+}

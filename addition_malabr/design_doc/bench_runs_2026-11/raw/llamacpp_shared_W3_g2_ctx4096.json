@@ -1,0 +1,272 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "shared",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2",
+   "--n-ctx",
+   "4096",
+   "--page",
+   "900"
+  ],
+  "tag": "",
+  "workload": "W3",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--kv-unified",
+   "n_ctx": 4096,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 4096,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "4096",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmprlvrm3zu.llama.log"
+  },
+  "seconds": 1311.800867319107,
+  "finished": "2026-11-06 04:15:20",
+  "mem_available_kb": 10263948,
+  "loadavg": [
+   3.0,
+   2.99853515625,
+   2.78369140625
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 47.81555461883545,
+    "small_turns": 18,
+    "small_ttft_median": 0.7571834325790405,
+    "small_ttft_p95": 1.2543933391571045,
+    "small_turn_median": 0.9016215801239014,
+    "small_errors": 15,
+    "small_error_samples": [
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "HTTP 500: {\"error\":{\"code\":500,\"message\":\"Context size has been exceeded.\",\"type\":\"server_error\"}}",
+     "HTTP 500: {\"error\":{\"code\":500,\"message\":\"Context size has been exceeded.\",\"type\":\"server_error\"}}"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 47.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 47.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 51.06332850456238,
+    "small_turns": 18,
+    "small_ttft_median": 1.1966640949249268,
+    "small_ttft_p95": 6.155145883560181,
+    "small_turn_median": 0.9318656921386719,
+    "small_errors": 15,
+    "small_error_samples": [
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 50.9,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 50.9,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 51.82253432273865,
+    "small_turns": 18,
+    "small_ttft_median": 1.2117246389389038,
+    "small_ttft_p95": 6.259011268615723,
+    "small_turn_median": 0.9425501823425293,
+    "small_errors": 15,
+    "small_error_samples": [
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 51.81675124168396,
+    "small_turns": 18,
+    "small_ttft_median": 1.207456111907959,
+    "small_ttft_p95": 6.098156929016113,
+    "small_turn_median": 0.9102580547332764,
+    "small_errors": 15,
+    "small_error_samples": [
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.7,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 51.56488537788391,
+    "small_turns": 18,
+    "small_ttft_median": 1.2289491891860962,
+    "small_ttft_p95": 6.080081939697266,
+    "small_turn_median": 0.9233002662658691,
+    "small_errors": 15,
+    "small_error_samples": [
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}",
+     "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.3,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 51.3,
+       "error": "{'code': 500, 'message': 'Context size has been exceeded.', 'type': 'server_error'}"
+      }
+     }
+    }
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 1.207456111907959,
+    "min": 0.7571834325790405,
+    "max": 1.2289491891860962,
+    "sd": 0.20337426686595048,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 6.098156929016113,
+    "min": 1.2543933391571045,
+    "max": 6.259011268615723,
+    "sd": 2.1896435690373686,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 0.9233002662658691,
+    "min": 0.9016215801239014,
+    "max": 0.9425501823425293,
+    "sd": 0.016389426193961866,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 15,
+    "min": 15,
+    "max": 15,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": null
+  }
+ }
+}

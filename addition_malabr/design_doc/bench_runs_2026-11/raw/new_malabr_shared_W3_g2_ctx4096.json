@@ -1,0 +1,280 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "malabr",
+   "--tag",
+   "new",
+   "--mode",
+   "shared",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2",
+   "--guard",
+   "on",
+   "--n-ctx",
+   "4096",
+   "--page",
+   "900"
+  ],
+  "tag": "new",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "shared",
+   "kv_unified": true,
+   "n_ctx": 4096,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 2048,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": true,
+    "kv_type": "f16",
+    "n_ctx": 4096,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/shared_4096x8_t3.json",
+   "decode_curve": [
+    [
+     0,
+     10.0,
+     5.0
+    ],
+    [
+     2048,
+     5.0,
+     2.5
+    ]
+   ]
+  },
+  "seconds": 1224.6341722011566,
+  "finished": "2026-11-06 03:40:27",
+  "mem_available_kb": 10002448,
+  "loadavg": [
+   0.541015625,
+   1.31201171875,
+   1.71728515625
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 61.07968330383301,
+    "small_turns": 18,
+    "small_ttft_median": null,
+    "small_ttft_p95": null,
+    "small_turn_median": NaN,
+    "small_errors": 18,
+    "small_error_samples": [
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 75,
+      "ok": 2,
+      "refused": 73,
+      "other": 0,
+      "first_refusal": {
+       "t": 41.2,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     },
+     "11": {
+      "sent": 65,
+      "ok": 2,
+      "refused": 63,
+      "other": 0,
+      "first_refusal": {
+       "t": 61.0,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 61.08386206626892,
+    "small_turns": 18,
+    "small_ttft_median": null,
+    "small_ttft_p95": null,
+    "small_turn_median": NaN,
+    "small_errors": 18,
+    "small_error_samples": [
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 75,
+      "ok": 2,
+      "refused": 73,
+      "other": 0,
+      "first_refusal": {
+       "t": 41.2,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     },
+     "11": {
+      "sent": 65,
+      "ok": 2,
+      "refused": 63,
+      "other": 0,
+      "first_refusal": {
+       "t": 61.0,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 61.58633017539978,
+    "small_turns": 18,
+    "small_ttft_median": null,
+    "small_ttft_p95": null,
+    "small_turn_median": NaN,
+    "small_errors": 18,
+    "small_error_samples": [
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 75,
+      "ok": 2,
+      "refused": 73,
+      "other": 0,
+      "first_refusal": {
+       "t": 41.5,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     },
+     "11": {
+      "sent": 66,
+      "ok": 2,
+      "refused": 64,
+      "other": 0,
+      "first_refusal": {
+       "t": 61.4,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 61.57610368728638,
+    "small_turns": 18,
+    "small_ttft_median": null,
+    "small_ttft_p95": null,
+    "small_turn_median": NaN,
+    "small_errors": 18,
+    "small_error_samples": [
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 75,
+      "ok": 2,
+      "refused": 73,
+      "other": 0,
+      "first_refusal": {
+       "t": 41.4,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     },
+     "11": {
+      "sent": 65,
+      "ok": 2,
+      "refused": 63,
+      "other": 0,
+      "first_refusal": {
+       "t": 61.4,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 61.33329939842224,
+    "small_turns": 18,
+    "small_ttft_median": null,
+    "small_ttft_p95": null,
+    "small_turn_median": NaN,
+    "small_errors": 18,
+    "small_error_samples": [
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment",
+     "[refused] the server is at capacity -- try again in a moment"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 75,
+      "ok": 2,
+      "refused": 73,
+      "other": 0,
+      "first_refusal": {
+       "t": 41.3,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     },
+     "11": {
+      "sent": 65,
+      "ok": 2,
+      "refused": 63,
+      "other": 0,
+      "first_refusal": {
+       "t": 61.2,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   }
+  ],
+  "summary": {
+   "small_ttft_median": null,
+   "small_ttft_p95": null,
+   "small_turn_median": null,
+   "small_errors": {
+    "median": 18,
+    "min": 18,
+    "max": 18,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}

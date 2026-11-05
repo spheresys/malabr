@@ -1,0 +1,301 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "malabr",
+   "--tag",
+   "new",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2",
+   "--guard",
+   "on",
+   "--n-ctx",
+   "4096",
+   "--page",
+   "900"
+  ],
+  "tag": "new",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "partitioned",
+   "kv_unified": false,
+   "n_ctx": 4096,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 512,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": false,
+    "kv_type": "f16",
+    "n_ctx": 4096,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/partitioned_4096x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     47.05282443270519,
+     45.855428723897504
+    ],
+    [
+     64,
+     44.80771465175861,
+     43.567283272804744
+    ],
+    [
+     128,
+     39.925568160677685,
+     28.1608346015222
+    ],
+    [
+     256,
+     36.49024981779092,
+     36.47977536631042
+    ],
+    [
+     384,
+     36.14417052101613,
+     35.79679677151349
+    ],
+    [
+     448,
+     35.722101040201245,
+     35.70356906490061
+    ]
+   ]
+  },
+  "seconds": 677.5562710762024,
+  "finished": "2026-11-06 03:51:50",
+  "mem_available_kb": 9934576,
+  "loadavg": [
+   2.98046875,
+   2.056640625,
+   1.951171875
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 0.25060319900512695,
+    "small_turns": 18,
+    "small_ttft_median": 0.5954852104187012,
+    "small_ttft_p95": 1.2511086463928223,
+    "small_turn_median": 1.2297145128250122,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 0.25092625617980957,
+    "small_turns": 18,
+    "small_ttft_median": 0.6769405603408813,
+    "small_ttft_p95": 1.6385598182678223,
+    "small_turn_median": 1.3782159090042114,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 9,
+      "ok": 0,
+      "refused": 9,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     },
+     "11": {
+      "sent": 9,
+      "ok": 0,
+      "refused": 9,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 0.2505340576171875,
+    "small_turns": 18,
+    "small_ttft_median": 0.6307986974716187,
+    "small_ttft_p95": 1.6583857536315918,
+    "small_turn_median": 1.1944143772125244,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 0.2508974075317383,
+    "small_turns": 18,
+    "small_ttft_median": 0.7125604152679443,
+    "small_ttft_p95": 581.1093969345093,
+    "small_turn_median": 1.382731556892395,
+    "small_errors": 2,
+    "small_error_samples": [
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 9,
+      "ok": 0,
+      "refused": 9,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     },
+     "11": {
+      "sent": 9,
+      "ok": 0,
+      "refused": 9,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 0.2510085105895996,
+    "small_turns": 18,
+    "small_ttft_median": 0.49691951274871826,
+    "small_ttft_p95": 1.5113282203674316,
+    "small_turn_median": 1.0749471187591553,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     },
+     "11": {
+      "sent": 8,
+      "ok": 0,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 0.0,
+       "error": "[refused] gate 1 bypassed: prompt is too long -- 884 tokens, but this conversation can accept at most 256"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 0.6307986974716187,
+    "min": 0.49691951274871826,
+    "max": 0.7125604152679443,
+    "sd": 0.08313207964891642,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.6385598182678223,
+    "min": 1.2511086463928223,
+    "max": 581.1093969345093,
+    "sd": 259.20261409701016,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 1.2297145128250122,
+    "min": 1.0749471187591553,
+    "max": 1.382731556892395,
+    "sd": 0.13055809548740102,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 2,
+    "sd": 0.8944271909999159,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}

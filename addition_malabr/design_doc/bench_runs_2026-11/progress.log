@@ -233,3 +233,14 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 03:19:54] machine rebooted while paused; /tmp lost. OLD tree rebuilt per campaign_state/README.txt (needed as working dir for llama/ollama runs). Swap empty. 13 runs left.
 [2026-11-06 03:19:54] RESUME with the trimmed list approved by the user: remaining runs of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)
 [2026-11-06 03:19:57] saved: W3 greedy 2 (ab88b66994c60)
+[2026-11-06 03:19:58] saved: W3 guard off (6f7b3fddf6cc6)
+[2026-11-06 03:20:01] start (try 1): new --mode shared --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | swap 0% avail 8815MB load 1.05
+[2026-11-06 03:40:29] completed: new --mode shared --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | try 1, 
+[2026-11-06 03:40:32] start (try 1): new --mode partitioned --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | swap 0% avail 9927MB load 0.50
+[2026-11-06 03:51:52] completed: new --mode partitioned --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | try 1, 
+[2026-11-06 03:51:55] start (try 1): llama --mode partitioned --workload W3 --greedy 2 --n-ctx 4096 --page 900 | swap 0% avail 9943MB load 4.50
+[2026-11-06 03:53:25] completed: llama --mode partitioned --workload W3 --greedy 2 --n-ctx 4096 --page 900 | try 1, 
+[2026-11-06 03:53:28] start (try 1): llama --mode shared --workload W3 --greedy 2 --n-ctx 4096 --page 900 | swap 0% avail 9974MB load 2.15
+[2026-11-06 04:15:25] completed: llama --mode shared --workload W3 --greedy 2 --n-ctx 4096 --page 900 | try 1, 
+[2026-11-06 04:15:28] start (try 1): ollama --workload W3 --greedy 2 --n-ctx 4096 --page 900 | swap 0% avail 9937MB load 2.61
+[2026-11-06 04:17:13] completed: ollama --workload W3 --greedy 2 --n-ctx 4096 --page 900 | try 1, 
