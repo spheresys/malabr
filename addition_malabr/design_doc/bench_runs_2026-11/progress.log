@@ -229,3 +229,6 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 16:28:32] completed: new --mode shared --workload W3 --greedy 2 --guard off | try 1, 
 [2026-11-05 16:28:33] saved: W3 guard off (57bf187ae1fe7)
 [2026-11-05 16:28:33] STOPPED cleanly before: new --mode shared --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900
+[2026-11-05 16:28:35] saved: stopped (27d4fd4e200bb)
+[2026-11-06 03:19:54] machine rebooted while paused; /tmp lost. OLD tree rebuilt per campaign_state/README.txt (needed as working dir for llama/ollama runs). Swap empty. 13 runs left.
+[2026-11-06 03:19:54] RESUME with the trimmed list approved by the user: remaining runs of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)
