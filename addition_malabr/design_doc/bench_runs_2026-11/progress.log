@@ -216,3 +216,10 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 14:30:02] start (try 1): ollama --workload W3 --greedy 2 | swap 79% avail 10985MB load 4.88
 [2026-11-05 15:07:27] completed: ollama --workload W3 --greedy 2 | try 1, 
 [2026-11-05 15:07:27] STOPPED cleanly before: new --mode partitioned --workload W3 --greedy 2
+[2026-11-05 15:07:49] saved: stopped (851a925de6d54)
+[2026-11-05 15:18:33] swap cleared by the user with swapoff/swapon (used 0MB). 16 runs left.
+[2026-11-05 15:18:33] RESUME with the trimmed list approved by the user: remaining runs of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)
+[2026-11-05 15:18:36] start (try 1): new --mode partitioned --workload W3 --greedy 2 | swap 0% avail 7546MB load 0.55
+[2026-11-05 15:28:02] completed: new --mode partitioned --workload W3 --greedy 2 | try 1, 
+[2026-11-05 15:28:05] start (try 1): new --mode shared --workload W3 --greedy 2 | swap 29% avail 8358MB load 3.20
+[2026-11-05 15:58:29] completed: new --mode shared --workload W3 --greedy 2 | try 1, 

@@ -1,0 +1,262 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "malabr",
+   "--tag",
+   "new",
+   "--mode",
+   "shared",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2"
+  ],
+  "tag": "new",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "shared",
+   "kv_unified": true,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 8192,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": true,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/shared_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     44.65016212865829,
+     31.564992547505828
+    ],
+    [
+     1024,
+     24.441184509808068,
+     22.833337537042286
+    ],
+    [
+     2048,
+     17.436532989701227,
+     17.371077502942786
+    ],
+    [
+     4096,
+     8.028953071177952,
+     8.02687648686314
+    ],
+    [
+     6144,
+     5.105913879946949,
+     5.104274390483488
+    ],
+    [
+     8128,
+     3.944415409479276,
+     3.934814427011108
+    ]
+   ]
+  },
+  "seconds": 1820.887004852295,
+  "finished": "2026-11-05 15:58:26",
+  "mem_available_kb": 8530044,
+  "loadavg": [
+   3.712890625,
+   3.91357421875,
+   3.63427734375
+  ]
+ },
+ "result": {
+  "page_tokens": 3000,
+  "runs": [
+   {
+    "fill_seconds": 120.16034483909607,
+    "small_turns": 18,
+    "small_ttft_median": 21.879411578178406,
+    "small_ttft_p95": 23.866002559661865,
+    "small_turn_median": 29.634930968284607,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 1,
+      "ok": 1,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 0,
+      "ok": 0,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 120.14387321472168,
+    "small_turns": 18,
+    "small_ttft_median": 22.030654191970825,
+    "small_ttft_p95": 23.295762538909912,
+    "small_turn_median": 29.364771723747253,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 1,
+      "ok": 1,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 0,
+      "ok": 0,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 120.14705538749695,
+    "small_turns": 18,
+    "small_ttft_median": 21.93755578994751,
+    "small_ttft_p95": 23.32014751434326,
+    "small_turn_median": 29.410966277122498,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 1,
+      "ok": 1,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 0,
+      "ok": 0,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 120.1460473537445,
+    "small_turns": 18,
+    "small_ttft_median": 22.09577214717865,
+    "small_ttft_p95": 24.022983074188232,
+    "small_turn_median": 29.720615029335022,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 1,
+      "ok": 1,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 0,
+      "ok": 0,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 120.1703691482544,
+    "small_turns": 18,
+    "small_ttft_median": 22.726324796676636,
+    "small_ttft_p95": 24.594199657440186,
+    "small_turn_median": 30.199281334877014,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 1,
+      "ok": 1,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 0,
+      "ok": 0,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 22.030654191970825,
+    "min": 21.879411578178406,
+    "max": 22.726324796676636,
+    "sd": 0.3414659448126942,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 23.866002559661865,
+    "min": 23.295762538909912,
+    "max": 24.594199657440186,
+    "sd": 0.540226973787396,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 29.634930968284607,
+    "min": 29.364771723747253,
+    "max": 30.199281334877014,
+    "sd": 0.333210773605763,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}
