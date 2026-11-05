@@ -80,12 +80,19 @@ Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive 
 | Run | n | n_ctx | Page tokens | Small TTFT median s | Small TTFT p95 s | Small turn s | Small errors | Failed rounds | Tokens compacted | Greedy pages (all runs) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | llamacpp_partitioned_W3_g0 | 5 | 16384 | 900 | 0.93 ± 0.01 (0.91–0.95) | 1.12 ± 0.02 (1.11–1.16) | 1.73 ± 0.04 (1.69–1.79) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
+| llamacpp_partitioned_W3_g1 | 5 | 16384 | 900 | 0.80 ± 0.10 (0.72–0.96) | 1.18 ± 0.07 (1.06–1.23) | 1.75 ± 0.17 (1.45–1.86) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 10 ok, 37 refused, 0 other |
 | llamacpp_shared_W3_g0 | 5 | 16384 | 3000 | 0.89 ± 0.34 (0.68–1.50) | 1.37 ± 0.58 (1.05–2.41) | 1.85 ± 0.30 (1.67–2.37) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
+| llamacpp_shared_W3_g1 | 5 | 16384 | 3000 | 3.17 ± 0.32 (2.76–3.64) | 89.00 ± 0.51 (88.44–89.83) | 4.01 ± 0.34 (3.57–4.48) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 25 ok, 38 refused, 0 other |
 | new_malabr_partitioned_W3_g0 | 5 | 16384 | 900 | 0.58 ± 0.04 (0.54–0.63) | 1.23 ± 0.04 (1.17–1.27) | 1.06 ± 0.03 (1.03–1.11) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| new_malabr_partitioned_W3_g1 | 5 | 16384 | 900 | 0.67 ± 0.06 (0.60–0.76) | 1.48 ± 0.14 (1.38–1.69) | 1.29 ± 0.12 (1.10–1.41) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | tab 10: 10 ok, 43 refused, 0 other |
 | new_malabr_shared_W3_g0 | 5 | 16384 | 3000 | 0.56 ± 0.04 (0.51–0.61) | 1.05 ± 0.05 (1.01–1.12) | 1.08 ± 0.09 (0.95–1.17) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| new_malabr_shared_W3_g1 | 5 | 16384 | 3000 | 16.70 ± 1.78 (13.56–17.88) | 21.15 ± 0.24 (20.86–21.42) | 22.29 ± 1.00 (21.30–23.48) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | tab 10: 5 ok, 0 refused, 0 other |
 | old_malabr_partitioned_W3_g0 | 5 | 16384 | 900 | 0.66 ± 0.03 (0.62–0.71) | 1.55 ± 0.20 (1.34–1.75) | 1.13 ± 0.03 (1.09–1.17) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| old_malabr_partitioned_W3_g1 | 5 | 16384 | 900 | 14.53 ± 0.82 (13.33–15.23) | 25.99 ± 0.52 (25.26–26.59) | 15.03 ± 0.81 (13.91–15.74) | 12.0 ± 0.0 (12.0–12.0) | 38785 ± 130 (38616–38930) | 0 ± 0 (0–0) | tab 10: 10 ok, 0 refused, 5 other |
 | old_malabr_shared_W3_g0 | 5 | 16384 | 3000 | 0.61 ± 0.06 (0.54–0.67) | 1.50 ± 0.25 (1.30–1.91) | 1.04 ± 0.06 (0.96–1.10) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
+| old_malabr_shared_W3_g1 | 5 | 16384 | 3000 | 4.61 ± 0.13 (4.41–4.75) | 5.51 ± 0.13 (5.36–5.69) | 5.31 ± 0.05 (5.26–5.39) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | tab 10: 5 ok, 0 refused, 0 other |
 | ollama_W3_g0 | 5 | 16384 | 900 | 0.94 ± 0.03 (0.92–0.99) | 1.12 ± 0.02 (1.10–1.15) | 1.74 ± 0.01 (1.72–1.75) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
+| ollama_W3_g1 | 5 | 16384 | 900 | 10.17 ± 2.65 (6.59–13.26) | 15.24 ± 0.38 (14.91–15.83) | 16.45 ± 0.10 (16.28–16.55) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 79 ok, 0 refused, 0 other |
 
 ## W4: premise at overflow (RQ2)
 
@@ -192,3 +199,44 @@ planted
 - `[2026-11-04 10:04:08] FAILED rc=143: --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-04 10:04:08] NOT COMPLETED (drive dropped 10:01, killed, no JSON; trials 0-2 in console.txt): --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-05 02:38:53] FAILED: calibrate shared 4096 | after 2 tries, rc=1`
+
+## Runs cut from the plan
+
+On 2026-11-05 at 10:59 the user approved a trimmed list: 21 of the 41 remaining runs were kept and 20 were cut, to save an estimated 2–4 hours. Runs were chosen by what they measure, not by their results; none of the cut runs had been started.
+
+| Cut run | n | Why it was cut | What is lost |
+|---|---|---|---|
+| OLD partitioned and OLD shared, W3, 2 greedy tabs | 2 | OLD is the slowest system here (64 min at 1 greedy tab) and already has the 1-greedy-tab result | No OLD vs NEW comparison at 2 greedy tabs |
+| OLD shared, W3, 2 greedy tabs, guard off | 1 | NEW shared alone tests the guard on the frozen build | No OLD guard-off result |
+| OLD shared guard on, OLD shared guard off, OLD partitioned guard on, W3 small pool | 3 | The OLD comparison stops at 1 greedy tab | No OLD vs NEW comparison in the small pool |
+| NEW shared guard off, W3 small pool | 1 | Guard off is already measured at the production pool size | No guard-off result under scarce memory |
+| Chrome `rss_5` | 1 | `rss_3` and `rss_4` give two runs for a reference system on a different model | Clean Chrome memory rests on n = 2 |
+| Chrome relative rerun, 4 tabs (`relative2_4tabs_0`–`5`) | 6 | The 0.30→0.05 swing appeared at 8 tabs | Nonce fix not checked at 4 tabs |
+| Chrome relative rerun, 8 tabs staggered (`relative2_8tabs_stagger_0`–`5`) | 6 | Same reason | Nonce fix not checked with staggered arrivals |
+
+The tables above show these as "not run" or leave them out. No result is claimed for them.
+
+## NEW shared small pool: calibration not measured
+
+The calibration for NEW, shared KV, n_ctx 4,096 failed on both tries (`decode: failed to find a memory slot`; `FAILED: calibrate shared 4096` in `progress.log`). No calibration file exists for this configuration.
+
+The small-pool run `new_malabr_shared_W3_g2_ctx4096` therefore did not use a measured calibration. The harness repeats the measurement when the run starts and, when it fails, uses the built-in fallback curve without saving it. Every other NEW configuration, including partitioned at 4,096, uses a measured calibration.
+
+Scheduling figures from this one run are not like-for-like with the measured-calibration runs. The cause of the slot failure was not investigated, because the design was frozen.
+
+## W2: survivor ratios against each system's own control
+
+Survivors produced the same 384 tokens in every run, so token counts don't explain any ratio. Each range is across the 5 runs.
+
+| System | Control s | After closing s | Ratio |
+|---|---|---|---|
+| llama.cpp partitioned | 9.27–9.59 | 10.73–11.32 | 0.84× |
+| Ollama | 9.11–9.73 | 10.97–11.55 | 0.83× |
+| llama.cpp unified | 9.06–9.47 | 6.39–6.63 | about 1.44× |
+
+The slowdown is consistent in all 5 runs of both per-slot systems, so it is not noise. Survivors really finish 15–20% later after their neighbours are closed, while the same server with a unified cache speeds up. **The cause is not established:** no per-run server logs were kept, and no diagnostic was run.
+
+## Memory caveats the † rule does not catch
+
+† only checks swap when a run starts. Swap went from 3% at the start of `llama.cpp unified, W3, 1 greedy tab` to 64% at the start of the Ollama run, and was about 99% full during the Ollama run (10:37, runner RSS about 10 GB, load 14.7). NEW W3 at 1 greedy tab then started at 77% (partitioned) and 70% (shared), under the 80% limit. Treat these W3 runs as possibly affected by memory pressure even though they carry no †.
+

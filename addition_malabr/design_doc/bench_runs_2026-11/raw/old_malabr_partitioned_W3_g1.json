@@ -1,0 +1,272 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "malabr",
+   "--tag",
+   "old",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W3",
+   "--greedy",
+   "1"
+  ],
+  "tag": "old",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "partitioned",
+   "kv_unified": false,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 2048,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": false,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/mserver/tests/bench_calibration_partitioned_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     44.72478986292451,
+     32.24542606434177
+    ],
+    [
+     256,
+     37.6570382932313,
+     37.13766420316783
+    ],
+    [
+     512,
+     32.83179867558794,
+     32.80552274909325
+    ],
+    [
+     1024,
+     24.883660953352027,
+     24.59614104876856
+    ],
+    [
+     1536,
+     20.261082588018144,
+     20.233680342378165
+    ],
+    [
+     1984,
+     17.71656317406616,
+     17.66616623714562
+    ]
+   ]
+  },
+  "seconds": 3831.5588097572327,
+  "finished": "2026-11-05 09:20:47",
+  "mem_available_kb": 9311392,
+  "loadavg": [
+   0.7958984375,
+   0.40771484375,
+   0.4033203125
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 120.16117644309998,
+    "small_turns": 18,
+    "small_ttft_median": 15.226032137870789,
+    "small_ttft_p95": 26.586231470108032,
+    "small_turn_median": 15.73713743686676,
+    "small_errors": 12,
+    "small_error_samples": [
+     "timeout",
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 3,
+      "ok": 2,
+      "refused": 0,
+      "other": 1,
+      "first_refusal": null,
+      "other_sample": "timeout"
+     }
+    },
+    "compactions": [],
+    "round_errors": 38839,
+    "round_error_samples": [
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1"
+    ]
+   },
+   {
+    "fill_seconds": 120.16589069366455,
+    "small_turns": 18,
+    "small_ttft_median": 14.039191007614136,
+    "small_ttft_p95": 25.71027660369873,
+    "small_turn_median": 14.421823263168335,
+    "small_errors": 12,
+    "small_error_samples": [
+     "timeout",
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 3,
+      "ok": 2,
+      "refused": 0,
+      "other": 1,
+      "first_refusal": null,
+      "other_sample": "timeout"
+     }
+    },
+    "compactions": [],
+    "round_errors": 38616,
+    "round_error_samples": [
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1"
+    ]
+   },
+   {
+    "fill_seconds": 120.16540169715881,
+    "small_turns": 18,
+    "small_ttft_median": 13.328267693519592,
+    "small_ttft_p95": 25.260776042938232,
+    "small_turn_median": 13.90860390663147,
+    "small_errors": 12,
+    "small_error_samples": [
+     "timeout",
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 3,
+      "ok": 2,
+      "refused": 0,
+      "other": 1,
+      "first_refusal": null,
+      "other_sample": "timeout"
+     }
+    },
+    "compactions": [],
+    "round_errors": 38685,
+    "round_error_samples": [
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1"
+    ]
+   },
+   {
+    "fill_seconds": 120.15574765205383,
+    "small_turns": 18,
+    "small_ttft_median": 14.97507119178772,
+    "small_ttft_p95": 26.071831464767456,
+    "small_turn_median": 15.486545085906982,
+    "small_errors": 12,
+    "small_error_samples": [
+     "timeout",
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 3,
+      "ok": 2,
+      "refused": 0,
+      "other": 1,
+      "first_refusal": null,
+      "other_sample": "timeout"
+     }
+    },
+    "compactions": [],
+    "round_errors": 38857,
+    "round_error_samples": [
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1"
+    ]
+   },
+   {
+    "fill_seconds": 120.15803909301758,
+    "small_turns": 18,
+    "small_ttft_median": 15.083794474601746,
+    "small_ttft_p95": 26.311915397644043,
+    "small_turn_median": 15.595630407333374,
+    "small_errors": 12,
+    "small_error_samples": [
+     "timeout",
+     "timeout",
+     "timeout"
+    ],
+    "greedy": {
+     "10": {
+      "sent": 3,
+      "ok": 2,
+      "refused": 0,
+      "other": 1,
+      "first_refusal": null,
+      "other_sample": "timeout"
+     }
+    },
+    "compactions": [],
+    "round_errors": 38930,
+    "round_error_samples": [
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1",
+     "RuntimeError: llama_decode failed rc=1"
+    ]
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 14.97507119178772,
+    "min": 13.328267693519592,
+    "max": 15.226032137870789,
+    "sd": 0.8176628760726756,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 26.071831464767456,
+    "min": 25.260776042938232,
+    "max": 26.586231470108032,
+    "sd": 0.5186074013976412,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 15.486545085906982,
+    "min": 13.90860390663147,
+    "max": 15.73713743686676,
+    "sd": 0.8148347463934369,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 12,
+    "min": 12,
+    "max": 12,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 38839,
+    "min": 38616,
+    "max": 38930,
+    "sd": 130.08189728013656,
+    "n": 5
+   }
+  }
+ }
+}

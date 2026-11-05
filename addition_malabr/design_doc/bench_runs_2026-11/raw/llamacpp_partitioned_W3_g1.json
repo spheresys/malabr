@@ -1,0 +1,198 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W3",
+   "--greedy",
+   "1"
+  ],
+  "tag": "",
+  "workload": "W3",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--no-kv-unified",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 2048,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "16384",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--no-kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmpq7ruf4_t.llama.log"
+  },
+  "seconds": 179.15164995193481,
+  "finished": "2026-11-05 09:40:05",
+  "mem_available_kb": 9423488,
+  "loadavg": [
+   2.58447265625,
+   2.8671875,
+   2.267578125
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 14.015412330627441,
+    "small_turns": 18,
+    "small_ttft_median": 0.7644591331481934,
+    "small_ttft_p95": 1.1925690174102783,
+    "small_turn_median": 1.8182276487350464,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 13.8,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 13.767207384109497,
+    "small_turns": 18,
+    "small_ttft_median": 0.7290382385253906,
+    "small_ttft_p95": 1.2066662311553955,
+    "small_turn_median": 1.8370600938796997,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 13.8,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 13.766271591186523,
+    "small_turns": 18,
+    "small_ttft_median": 0.8491308689117432,
+    "small_ttft_p95": 1.0568320751190186,
+    "small_turn_median": 1.4546315670013428,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 8,
+      "ok": 2,
+      "refused": 6,
+      "other": 0,
+      "first_refusal": {
+       "t": 13.6,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 13.26663851737976,
+    "small_turns": 18,
+    "small_ttft_median": 0.7161757946014404,
+    "small_ttft_p95": 1.2342665195465088,
+    "small_turn_median": 1.8550270795822144,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 13.1,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 13.766773700714111,
+    "small_turns": 18,
+    "small_ttft_median": 0.9640582799911499,
+    "small_ttft_p95": 1.2058420181274414,
+    "small_turn_median": 1.804277777671814,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 9,
+      "ok": 2,
+      "refused": 7,
+      "other": 0,
+      "first_refusal": {
+       "t": 13.7,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 0.7644591331481934,
+    "min": 0.7161757946014404,
+    "max": 0.9640582799911499,
+    "sd": 0.103137828464482,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.2058420181274414,
+    "min": 1.0568320751190186,
+    "max": 1.2342665195465088,
+    "sd": 0.07008770583972078,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 1.8182276487350464,
+    "min": 1.4546315670013428,
+    "max": 1.8550270795822144,
+    "sd": 0.16835961071953012,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": null
+  }
+ }
+}

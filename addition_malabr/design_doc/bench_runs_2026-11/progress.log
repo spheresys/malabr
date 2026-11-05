@@ -186,3 +186,18 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 08:15:23] completed: new --mode partitioned --workload W3 --greedy 0 | try 1, 
 [2026-11-05 08:15:26] start (try 1): new --mode shared --workload W3 --greedy 0 | swap 2% avail 9269MB load 2.16
 [2026-11-05 08:16:51] completed: new --mode shared --workload W3 --greedy 0 | try 1, 
+[2026-11-05 08:16:52] saved: W3 greedy 0 (6f69ea96a69c9)
+[2026-11-05 08:16:55] start (try 1): old --mode partitioned --workload W3 --greedy 1 | swap 2% avail 9177MB load 2.30
+[2026-11-05 09:20:48] completed: old --mode partitioned --workload W3 --greedy 1 | try 1, 
+[2026-11-05 09:20:52] start (try 1): old --mode shared --workload W3 --greedy 1 | swap 2% avail 9273MB load 0.73
+[2026-11-05 09:37:03] completed: old --mode shared --workload W3 --greedy 1 | try 1, 
+[2026-11-05 09:37:06] start (try 1): llama --mode partitioned --workload W3 --greedy 1 | swap 2% avail 9273MB load 3.04
+[2026-11-05 09:40:06] completed: llama --mode partitioned --workload W3 --greedy 1 | try 1, 
+[2026-11-05 09:40:09] start (try 1): llama --mode shared --workload W3 --greedy 1 | swap 3% avail 9278MB load 2.46
+[2026-11-05 10:16:58] completed: llama --mode shared --workload W3 --greedy 1 | try 1, 
+[2026-11-05 10:17:01] start (try 1): ollama --workload W3 --greedy 1 | swap 64% avail 11573MB load 2.84
+[2026-11-05 10:40:18] completed: ollama --workload W3 --greedy 1 | try 1, 
+[2026-11-05 10:40:21] start (try 1): new --mode partitioned --workload W3 --greedy 1 | swap 77% avail 12181MB load 3.88
+[2026-11-05 10:45:21] completed: new --mode partitioned --workload W3 --greedy 1 | try 1, 
+[2026-11-05 10:45:24] start (try 1): new --mode shared --workload W3 --greedy 1 | swap 70% avail 11883MB load 3.21
+[2026-11-05 11:12:17] completed: new --mode shared --workload W3 --greedy 1 | try 1, 
