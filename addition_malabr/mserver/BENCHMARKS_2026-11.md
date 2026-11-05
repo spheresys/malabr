@@ -171,8 +171,8 @@ RSS of the Chrome process tree in MB, each session filled to about 8,208 of its 
 |---|---|---|---|---|---|---|---|---|
 | rss_1 † under memory pressure | 3082 | 4614 | 5896 | 7175 | 8461 | 9736 | 1124 | 0 |
 | rss_2 † under memory pressure | 3071 | 4595 | 5875 | 7129 | 6986 | 7827 | 303 | 0 |
-| rss_3 | not run |  |  |  |  |  |  |  |
-| rss_4 | not run |  |  |  |  |  |  |  |
+| rss_3 | 3084 | 4615 | 5896 | 7033 | 8248 | 9527 | 832 | 0 |
+| rss_4 | 3067 | 4617 | 5882 | 7163 | 8444 | 9723 | 1121 | 0 |
 | rss_5 | not run |  |  |  |  |  |  |  |
 
 ### Closing tabs (W2 equivalent)

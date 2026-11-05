@@ -1,0 +1,18 @@
+=== RQ2: resident cost of an undivided context pool ===
+  baseline (model loaded, 0 sessions held):     3067 MB
+
+  sessions  usage tok    RSS MB    delta
+         1       8208      4617    +1550
+         2       8208      5882    +1265
+         3       8208      7163    +1281
+         4       8208      8444    +1281
+         5       8208      9723    +1280
+         6          0      1121    -8602
+
+  6 filled sessions added -1946 MB (-324 MB per session) on top of a 3067 MB baseline.
+  MALABR for contrast: its KV pool is allocated once at
+  startup and RSS is FLAT from 1 to 8 sessions (~1139 MB),
+  because the pool is divided rather than handed out per
+  session. Growth here is the cost of not dividing it.
+
+  wrote /media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/chrome/rss_4.json

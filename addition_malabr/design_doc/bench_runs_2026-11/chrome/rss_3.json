@@ -1,0 +1,41 @@
+{
+  "baseline_mb": 3084.1796875,
+  "rows": [
+    {
+      "sessions": 1,
+      "usage": 8208,
+      "window": 9216,
+      "rss_mb": 4614.9
+    },
+    {
+      "sessions": 2,
+      "usage": 8208,
+      "window": 9216,
+      "rss_mb": 5895.8
+    },
+    {
+      "sessions": 3,
+      "usage": 8208,
+      "window": 9216,
+      "rss_mb": 7033.2
+    },
+    {
+      "sessions": 4,
+      "usage": 8208,
+      "window": 9216,
+      "rss_mb": 8248.4
+    },
+    {
+      "sessions": 5,
+      "usage": 8208,
+      "window": 9216,
+      "rss_mb": 9527.2
+    },
+    {
+      "sessions": 6,
+      "usage": 0,
+      "window": 9216,
+      "rss_mb": 832.3
+    }
+  ]
+}
