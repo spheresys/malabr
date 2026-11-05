@@ -50,7 +50,7 @@ ll() { item "llama $*" $OLDT 18000 $OUT/console.txt X=1 -- $PY tests/campaign.py
 ol() { item "ollama $*" $OLDT 18000 $OUT/console.txt X=1 -- $PY tests/campaign.py --out $OUT/raw --system ollama "$@"; }
 ch() { n=$1; shift; item "chrome $n" $A/scripts 5400 $OUT/chrome/$n.txt X=1 -- $PY "$@"; }
 
-step "RESUME with the trimmed list approved by the user: 19 runs left of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)"
+step "RESUME with the trimmed list approved by the user: remaining runs of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)"
 # ---- W3, 2 greedy tabs: OLD cut
 ll --mode partitioned --workload W3 --greedy 2
 ll --mode shared --workload W3 --greedy 2

@@ -203,3 +203,12 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 11:12:17] completed: new --mode shared --workload W3 --greedy 1 | try 1, 
 [2026-11-05 11:12:19] saved: W3 greedy 1 (281cb25d661b1)
 [2026-11-05 11:12:19] STOPPED cleanly before: old --mode partitioned --workload W3 --greedy 2
+[2026-11-05 11:12:21] saved: stopped (a77259f014231)
+[2026-11-05 11:12:23] chain: overnight.sh exited cleanly, starting trimmed list
+[2026-11-05 11:12:23] RESUME with the trimmed list approved by the user: 19 runs left of the 21 kept, 20 runs cut (see BENCHMARKS_2026-11.md)
+[2026-11-05 11:12:26] start (try 1): llama --mode partitioned --workload W3 --greedy 2 | swap 60% avail 11162MB load 3.47
+[2026-11-05 11:17:32] completed: llama --mode partitioned --workload W3 --greedy 2 | try 1, 
+[2026-11-05 11:17:35] start (try 1): llama --mode shared --workload W3 --greedy 2 | swap 59% avail 11310MB load 2.66
+[2026-11-05 12:36:12] completed: llama --mode shared --workload W3 --greedy 2 | try 1, 
+[2026-11-05 12:36:15] start (try 1): ollama --workload W3 --greedy 2 | swap 57% avail 11050MB load 3.32
+[2026-11-05 14:29:45] DRIVE LOST 2026-11-05 12:39:19, back 14:20:44 (now /dev/sdb1, ext4 recovery complete). ollama --workload W3 --greedy 2 stopped midway by the drive check, no result file, rerun. llama W3 greedy 2 x2 survived, 5/5 runs each. git fsck --connectivity-only clean. 17 runs left.

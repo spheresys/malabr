@@ -1,0 +1,248 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "llamacpp",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2"
+  ],
+  "tag": "",
+  "workload": "W3",
+  "system_info": {
+   "system": "llama.cpp server",
+   "mode": "--no-kv-unified",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "threads": 3,
+   "limit_per_session": 2048,
+   "args": [
+    "-m",
+    "/tmp/claude-1000/-media-chaitu-chaitanya-malabr-src/08315610-55c0-4645-a355-34f92fc3622c/scratchpad/camp/oldtree/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf",
+    "-c",
+    "16384",
+    "-np",
+    "8",
+    "-t",
+    "3",
+    "-tb",
+    "3",
+    "-b",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8955",
+    "--metrics",
+    "--no-webui",
+    "--no-kv-unified"
+   ],
+   "version": "version: 0.8.0-dev (build 12078, commit 19e8a86fe)",
+   "log": "/tmp/tmpstzaf1nt.llama.log"
+  },
+  "seconds": 300.6696903705597,
+  "finished": "2026-11-05 11:17:27",
+  "mem_available_kb": 11441112,
+  "loadavg": [
+   2.96484375,
+   3.4140625,
+   3.66015625
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 32.795790910720825,
+    "small_turns": 18,
+    "small_ttft_median": 1.0556745529174805,
+    "small_ttft_p95": 1.3871848583221436,
+    "small_turn_median": 2.0817195177078247,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 32.4,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     },
+     "11": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 32.6,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 32.28688669204712,
+    "small_turns": 18,
+    "small_ttft_median": 1.1286784410476685,
+    "small_ttft_p95": 1.4138851165771484,
+    "small_turn_median": 2.145978093147278,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 32.3,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     },
+     "11": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 32.0,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 31.532797813415527,
+    "small_turns": 18,
+    "small_ttft_median": 1.1519203186035156,
+    "small_ttft_p95": 1.4455864429473877,
+    "small_turn_median": 2.077440619468689,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.1,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     },
+     "11": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.3,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 31.53371572494507,
+    "small_turns": 18,
+    "small_ttft_median": 0.8725202083587646,
+    "small_ttft_p95": 1.3094751834869385,
+    "small_turn_median": 2.0224170684814453,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.3,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     },
+     "11": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.4,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   },
+   {
+    "fill_seconds": 31.534938097000122,
+    "small_turns": 18,
+    "small_ttft_median": 0.9928508996963501,
+    "small_ttft_p95": 1.3429090976715088,
+    "small_turn_median": 2.0150657892227173,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.2,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     },
+     "11": {
+      "sent": 10,
+      "ok": 2,
+      "refused": 8,
+      "other": 0,
+      "first_refusal": {
+       "t": 31.4,
+       "error": "HTTP 400: {\"error\":{\"code\":400,\"message\":\"request (2670 tokens) exceeds the available context size (2048 tokens), try in"
+      }
+     }
+    }
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 1.0556745529174805,
+    "min": 0.8725202083587646,
+    "max": 1.1519203186035156,
+    "sd": 0.11281366570136551,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.3871848583221436,
+    "min": 1.3094751834869385,
+    "max": 1.4455864429473877,
+    "sd": 0.054430472947398854,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 2.077440619468689,
+    "min": 2.0150657892227173,
+    "max": 2.145978093147278,
+    "sd": 0.05300092869215224,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": null
+  }
+ }
+}

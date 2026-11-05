@@ -472,3 +472,17 @@ wrote new_malabr_partitioned_W3_g1.json (298s)
   W3 greedy=1 n_ctx=16384 run 4: small TTFT 17.180957794189453 p95 21.421020984649658 errs 0 greedy {10: (1, 0, 0)} round_errors 0
   W3 greedy=1 n_ctx=16384 run 5: small TTFT 13.561492919921875 p95 21.328259468078613 errs 0 greedy {10: (1, 0, 0)} round_errors 0
 wrote new_malabr_shared_W3_g1.json (1611s)
+  W3 greedy=2 n_ctx=16384 run 0: small TTFT 0.8508189916610718 p95 1.3993031978607178 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 1: small TTFT 1.0556745529174805 p95 1.3871848583221436 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 2: small TTFT 1.1286784410476685 p95 1.4138851165771484 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 3: small TTFT 1.1519203186035156 p95 1.4455864429473877 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 4: small TTFT 0.8725202083587646 p95 1.3094751834869385 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 5: small TTFT 0.9928508996963501 p95 1.3429090976715088 errs 0 greedy {10: (2, 8, 0), 11: (2, 8, 0)} round_errors None
+wrote llamacpp_partitioned_W3_g2.json (301s)
+  W3 greedy=2 n_ctx=16384 run 0: small TTFT 2.413541078567505 p95 58.47349977493286 errs 9 greedy {10: (3, 2, 0), 11: (2, 2, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 1: small TTFT 2.5039918422698975 p95 62.50369572639465 errs 9 greedy {10: (3, 3, 0), 11: (3, 3, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 2: small TTFT 2.2542765140533447 p95 52.21066164970398 errs 9 greedy {10: (2, 2, 0), 11: (3, 2, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 3: small TTFT 8.351397395133972 p95 86.54480957984924 errs 9 greedy {10: (2, 3, 0), 11: (3, 3, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 4: small TTFT 2.1771109104156494 p95 65.52569317817688 errs 9 greedy {10: (2, 2, 0), 11: (3, 2, 0)} round_errors None
+  W3 greedy=2 n_ctx=16384 run 5: small TTFT 10.786673426628113 p95 66.09088230133057 errs 8 greedy {10: (3, 2, 0), 11: (2, 2, 0)} round_errors None
+wrote llamacpp_shared_W3_g2.json (4717s)
