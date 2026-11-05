@@ -1,0 +1,196 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw",
+   "--system",
+   "ollama",
+   "--workload",
+   "W3",
+   "--greedy",
+   "2"
+  ],
+  "tag": "",
+  "workload": "W3",
+  "system_info": {
+   "system": "ollama",
+   "mode": "fixed (no unified option)",
+   "n_ctx": 16384,
+   "parallel": 8,
+   "num_ctx_per_session": 2048,
+   "limit_per_session": 2048,
+   "threads": 3,
+   "version": "0.40.14",
+   "log": "/tmp/tmpw1k4113c.ollama.log"
+  },
+  "seconds": 2239.7620882987976,
+  "finished": "2026-11-05 15:07:22",
+  "mem_available_kb": 11076884,
+  "loadavg": [
+   3.26806640625,
+   3.69189453125,
+   3.46875
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 120.13771772384644,
+    "small_turns": 18,
+    "small_ttft_median": 6.671695351600647,
+    "small_ttft_p95": 37.147507667541504,
+    "small_turn_median": 29.216713309288025,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    }
+   },
+   {
+    "fill_seconds": 120.15436816215515,
+    "small_turns": 18,
+    "small_ttft_median": 7.162189483642578,
+    "small_ttft_p95": 8.529863834381104,
+    "small_turn_median": 33.87352728843689,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    }
+   },
+   {
+    "fill_seconds": 120.14196014404297,
+    "small_turns": 18,
+    "small_ttft_median": 5.38008177280426,
+    "small_ttft_p95": 31.75038433074951,
+    "small_turn_median": 33.02000951766968,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    }
+   },
+   {
+    "fill_seconds": 120.13110876083374,
+    "small_turns": 18,
+    "small_ttft_median": 6.767336964607239,
+    "small_ttft_p95": 29.519336462020874,
+    "small_turn_median": 34.19810175895691,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    }
+   },
+   {
+    "fill_seconds": 120.15476274490356,
+    "small_turns": 18,
+    "small_ttft_median": 7.568356394767761,
+    "small_ttft_p95": 27.994340181350708,
+    "small_turn_median": 32.21678626537323,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     },
+     "11": {
+      "sent": 12,
+      "ok": 12,
+      "refused": 0,
+      "other": 0,
+      "first_refusal": null
+     }
+    }
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 6.767336964607239,
+    "min": 5.38008177280426,
+    "max": 7.568356394767761,
+    "sd": 0.8238155544565253,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 29.519336462020874,
+    "min": 8.529863834381104,
+    "max": 37.147507667541504,
+    "sd": 10.885989570352471,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 33.02000951766968,
+    "min": 29.216713309288025,
+    "max": 34.19810175895691,
+    "sd": 1.9937773084019605,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": null
+  }
+ }
+}
