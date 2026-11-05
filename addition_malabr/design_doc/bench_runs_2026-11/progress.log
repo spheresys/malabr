@@ -201,3 +201,5 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-05 10:45:21] completed: new --mode partitioned --workload W3 --greedy 1 | try 1, 
 [2026-11-05 10:45:24] start (try 1): new --mode shared --workload W3 --greedy 1 | swap 70% avail 11883MB load 3.21
 [2026-11-05 11:12:17] completed: new --mode shared --workload W3 --greedy 1 | try 1, 
+[2026-11-05 11:12:19] saved: W3 greedy 1 (281cb25d661b1)
+[2026-11-05 11:12:19] STOPPED cleanly before: old --mode partitioned --workload W3 --greedy 2
