@@ -249,3 +249,18 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 04:34:29] completed: chrome rss_3 | try 1, 
 [2026-11-06 04:34:32] start (try 1): chrome rss_4 | swap 49% avail 12272MB load 3.50
 [2026-11-06 04:51:34] completed: chrome rss_4 | try 1, 
+[2026-11-06 04:51:36] saved: Chrome rss_3-4 (c56f8c723469a)
+[2026-11-06 04:51:39] start (try 1): chrome relative2_8tabs_0 | swap 56% avail 12403MB load 2.96
+[2026-11-06 04:52:34] completed: chrome relative2_8tabs_0 | try 1, 
+[2026-11-06 04:52:38] start (try 1): chrome relative2_8tabs_1 | swap 56% avail 12315MB load 3.12
+[2026-11-06 04:53:23] completed: chrome relative2_8tabs_1 | try 1, 
+[2026-11-06 04:53:26] start (try 1): chrome relative2_8tabs_2 | swap 56% avail 12489MB load 3.14
+[2026-11-06 04:54:11] completed: chrome relative2_8tabs_2 | try 1, 
+[2026-11-06 04:54:14] start (try 1): chrome relative2_8tabs_3 | swap 56% avail 12451MB load 2.61
+[2026-11-06 04:54:59] completed: chrome relative2_8tabs_3 | try 1, 
+[2026-11-06 04:55:02] start (try 1): chrome relative2_8tabs_4 | swap 56% avail 12429MB load 3.10
+[2026-11-06 04:55:07] run failed rc=2 (try 1): chrome relative2_8tabs_4 | 
+[2026-11-06 04:55:20] start (try 2): chrome relative2_8tabs_4 | swap 56% avail 12557MB load 2.54
+[2026-11-06 04:56:05] completed: chrome relative2_8tabs_4 | try 2, 
+[2026-11-06 04:56:08] start (try 1): chrome relative2_8tabs_5 | swap 56% avail 12429MB load 2.34
+[2026-11-06 04:56:53] completed: chrome relative2_8tabs_5 | try 1, 

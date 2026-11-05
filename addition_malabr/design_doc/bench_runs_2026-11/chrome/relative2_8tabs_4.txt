@@ -1,0 +1,27 @@
+
+Gemini Nano is not usable here (availability: 'downloading').
+Nothing is measured rather than guessed. See
+design_doc/session_handoff_v6.md for why, and re-run this
+script unchanged on a machine where the model downloads.
+  prompt nonce 57605c72
+
+=== Chrome built-in Prompt API, 8 tabs ===
+  foreground TTFT :   6.24s  (tab 7, brought to front)
+  median TTFT     :  17.63s
+  p95 TTFT        :  33.81s
+
+  RELATIVE SCORE (foreground / median): 0.35
+  RELATIVE SCORE excluding create(): 0.34   (fg 5.92s / median 17.31s)
+  The second line is the one comparable to MALABR, whose
+  harness creates the session before starting its clock.
+
+  inter-chunk p50 (s)       : 0.075
+  inter-chunk p95 (s)       : 0.079
+  foreground chunk gap p95  : 0.075
+  background chunk gap p95  : 0.079
+  stalls >1s  fg / bg       : 0 / 0
+  chars/s aggregate         : 45.9
+  Jain fairness (chars/s)   : 0.999
+  (streams capped at 40 chunks; CPU Nano is slow to finish)
+
+  wrote /media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/chrome/relative2_8tabs_4.json

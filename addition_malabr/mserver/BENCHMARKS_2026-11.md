@@ -157,7 +157,7 @@ A different model (Gemini Nano, CPU variant), so absolute numbers aren't compara
 | Workload | Set | n | Visible TTFT s | Relative | Relative, run by run |
 |---|---|---|---|---|---|
 | 8 tabs | first set (no nonce; JSON save crashed) | 5 | 3.24 ± 3.86 (0.78–9.64) | 0.20 ± 0.24 (0.05–0.60) | 0.60, 0.27, 0.05, 0.05, 0.05 |
-| 8 tabs | rerun (nonce, script fixed) | 0 | not run | – |  |
+| 8 tabs | rerun (nonce, script fixed) | 5 | 4.65 ± 4.16 (1.85–11.30) | 0.25 ± 0.23 (0.10–0.61) | 0.10, 0.61, 0.10, 0.35, 0.11 |
 | 4 tabs | first set (no nonce; JSON save crashed) | 5 | 1.89 ± 0.48 (1.67–2.75) | 0.24 ± 0.06 (0.21–0.34) | 0.34, 0.21, 0.21, 0.21, 0.21 |
 | 4 tabs | rerun (nonce, script fixed) | 0 | not run | – |  |
 | 8 tabs, visible 2 s late | first set (no nonce; JSON save crashed) | 5 | 65.60 ± 33.88 (10.65–99.81) | 0.79 ± 0.14 (0.55–0.88) | 0.85, 0.86, 0.88, 0.83, 0.55 |

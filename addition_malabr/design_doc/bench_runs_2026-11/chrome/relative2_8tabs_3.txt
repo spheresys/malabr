@@ -1,0 +1,22 @@
+  prompt nonce 9d1c6fc4
+
+=== Chrome built-in Prompt API, 8 tabs ===
+  foreground TTFT :   1.96s  (tab 7, brought to front)
+  median TTFT     :  18.74s
+  p95 TTFT        :  35.25s
+
+  RELATIVE SCORE (foreground / median): 0.10
+  RELATIVE SCORE excluding create(): 0.09   (fg 1.64s / median 18.41s)
+  The second line is the one comparable to MALABR, whose
+  harness creates the session before starting its clock.
+
+  inter-chunk p50 (s)       : 0.077
+  inter-chunk p95 (s)       : 0.093
+  foreground chunk gap p95  : 0.093
+  background chunk gap p95  : 0.093
+  stalls >1s  fg / bg       : 0 / 0
+  chars/s aggregate         : 42.5
+  Jain fairness (chars/s)   : 0.995
+  (streams capped at 40 chunks; CPU Nano is slow to finish)
+
+  wrote /media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/chrome/relative2_8tabs_3.json
