@@ -273,3 +273,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 11:13:23] completed: fix --mode shared --workload W3 --greedy 1 | try 1, 
 [2026-11-06 11:13:26] start (try 1): fix --mode partitioned --workload W3 --greedy 1 | swap 64% avail 12628MB load 3.18
 [2026-11-06 11:18:22] completed: fix --mode partitioned --workload W3 --greedy 1 | try 1, 
+[2026-11-06 11:18:24] saved: fix rerun: W3 greedy 1 (57f8abf03db19)
+[2026-11-06 11:18:27] start (try 1): fix --mode shared --workload W3 --greedy 2 | swap 64% avail 12325MB load 2.81
+[2026-11-06 11:36:44] completed: fix --mode shared --workload W3 --greedy 2 | try 1, 
+[2026-11-06 11:36:47] start (try 1): fix --mode partitioned --workload W3 --greedy 2 | swap 61% avail 10388MB load 3.30
+[2026-11-06 11:46:38] completed: fix --mode partitioned --workload W3 --greedy 2 | try 1, 
