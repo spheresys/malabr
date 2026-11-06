@@ -57,15 +57,19 @@ The campaign finished at 04:56 on 2026-11-06 on the frozen build, tag `design-fr
 | 2026-11-05 about 15:10 | Paused at your request to clear swap | You cleared it; the campaign resumed at 15:18 |
 | 2026-11-05 16:28 | Paused at your request | Machine later rebooted; setup restored and resumed at 03:20 on 2026-11-06 |
 
+## After the campaign: the fix (2026-11-06)
+
+You chose to apply the proposed fix after first saying to leave the build frozen. It's committed as `c859db3a5c2e`, tagged `design-fix-2026-11-06`, and the freeze tag is unchanged. W1 and W3 were rerun into `raw_fix/` using the freeze's calibrations, which was my decision, so that only the prompt order differs. You stopped the guard-off run about 3 minutes in at 11:49; it was redone in full. Results are in `BENCHMARKS_2026-11.md`.
+
 ## What's left
 
 **Runs:** nothing from the trimmed plan. Running the 20 cut runs would take roughly 3–5 hours: most of it the OLD runs at 2 greedy tabs and in the small pool (about 2–4 h), plus `rss_5` and the 12 Chrome relative runs (under an hour).
 
 **Open work, needing your decision:**
-- W3 shared-mode diagnosis and a proposed fix, which you asked for and is next. Changing the code would need an unfreeze and new runs.
+- Small-pool shared refusals, and throughput against llama.cpp and Ollama: both are still open.
 - Chromium rebuild for items 8 and 9.
 - t48 and the shared 4,096 calibration failure, neither of which has been investigated.
-- Partitioned small-pool outlier (one run had 2 errors and a p95 of 581 s), not explained or rerun.
+- Partitioned small-pool outlier (one run had 2 errors and a p95 of 581 s): didn't recur on the fixed build, still not explained.
 
 ## Integrity checks
 

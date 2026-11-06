@@ -82,3 +82,48 @@ Clean memory growth (`rss_3`, `rss_4`, sessions 0→5): 1,310 ± 30 MB per sessi
 
 - **Memory:** swap was cleared by hand at about 15:15 on 2026-11-05, before NEW W3 at 2 greedy tabs. It was 29–30% at the start of NEW shared at 2 greedy tabs and guard off, and 0% at the start of the small-pool runs. No run started above the 80% limit.
 - **Interruptions:** the drive dropped from 12:39 to 14:20 on 2026-11-05, and `ollama W3 greedy 2` was redone in full. The machine rebooted during the pause that followed; the OLD tree was rebuilt and checked against `610c233`, and only llama.cpp and Ollama ran from it afterwards.
+
+## Fixed build: second set of numbers
+
+Build `c859db3a5c2e`, tag `design-fix-2026-11-06`. It differs from the freeze by one change: the shortest waiting prompt now gets prefill first, after the visible tab. The tables above this section remain the frozen build's record; raw results for this set are in `raw_fix/`.
+
+**Suite on this build:** partitioned 90/91 (only t48 fails), shared 91/91, 19 browser tests skipped.
+
+**Rerun:** NEW W1 and W3 only, n = 5 each, using the freeze's calibrations. **Not rerun:** W2, W4, W5 and R1, nor any baseline, so their numbers still come from the frozen build or the earlier baseline runs. W4 was left out because one shared-mode run takes over 4 hours.
+
+### W3 small tabs, frozen vs fixed (n = 5 each)
+
+| Run | TTFT median s, frozen | fixed | p95 s, frozen | fixed | Turn s, frozen | fixed | Errors per run, frozen | fixed | Greedy pages over 5 runs (ok, refused), fixed |
+|---|---|---|---|---|---|---|---|---|---|
+| partitioned, 0 greedy | 0.58 ± 0.04 | 0.82 ± 0.04 | 1.23 ± 0.04 | 1.59 ± 0.10 | 1.06 ± 0.03 | 1.47 ± 0.09 | 0.0 ± 0.0 | 0.0 ± 0.0 | none |
+| shared, 0 greedy | 0.56 ± 0.04 | 0.63 ± 0.04 | 1.05 ± 0.05 | 1.23 ± 0.10 | 1.08 ± 0.09 | 1.31 ± 0.16 | 0.0 ± 0.0 | 0.0 ± 0.0 | none |
+| partitioned, 1 greedy | 0.67 ± 0.06 | 0.75 ± 0.08 | 1.48 ± 0.14 | 1.39 ± 0.06 | 1.29 ± 0.12 | 1.36 ± 0.09 | 0.0 ± 0.0 | 0.0 ± 0.0 | tab 10: 10, 43 |
+| shared, 1 greedy | 16.70 ± 1.78 | 0.83 ± 0.04 | 21.15 ± 0.24 | 1.54 ± 0.11 | 22.29 ± 1.00 | 6.74 ± 0.07 | 0.0 ± 0.0 | 0.0 ± 0.0 | tab 10: 5, 0 |
+| partitioned, 2 greedy | 0.84 ± 0.12 | 0.81 ± 0.05 | 1.81 ± 0.67 | 1.54 ± 0.11 | 1.49 ± 0.15 | 1.47 ± 0.08 | 0.0 ± 0.0 | 0.0 ± 0.0 | tab 10: 10, 86; tab 11: 10, 45 |
+| shared, 2 greedy | 22.13 ± 0.34 | 0.93 ± 0.06 | 23.82 ± 0.54 | 2.47 ± 0.91 | 29.67 ± 0.33 | 7.66 ± 0.15 | 0.0 ± 0.0 | 0.0 ± 0.0 | tab 10: 5, 0; tab 11: 0, 0 |
+| shared, 2 greedy, guard off | 21.38 ± 0.25 | 0.91 ± 0.09 | 23.66 ± 0.74 | 2.49 ± 1.27 | 29.55 ± 1.43 | 7.67 ± 0.20 | 0.0 ± 0.0 | 0.0 ± 0.0 | tab 10: 4, 0; tab 11: 1, 0 |
+| partitioned, small pool | 0.62 ± 0.08 | 0.70 ± 0.02 | 117.43 ± 259.20 | 1.46 ± 0.23 | 1.25 ± 0.13 | 1.44 ± 0.07 | 0.4 ± 0.9 | 0.0 ± 0.0 | tab 10: 0, 45; tab 11: 0, 45 |
+| shared, small pool | – | – | – | – | – | – | 18.0 ± 0.0 | 18.0 ± 0.0 | tab 10: 10, 348; tab 11: 10, 322 |
+
+### W1, frozen vs fixed (n = 5 each)
+
+| Scenario, mode | Visible TTFT s, frozen | fixed | Median TTFT s, frozen | fixed | p95 s, frozen | fixed | Throughput tok/s, frozen | fixed | Stalls >1 s visible/bg, fixed |
+|---|---|---|---|---|---|---|---|---|---|
+| 8 tabs, visible last, partitioned | 0.55 ± 0.02 | 0.52 ± 0.01 | 3.74 ± 0.38 | 2.91 ± 0.18 | 5.74 ± 0.30 | 5.55 ± 0.07 | 31.92 ± 1.09 | 32.63 ± 0.18 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+| 8 tabs, visible last, shared | 0.49 ± 0.01 | 0.48 ± 0.04 | 2.58 ± 0.18 | 2.01 ± 0.07 | 4.18 ± 0.18 | 3.80 ± 0.11 | 35.05 ± 0.94 | 36.13 ± 0.36 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+| 4 tabs, visible last, partitioned | 0.55 ± 0.11 | 0.44 ± 0.04 | 1.27 ± 0.15 | 1.09 ± 0.18 | 2.59 ± 0.29 | 2.33 ± 0.37 | 31.86 ± 0.51 | 33.63 ± 1.64 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+| 4 tabs, visible last, shared | 0.51 ± 0.12 | 0.42 ± 0.02 | 1.05 ± 0.17 | 0.88 ± 0.05 | 1.93 ± 0.23 | 1.72 ± 0.06 | 33.66 ± 1.11 | 35.36 ± 0.87 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+| 8 tabs, visible first (control), partitioned | 0.25 ± 0.01 | 0.22 ± 0.02 | 4.43 ± 0.30 | 4.28 ± 0.38 | 6.67 ± 0.41 | 6.73 ± 0.46 | 30.28 ± 0.65 | 30.33 ± 0.94 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+| 8 tabs, visible first (control), shared | 0.25 ± 0.01 | 0.25 ± 0.03 | 2.69 ± 0.24 | 2.27 ± 0.16 | 4.24 ± 0.11 | 3.98 ± 0.24 | 34.22 ± 0.71 | 34.35 ± 2.62 | 0.00 ± 0.00 / 0.00 ± 0.00 |
+
+**What changed:**
+- **W3 shared, regression fixed:** small-tab TTFT 16.70 → 0.83 s at 1 greedy tab, and 22.13 → 0.93 s at 2. TTFT is now better than OLD's 4.61 s at 1 greedy tab, but the turn takes 6.74 s against OLD's 5.31 s, so it's still about 27% slower to complete.
+- **W1 improved a little in both modes:** at 8 tabs, median TTFT went 3.74 → 2.91 s partitioned and 2.58 → 2.01 s shared. Throughput is about the same.
+- **Partitioned small-pool outlier:** the one run with a 581 s p95 didn't recur (p95 1.46 ± 0.23 s), and it remains unexplained.
+
+**What didn't change:**
+- **Small-pool shared refusals:** all 18 small-tab turns are still refused per run. This is a separate admission bug.
+- **Greedy tabs in shared mode:** still 5 pages over 5 runs. At 2 greedy tabs, the second tab completed none, with guard on.
+- **Throughput against llama.cpp and Ollama:** still less than half at 8 tabs.
+
+**Unexplained:** at 0 greedy tabs, TTFT rose from 0.58 to 0.82 s partitioned and from 0.56 to 0.63 s shared, and turn time rose too. Other apps were using more memory during these reruns, with about 7 GB available against about 9 GB, but that hasn't been tested as the cause. W1 got faster on the same build.
