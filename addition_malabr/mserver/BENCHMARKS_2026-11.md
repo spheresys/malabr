@@ -126,7 +126,7 @@ Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive 
 | llamacpp_partitioned_W3_g2_ctx4096 | 5 | 4096 | 900 | 0.58 ± 0.07 (0.46–0.63) | 0.91 ± 0.04 (0.86–0.95) | 1.48 ± 0.04 (1.43–1.53) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 0 ok, 35 refused, 0 other; tab 11: 0 ok, 35 refused, 0 other |
 | llamacpp_shared_W3_g0 | 5 | 16384 | 3000 | 0.89 ± 0.34 (0.68–1.50) | 1.37 ± 0.58 (1.05–2.41) | 1.85 ± 0.30 (1.67–2.37) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
 | llamacpp_shared_W3_g1 | 5 | 16384 | 3000 | 3.17 ± 0.32 (2.76–3.64) | 89.00 ± 0.51 (88.44–89.83) | 4.01 ± 0.34 (3.57–4.48) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 25 ok, 38 refused, 0 other |
-| llamacpp_shared_W3_g2 | 5 | 16384 | 3000 | 5.21 ± 4.07 (2.18–10.79) | 66.58 ± 12.48 (52.21–86.54) | 93.57 ± 9.28 (77.71–101.59) | 8.8 ± 0.4 (8.0–9.0) | n/a | n/a | tab 10: 12 ok, 12 refused, 0 other; tab 11: 14 ok, 12 refused, 0 other |
+| llamacpp_shared_W3_g2 † | 5 | 16384 | 3000 | 5.21 ± 4.07 (2.18–10.79) | 66.58 ± 12.48 (52.21–86.54) | 93.57 ± 9.28 (77.71–101.59) | 8.8 ± 0.4 (8.0–9.0) | n/a | n/a | tab 10: 12 ok, 12 refused, 0 other; tab 11: 14 ok, 12 refused, 0 other |
 | llamacpp_shared_W3_g2_ctx4096 | 5 | 4096 | 900 | 1.12 ± 0.20 (0.76–1.23) | 5.17 ± 2.19 (1.25–6.26) | 0.92 ± 0.02 (0.90–0.94) | 15.0 ± 0.0 (15.0–15.0) | n/a | n/a | tab 10: 10 ok, 30 refused, 0 other; tab 11: 10 ok, 30 refused, 0 other |
 | new_malabr_partitioned_W3_g0 | 5 | 16384 | 900 | 0.58 ± 0.04 (0.54–0.63) | 1.23 ± 0.04 (1.17–1.27) | 1.06 ± 0.03 (1.03–1.11) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | none |
 | new_malabr_partitioned_W3_g1 | 5 | 16384 | 900 | 0.67 ± 0.06 (0.60–0.76) | 1.48 ± 0.14 (1.38–1.69) | 1.29 ± 0.12 (1.10–1.41) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | tab 10: 10 ok, 43 refused, 0 other |
@@ -143,7 +143,7 @@ Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive 
 | old_malabr_shared_W3_g1 | 5 | 16384 | 3000 | 4.61 ± 0.13 (4.41–4.75) | 5.51 ± 0.13 (5.36–5.69) | 5.31 ± 0.05 (5.26–5.39) | 0.0 ± 0.0 (0.0–0.0) | 0 ± 0 (0–0) | 0 ± 0 (0–0) | tab 10: 5 ok, 0 refused, 0 other |
 | ollama_W3_g0 | 5 | 16384 | 900 | 0.94 ± 0.03 (0.92–0.99) | 1.12 ± 0.02 (1.10–1.15) | 1.74 ± 0.01 (1.72–1.75) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | none |
 | ollama_W3_g1 | 5 | 16384 | 900 | 10.17 ± 2.65 (6.59–13.26) | 15.24 ± 0.38 (14.91–15.83) | 16.45 ± 0.10 (16.28–16.55) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 79 ok, 0 refused, 0 other |
-| ollama_W3_g2 | 5 | 16384 | 900 | 6.71 ± 0.82 (5.38–7.57) | 26.99 ± 10.89 (8.53–37.15) | 32.51 ± 1.99 (29.22–34.20) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 60 ok, 0 refused, 0 other; tab 11: 60 ok, 0 refused, 0 other |
+| ollama_W3_g2 † | 5 | 16384 | 900 | 6.71 ± 0.82 (5.38–7.57) | 26.99 ± 10.89 (8.53–37.15) | 32.51 ± 1.99 (29.22–34.20) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 60 ok, 0 refused, 0 other; tab 11: 60 ok, 0 refused, 0 other |
 | ollama_W3_g2_ctx4096 | 5 | 4096 | 900 | 0.78 ± 0.04 (0.72–0.82) | 1.18 ± 0.03 (1.14–1.21) | 1.81 ± 0.05 (1.74–1.86) | 0.0 ± 0.0 (0.0–0.0) | n/a | n/a | tab 10: 0 ok, 40 refused, 0 other; tab 11: 0 ok, 40 refused, 0 other |
 
 ## W4: premise at overflow (RQ2)
@@ -248,6 +248,7 @@ planted
 
 ## Runs with caveats
 
+- `[2026-11-07 02:10:23] start (try 1): final --mode shared --workload W3 --greedy 2 | swap 91% avail 9967MB load 7.00 UNDER MEMORY PRESSURE (swap 91%)`
 - `[2026-11-04 10:04:08] FAILED rc=143: --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-04 10:04:08] NOT COMPLETED (drive dropped 10:01, killed, no JSON; trials 0-2 in console.txt): --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-05 02:38:53] FAILED: calibrate shared 4096 | after 2 tries, rc=1`

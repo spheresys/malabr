@@ -342,3 +342,14 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 01:47:33] completed: final --mode shared --workload W3 --greedy 1 | try 1, 
 [2026-11-07 01:47:36] start (try 1): final --mode partitioned --workload W3 --greedy 1 | swap 28% avail 7541MB load 3.62
 [2026-11-07 01:53:32] completed: final --mode partitioned --workload W3 --greedy 1 | try 1, 
+[2026-11-07 01:53:34] saved: final: W3 greedy 1 (ca76ccdd1ee36)
+[2026-11-07 01:53:37] start (try 1): final --mode shared --workload W3 --greedy 2 | swap 43% avail 7263MB load 5.95
+[2026-11-07 02:10:02] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-07 02:10:14] saved: final: W1 (bd023ddba1e39)
+[2026-11-07 02:10:16] saved: final: W2 (2aed93f271787)
+[2026-11-07 02:10:17] saved: final: R1 (d9ea40fe6b581)
+[2026-11-07 02:10:19] saved: final: W3 greedy 0 (aa028ced9c430)
+[2026-11-07 02:10:20] saved: final: W3 greedy 1 (e9a001fc07cf7)
+[2026-11-07 02:10:23] start (try 1): final --mode shared --workload W3 --greedy 2 | swap 91% avail 9967MB load 7.00 UNDER MEMORY PRESSURE (swap 91%)
+[2026-11-07 02:12:41] STOPPED by the user during: final --mode shared --workload W3 --greedy 2 (killed mid-run under swap pressure, to clear swap and restart)
+[2026-11-07 02:15:06] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)

@@ -470,17 +470,17 @@ load_tensors:   CPU_Mapped model buffer size =   604.15 MiB
 llama_context: constructing llama_context
 llama_context: n_seq_max     = 8
 llama_context: n_ctx         = 16384
-llama_context: n_ctx_seq     = 2048
+llama_context: n_ctx_seq     = 16384
 llama_context: n_batch       = 512
 llama_context: n_ubatch      = 512
 llama_context: causal_attn   = 1
 llama_context: flash_attn    = auto
-llama_context: kv_unified    = false
+llama_context: kv_unified    = true
 llama_context: freq_base     = 1000000.0
 llama_context: freq_scale    = 1
 llama_context: n_rs_seq      = 0
 llama_context: n_outputs_max = 512
-llama_context: n_ctx_seq (2048) < n_ctx_train (40960) -- the full capacity of the model will not be utilized
+llama_context: n_ctx_seq (16384) < n_ctx_train (40960) -- the full capacity of the model will not be utilized
 set_abort_callback: call
 llama_context:        CPU  output buffer size =     4.64 MiB
 llama_kv_cache: layer   0: dev = CPU
@@ -512,7 +512,7 @@ llama_kv_cache: layer  25: dev = CPU
 llama_kv_cache: layer  26: dev = CPU
 llama_kv_cache: layer  27: dev = CPU
 llama_kv_cache:        CPU KV buffer size =  1792.00 MiB
-llama_kv_cache: size = 1792.00 MiB (  2048 cells,  28 layers,  8/8 seqs), K (f16):  896.00 MiB, V (f16):  896.00 MiB
+llama_kv_cache: size = 1792.00 MiB ( 16384 cells,  28 layers,  8/1 seqs), K (f16):  896.00 MiB, V (f16):  896.00 MiB
 llama_kv_cache: attn_rot_k = 0, n_embd_head_k_all = 128
 llama_kv_cache: attn_rot_v = 0, n_embd_head_k_all = 128
 llama_context: enumerating backends
@@ -534,10 +534,30 @@ resolve_fused_ops: Lightning Indexer enabled
 graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
 graph_reserve: reserving a graph for ubatch with n_tokens =    8, n_seqs =  8, n_outputs =    8
 graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n_outputs =  512
-sched_reserve:        CPU compute buffer size =   300.75 MiB
-sched_reserve: graph nodes  = 1042
+sched_reserve:        CPU compute buffer size =   320.75 MiB
+sched_reserve: graph nodes  = 986
 sched_reserve: graph splits = 1
-sched_reserve: reserve took 3.08 ms, sched copies = 1
+sched_reserve: reserve took 4.01 ms, sched copies = 1
+llama_model_loader: loaded meta data with 28 key-value pairs and 310 tensors from /media/chaitu/chaitanya/malabr/src/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = qwen3
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = Qwen3 0.6B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = Qwen3
+llama_model_loader: - kv   5:                         general.size_label str              = 0.6B
+llama_model_loader: - kv   6:                          qwen3.block_count u32              = 28
+llama_model_loader: - kv   7:                       qwen3.context_length u32              = 40960
+llama_model_loader: - kv   8:                     qwen3.embedding_length u32              = 1024
+llama_model_loader: - kv   9:                  qwen3.feed_forward_length u32              = 3072
+llama_model_loader: - kv  10:                 qwen3.attention.head_count u32              = 16
+llama_model_loader: - kv  11:              qwen3.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  12:                       qwen3.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  13:     qwen3.attention.layer_norm_rms_epsilon f32              = 0.000001
+llama_model_loader: - kv  14:                 qwen3.attention.key_length u32              = 128
+llama_model_loader: - kv  15:               qwen3.attention.value_length u32              = 128
+llama_model_loader: - kv  16:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  17:                         tokenizer.ggml.pre str              = qwen2
 llama_model_loader: loaded meta data with 28 key-value pairs and 310 tensors from /media/chaitu/chaitanya/malabr/src/addition_malabr/models/Qwen3-0.6B-Q8_0.gguf (version GGUF V3 (latest))
 llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
 llama_model_loader: - kv   0:                       general.architecture str              = qwen3
@@ -560,6 +580,21 @@ llama_model_loader: - kv  16:                       tokenizer.ggml.model str    
 llama_model_loader: - kv  17:                         tokenizer.ggml.pre str              = qwen2
 llama_model_loader: - kv  18:                      tokenizer.ggml.tokens arr[str,151936]  = ["!", "\"", "#", "$", "%", "&", "'", ...
 llama_model_loader: - kv  19:                  tokenizer.ggml.token_type arr[i32,151936]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  18:                      tokenizer.ggml.tokens arr[str,151936]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+llama_model_loader: - kv  19:                  tokenizer.ggml.token_type arr[i32,151936]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  20:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+llama_model_loader: - kv  21:                tokenizer.ggml.eos_token_id u32              = 151645
+llama_model_loader: - kv  22:            tokenizer.ggml.padding_token_id u32              = 151643
+llama_model_loader: - kv  23:                tokenizer.ggml.bos_token_id u32              = 151643
+llama_model_loader: - kv  24:               tokenizer.ggml.add_bos_token bool             = false
+llama_model_loader: - kv  25:                    tokenizer.chat_template str              = {%- if tools %}\n    {{- '<|im_start|>...
+llama_model_loader: - kv  26:               general.quantization_version u32              = 2
+llama_model_loader: - kv  27:                          general.file_type u32              = 7
+llama_model_loader: - type  f32:  113 tensors
+llama_model_loader: - type q8_0:  197 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q8_0
+print_info: file size   = 604.15 MiB (8.50 BPW) 
 llama_model_loader: - kv  20:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
 llama_model_loader: - kv  21:                tokenizer.ggml.eos_token_id u32              = 151645
 llama_model_loader: - kv  22:            tokenizer.ggml.padding_token_id u32              = 151643
@@ -574,6 +609,32 @@ print_info: file format = GGUF V3 (latest)
 print_info: file type   = Q8_0
 print_info: file size   = 604.15 MiB (8.50 BPW) 
 init_tokenizer: initializing tokenizer for type 2
+load: 0 unused tokens
+load: control token: 151660 '<|fim_middle|>' is not marked as EOG
+load: control token: 151659 '<|fim_prefix|>' is not marked as EOG
+load: control token: 151653 '<|vision_end|>' is not marked as EOG
+load: control token: 151648 '<|box_start|>' is not marked as EOG
+load: control token: 151646 '<|object_ref_start|>' is not marked as EOG
+load: control token: 151649 '<|box_end|>' is not marked as EOG
+load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+load: control token: 151655 '<|image_pad|>' is not marked as EOG
+load: control token: 151651 '<|quad_end|>' is not marked as EOG
+load: control token: 151647 '<|object_ref_end|>' is not marked as EOG
+load: control token: 151652 '<|vision_start|>' is not marked as EOG
+load: control token: 151654 '<|vision_pad|>' is not marked as EOG
+init_tokenizer: initializing tokenizer for type 2
+load: control token: 151656 '<|video_pad|>' is not marked as EOG
+load: control token: 151644 '<|im_start|>' is not marked as EOG
+load: control token: 151661 '<|fim_suffix|>' is not marked as EOG
+load: control token: 151650 '<|quad_start|>' is not marked as EOG
+load: printing all EOG tokens:
+load:   - 128247 ('</s>')
+load:   - 151643 ('<|endoftext|>')
+load:   - 151645 ('<|im_end|>')
+load:   - 151662 ('<|fim_pad|>')
+load:   - 151663 ('<|repo_name|>')
+load:   - 151664 ('<|file_sep|>')
+load: special tokens cache size = 27
 load: 0 unused tokens
 load: control token: 151660 '<|fim_middle|>' is not marked as EOG
 load: control token: 151659 '<|fim_prefix|>' is not marked as EOG
@@ -625,188 +686,32 @@ print_info: EOG token             = 151663 '<|repo_name|>'
 print_info: EOG token             = 151664 '<|file_sep|>'
 print_info: max token length      = 256
 llama_model_load: vocab only - skipping tensors
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=315
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
+load: token to piece cache size = 0.9311 MB
+print_info: arch                  = qwen3
+print_info: vocab_only            = 1
+print_info: no_alloc              = 0
+print_info: vocab type            = BPE
+print_info: n_vocab               = 151936
+print_info: n_merges              = 151387
+print_info: BOS token             = 151643 '<|endoftext|>'
+print_info: EOS token             = 151645 '<|im_end|>'
+print_info: EOT token             = 151645 '<|im_end|>'
+print_info: PAD token             = 151643 '<|endoftext|>'
+print_info: LF token              = 198 'Ċ'
+print_info: FIM PRE token         = 151659 '<|fim_prefix|>'
+print_info: FIM SUF token         = 151661 '<|fim_suffix|>'
+print_info: FIM MID token         = 151660 '<|fim_middle|>'
+print_info: FIM PAD token         = 151662 '<|fim_pad|>'
+print_info: FIM REP token         = 151663 '<|repo_name|>'
+print_info: FIM SEP token         = 151664 '<|file_sep|>'
+print_info: EOG token             = 128247 '</s>'
+print_info: EOG token             = 151643 '<|endoftext|>'
+print_info: EOG token             = 151645 '<|im_end|>'
+print_info: EOG token             = 151662 '<|fim_pad|>'
+print_info: EOG token             = 151663 '<|repo_name|>'
+print_info: EOG token             = 151664 '<|file_sep|>'
+print_info: max token length      = 256
+llama_model_load: vocab only - skipping tensors
 malabr:   turn done (eos) produced~35B pos=44
 malabr:   turn done (eos) produced~35B pos=44
 malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=315
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=315
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~89B pos=267
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~89B pos=267
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~89B pos=267
-malabr:   turn done (eos) produced~23B pos=320
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=320
-malabr:   turn done (eos) produced~23B pos=320
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~47B pos=895
-malabr:   turn done (eos) produced~47B pos=1792
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~35B pos=44
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~134B pos=115
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~134B pos=115
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~51B pos=163
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~51B pos=163
-malabr:   turn done (eos) produced~72B pos=262
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~48B pos=210
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~72B pos=262
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-malabr:   turn done (eos) produced~23B pos=315
-malabr: [refused] this conversation has no room left for that message -- start a new chat or send something shorter
-~llama_context:        CPU compute buffer size is 300.7520 MiB, matches expectation of 300.7520 MiB
