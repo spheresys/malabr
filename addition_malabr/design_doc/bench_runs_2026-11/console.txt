@@ -728,3 +728,5 @@ wrote final_malabr_partitioned_W2.json (295s)
   W2 control run 5: survivors 23.1s wasted None
   W2 close run 5: survivors 12.5s wasted 0
 wrote final_malabr_shared_W2.json (220s)
+wrote final_malabr_partitioned_R1.json (48s)
+wrote final_malabr_shared_R1.json (47s)

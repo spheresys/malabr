@@ -327,3 +327,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 01:20:55] completed: final --mode partitioned --workload W2 | try 1, 
 [2026-11-07 01:20:58] start (try 1): final --mode shared --workload W2 | swap 24% avail 6837MB load 5.18
 [2026-11-07 01:24:44] completed: final --mode shared --workload W2 | try 1, 
+[2026-11-07 01:24:46] saved: final: W2 (856b3d8f91780)
+[2026-11-07 01:24:49] start (try 1): final --mode partitioned --workload R1 | swap 27% avail 7036MB load 4.35
+[2026-11-07 01:25:40] completed: final --mode partitioned --workload R1 | try 1, 
+[2026-11-07 01:25:43] start (try 1): final --mode shared --workload R1 | swap 28% avail 7177MB load 4.89
+[2026-11-07 01:26:33] completed: final --mode shared --workload R1 | try 1, 
