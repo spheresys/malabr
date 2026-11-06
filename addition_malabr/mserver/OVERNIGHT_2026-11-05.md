@@ -61,6 +61,10 @@ The campaign finished at 04:56 on 2026-11-06 on the frozen build, tag `design-fr
 
 You chose to apply the proposed fix after first saying to leave the build frozen. It's committed as `c859db3a5c2e`, tagged `design-fix-2026-11-06`, and the freeze tag is unchanged. W1 and W3 were rerun into `raw_fix/` using the freeze's calibrations, which was my decision, so that only the prompt order differs. You stopped the guard-off run about 3 minutes in at 11:49; it was redone in full. Results are in `BENCHMARKS_2026-11.md`.
 
+## Real-browser work (2026-11-06)
+
+The hand-run browser tests, new timing script `scripts/browser_bench.py` and a scripted demo rehearsal all ran on the fixed build. Results are in `BENCHMARKS_2026-11.md`, under "Real browser". The script's close-tab control arm was flawed (it timed all 8 tabs, not the same 4 survivors), so no speed-up is reported. It wasn't rerun, because the slot result was the useful one.
+
 ## What's left
 
 **Runs:** nothing from the trimmed plan. Running the 20 cut runs would take roughly 3–5 hours: most of it the OLD runs at 2 greedy tabs and in the small pool (about 2–4 h), plus `rss_5` and the 12 Chrome relative runs (under an hour).

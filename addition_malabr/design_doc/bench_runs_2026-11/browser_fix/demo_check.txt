@@ -1,0 +1,11 @@
+[PASS] 1. chat in a real tab | 4.1 s; page attached (30 chars) What is this page about? Answer in one short sentence. MALABR  This page is about birds.
+[PASS] 2.0 holder recalls its secret | vault passphrase I just gave you, exactly. MALABR  The vault passphrase is MAGENTA-177036.
+[PASS] 2.0 other tab (same origin) cannot see it | uire authentication or access to sensitive information. Please provide your passphrase, and I will confirm it.
+[PASS] 2.1 holder recalls its secret | vault passphrase I just gave you, exactly. MALABR  The vault passphrase is MAGENTA-289593.
+[PASS] 2.1 other tab (same origin) cannot see it | as it is not provided in the current context. Please provide the passphrase, and I will repeat it back to you.
+[PASS] 2.2 holder recalls its secret | vault passphrase I just gave you, exactly. MALABR  The vault passphrase is MAGENTA-908895.
+[PASS] 2.2 other tab (other origin) cannot see it | f you have a specific vault passphrase you'd like me to use, please provide it, and I'll be happy to help you.
+[PASS] 4. secret survives overflow | 106 s; '\nMALABR\n\nThe vault passphrase is HARPOON-273733.'
+compactions in log: 0
+8/8 passed
+rc=0

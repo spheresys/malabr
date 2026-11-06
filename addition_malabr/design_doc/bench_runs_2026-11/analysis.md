@@ -173,3 +173,11 @@ From activating a tab to the server logging `control FOREGROUND`, while 8 tabs g
 **Closing a tab in the real browser doesn't free its session**, even when it was closing mid-generation, and with 4 survivors and 4 closed tabs holding all 8 slots, a new tab can't get one. That's rebuild item 9. This extends the earlier measurement, which was of idle tabs.
 
 **No speed-up figure is reported.** My control arm timed all 8 tabs rather than the same 4 survivors, and short replies were nearly done by the time of the close, so the finish times aren't comparable. W2's speed-up remains a server-harness result, and it's still not demonstrated in a real browser.
+
+### Demo rehearsal, scripted
+
+Real browser, partitioned mode, 8/8 checks passed on 2026-11-06. It isn't a benchmark.
+
+- **Chat in a real tab:** answered about the page in 4.1 s.
+- **Isolation, 3 trials with fresh secrets:** the holder recalled its secret 3/3, and the other tab couldn't see it 3/3 (2 same-origin, 1 other-origin).
+- **Overflow, 1 trial:** a secret in the first turn, then 8 fill turns of about 2,000 characters. The secret was recalled. The session stayed at position 1,569 with `turns_so_far` at 4 during the fill, which shows older turns being dropped. The server doesn't log a compaction line for this case.
