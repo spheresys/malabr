@@ -599,3 +599,17 @@ wrote fix_malabr_shared_W3_g0.json (92s)
   W3 greedy=0 n_ctx=16384 run 4: small TTFT 0.8176071643829346 p95 1.544858694076538 errs 0 greedy {} round_errors 0
   W3 greedy=0 n_ctx=16384 run 5: small TTFT 0.7678638696670532 p95 1.532083511352539 errs 0 greedy {} round_errors 0
 wrote fix_malabr_partitioned_W3_g0.json (105s)
+  W3 greedy=2 n_ctx=4096 run 0: small TTFT None p95 None errs 18 greedy {10: (2, 72, 0), 11: (2, 63, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 1: small TTFT None p95 None errs 18 greedy {10: (2, 72, 0), 11: (2, 63, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 2: small TTFT None p95 None errs 18 greedy {10: (2, 71, 0), 11: (2, 63, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 3: small TTFT None p95 None errs 18 greedy {10: (2, 71, 0), 11: (2, 63, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 4: small TTFT None p95 None errs 18 greedy {10: (2, 63, 0), 11: (2, 70, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 5: small TTFT None p95 None errs 18 greedy {10: (2, 71, 0), 11: (2, 63, 0)} round_errors 0
+wrote fix_malabr_shared_W3_g2_ctx4096.json (1274s)
+  W3 greedy=2 n_ctx=4096 run 0: small TTFT 0.3909578323364258 p95 1.1517655849456787 errs 0 greedy {10: (0, 8, 0), 11: (0, 8, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 1: small TTFT 0.7158776521682739 p95 1.7063415050506592 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 2: small TTFT 0.6985090970993042 p95 1.2634708881378174 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 3: small TTFT 0.7070319652557373 p95 1.2034156322479248 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 4: small TTFT 0.6626596450805664 p95 1.6563169956207275 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
+  W3 greedy=2 n_ctx=4096 run 5: small TTFT 0.7286012172698975 p95 1.4945213794708252 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
+wrote fix_malabr_partitioned_W3_g2_ctx4096.json (99s)
