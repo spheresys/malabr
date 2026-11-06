@@ -370,3 +370,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 03:13:26] completed: final --mode shared --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | try 1, 
 [2026-11-07 03:13:30] start (try 1): final --mode partitioned --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | swap 0% avail 12599MB load 3.60
 [2026-11-07 03:15:15] completed: final --mode partitioned --workload W3 --greedy 2 --guard on --n-ctx 4096 --page 900 | try 1, 
+[2026-11-07 03:15:16] saved: final: W3 small pool (a65902877c07b)
+[2026-11-07 03:15:19] start (try 1): final --mode partitioned --workload W5 | swap 0% avail 12536MB load 3.71
+[2026-11-07 03:29:36] completed: final --mode partitioned --workload W5 | try 1, 
+[2026-11-07 03:29:39] start (try 1): final --mode shared --workload W5 | swap 0% avail 12610MB load 3.29
+[2026-11-07 03:46:16] completed: final --mode shared --workload W5 | try 1, 
