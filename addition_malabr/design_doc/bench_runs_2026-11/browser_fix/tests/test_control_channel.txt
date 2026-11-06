@@ -1,0 +1,2 @@
+browser: Chrome/127.0.6519.0
+  [FAIL] model server came up   see /tmp/malabr_controlchannel.log

@@ -303,3 +303,7 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 13:31:40] completed: fix --mode shared --workload W1 | try 1, 
 [2026-11-06 13:31:42] saved: fix rerun: W1 (9031951f9d3ac)
 [2026-11-06 13:31:42] FIX RERUN finished
+[2026-11-06 13:39:52] start browser bench partitioned swap 1117MB avail 7694MB load 2.53
+[2026-11-06 13:50:00] end browser bench partitioned rc=0
+[2026-11-06 13:50:00] start browser bench shared swap 1117MB avail 7560MB load 2.13
+[2026-11-06 13:59:21] end browser bench shared rc=0

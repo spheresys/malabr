@@ -1,0 +1,25 @@
+=== page-context extraction ===
+
+  body innerText : 2248 chars
+  extracted      : 1659 chars
+
+  [PASS] extraction keeps the article body
+  [PASS] extraction drops the cookie banner
+  [PASS] extraction drops the sidebar
+  [PASS] extraction drops the footer
+  [PASS] extraction drops the related links
+  [PASS] relevance selection reaches a paragraph a prefix cut would miss   selected 585 chars; 'preempt' in prefix-cut: False
+  [PASS] selection stays inside its budget   585 chars
+  [PASS] selection keeps document order
+  [PASS] extraction is deterministic (page cache stays valid)
+
+  sample of what the model would receive:
+
+    Paged attention is a memory management technique for large language model serv
+    
+    [...]
+    
+    Eviction policy is where the design gets interesting. When the pool is full, t
+    
+
+9 checks, 9 passed

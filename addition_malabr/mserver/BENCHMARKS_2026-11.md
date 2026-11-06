@@ -382,3 +382,49 @@ Build `c859db3a5c2e`, tag `design-fix-2026-11-06`. It differs from the freeze by
 
 **Unexplained:** at 0 greedy tabs, TTFT rose from 0.58 to 0.82 s partitioned and from 0.56 to 0.63 s shared, and turn time rose too. Other apps were using more memory during these reruns, with about 7 GB available against about 9 GB, but that hasn't been tested as the cause. W1 got faster on the same build.
 
+## Real browser (fixed build)
+
+Patched Chromium 127 built on 2026-08-28, the real panel and real `app.py`, driven over CDP, with n_ctx 16,384, 8 slots and 3 threads. These are the first numbers in this report that use the real browser. Times are measured in the panel, from clicking send to the first token. Brave stayed open during the runs, and page text is attached to each tab's first question.
+
+### Hand-run tests
+
+| Test | Result | Note |
+|---|---|---|
+| `test_panel_status.py` | 8/8 | |
+| `test_transcript_keys.py` | 14/14 | |
+| `test_page_context_patho.py` | 15/15 | |
+| `test_page_context.py` | 9/9 | Second try. The first crashed reading the page before its body existed; no change between tries |
+| `test_control_channel.py` | 4/5 | Second try, with quick calibration. The first gave up after 240 s during calibration. The one failure is the known tab-close check (2b, rebuild item 9) |
+
+### Time to first token, n = 5, 1 warm-up round discarded
+
+Mean ± sd. All 100 tab turns per mode were served, with no timeouts.
+
+| Scenario | Mode | Visible tab s | Background median s | All-tab p95 s | Round total s |
+|---|---|---|---|---|---|
+| 8 tabs, visible last | Partitioned | 0.61 ± 0.07 | 3.73 ± 0.27 | 5.49 ± 0.37 | 6.17 ± 0.37 |
+| | Shared | 0.48 ± 0.01 | 2.84 ± 0.05 | 4.20 ± 0.09 | 4.57 ± 0.02 |
+| 4 tabs, visible last | Partitioned | 0.45 ± 0.02 | 1.63 ± 0.06 | 2.49 ± 0.07 | 2.95 ± 0.29 |
+| | Shared | 0.44 ± 0.02 | 1.43 ± 0.05 | 2.06 ± 0.05 | 2.64 ± 0.24 |
+| 8 tabs, visible first (control) | Partitioned | 0.49 ± 0.05 | 3.83 ± 0.17 | 5.59 ± 0.28 | 6.18 ± 0.38 |
+| | Shared | 0.46 ± 0.02 | 2.82 ± 0.10 | 4.17 ± 0.12 | 4.78 ± 0.30 |
+
+At 8 tabs, the real browser's visible-tab TTFT is 6–8× lower than its background median, and these times are close to the harness's for the same scenario. Replies aren't capped to a fixed token count here, so round totals are rougher than the harness's makespan. There's no throughput figure.
+
+### Focus switch
+
+From activating a tab to the server logging `control FOREGROUND`, while 8 tabs generate: **0.02 s** in both modes (max 0.03 s, n = 9 of 10; the first activation was already the active tab, so it produced no event). It shows that the event reaches the server, not when tokens change.
+
+### Closing generating tabs
+
+8 tabs generate, and 4 are closed once they all have a first token. Then a new tab asks. n = 5 per mode, with a fresh browser and server per run.
+
+| Measure | Partitioned | Shared |
+|---|---|---|
+| New tab served after the closes | **0 of 5** | **0 of 5** |
+| Closed at, s | 8.68 ± 0.28 | 5.89 ± 0.24 |
+
+**Closing a tab in the real browser doesn't free its session**, even when it was closing mid-generation, and with 4 survivors and 4 closed tabs holding all 8 slots, a new tab can't get one. That's rebuild item 9. This extends the earlier measurement, which was of idle tabs.
+
+**No speed-up figure is reported.** My control arm timed all 8 tabs rather than the same 4 survivors, and short replies were nearly done by the time of the close, so the finish times aren't comparable. W2's speed-up remains a server-harness result, and it's still not demonstrated in a real browser.
+

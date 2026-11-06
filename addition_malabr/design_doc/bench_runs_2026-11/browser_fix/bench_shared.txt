@@ -1,0 +1,31 @@
+browser: Chrome/127.0.6519.0
+  B1 tabs=8 visible=last round 0: {'ttft_fg': 0.5852999999970198, 'ttft_median': 2.579300000000745, 'ttft_p95': 4.312, 'ttft_bg_median': 2.7858000000044703, 'wall': 4.731589317321777, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 1: {'ttft_fg': 0.4748999999985099, 'ttft_median': 2.4188500000014903, 'ttft_p95': 4.17589999999851, 'ttft_bg_median': 2.76870000000298, 'wall': 4.588490962982178, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 2: {'ttft_fg': 0.4685, 'ttft_median': 2.4923499999977645, 'ttft_p95': 4.243300000004471, 'ttft_bg_median': 2.8118999999985097, 'wall': 4.592806100845337, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 3: {'ttft_fg': 0.48370000000298025, 'ttft_median': 2.538449999999255, 'ttft_p95': 4.16619999999553, 'ttft_bg_median': 2.89639999999851, 'wall': 4.540677309036255, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 4: {'ttft_fg': 0.49639999999850987, 'ttft_median': 2.548650000002235, 'ttft_p95': 4.311, 'ttft_bg_median': 2.86510000000149, 'wall': 4.542897462844849, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 5: {'ttft_fg': 0.49719999999552966, 'ttft_median': 2.5236999999992547, 'ttft_p95': 4.08130000000447, 'ttft_bg_median': 2.87610000000149, 'wall': 4.5746684074401855, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=4 visible=last round 0: {'ttft_fg': 0.41520000000298024, 'ttft_median': 1.1292499999999999, 'ttft_p95': 1.9905, 'ttft_bg_median': 1.36210000000149, 'wall': 2.7432806491851807, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 1: {'ttft_fg': 0.41380000000447037, 'ttft_median': 1.1462000000029802, 'ttft_p95': 2.0605, 'ttft_bg_median': 1.3989000000059604, 'wall': 2.747382402420044, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 2: {'ttft_fg': 0.4138999999985099, 'ttft_median': 1.1249499999955297, 'ttft_p95': 1.98489999999851, 'ttft_bg_median': 1.3607999999970197, 'wall': 2.2126986980438232, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 3: {'ttft_fg': 0.4507000000029802, 'ttft_median': 1.2283000000007451, 'ttft_p95': 2.1005, 'ttft_bg_median': 1.50060000000149, 'wall': 2.7564945220947266, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 4: {'ttft_fg': 0.4447000000029802, 'ttft_median': 1.1771500000022352, 'ttft_p95': 2.0415999999940397, 'ttft_bg_median': 1.4235, 'wall': 2.753571033477783, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 5: {'ttft_fg': 0.453, 'ttft_median': 1.2076500000022352, 'ttft_p95': 2.12, 'ttft_bg_median': 1.4617000000029803, 'wall': 2.7460126876831055, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=8 visible=first round 0: {'ttft_fg': 0.43660000000149013, 'ttft_median': 2.4291500000022355, 'ttft_p95': 4.046300000004471, 'ttft_bg_median': 2.6561000000014903, 'wall': 4.57187032699585, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 1: {'ttft_fg': 0.447, 'ttft_median': 2.54804999999702, 'ttft_p95': 4.02910000000149, 'ttft_bg_median': 2.75539999999851, 'wall': 4.579339027404785, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 2: {'ttft_fg': 0.4412000000029802, 'ttft_median': 2.452050000000745, 'ttft_p95': 4.088199999995529, 'ttft_bg_median': 2.68089999999851, 'wall': 4.535689353942871, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 3: {'ttft_fg': 0.4528999999985099, 'ttft_median': 2.629949999999255, 'ttft_p95': 4.174200000002981, 'ttft_bg_median': 2.851, 'wall': 4.555889368057251, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 4: {'ttft_fg': 0.49120000000298025, 'ttft_median': 2.6769999999962746, 'ttft_p95': 4.3289000000059605, 'ttft_bg_median': 2.9056999999955297, 'wall': 5.115745782852173, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 5: {'ttft_fg': 0.4553999999985099, 'ttft_median': 2.636550000000745, 'ttft_p95': 4.239299999997019, 'ttft_bg_median': 2.8885, 'wall': 5.107264518737793, 'served': 8, 'n': 8, 'timed_out': False}
+  B2 [None, 0.023212909698486328, 0.02298569679260254, 0.022382497787475586, 0.022061586380004883, 0.02210688591003418, 0.02271103858947754, 0.024363279342651367, 0.028106689453125, 0.02572941780090332]
+  B3 b3_close 0: {'finish': 9.01020000000298, 'closed_at': 6.140769720077515, 'survivor_chars': 1072, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 0: {'finish': 8.18339999999851, 'closed_at': None, 'survivor_chars': 1742, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 1: {'finish': 7.2855, 'closed_at': 5.503069877624512, 'survivor_chars': 881, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 1: {'finish': 7.489199999995529, 'closed_at': None, 'survivor_chars': 1580, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 2: {'finish': 9.17139999999851, 'closed_at': 5.975659370422363, 'survivor_chars': 1227, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 2: {'finish': 7.74930000000447, 'closed_at': None, 'survivor_chars': 1590, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 3: {'finish': 8.48230000000447, 'closed_at': 5.928648948669434, 'survivor_chars': 1019, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 3: {'finish': 8.03089999999851, 'closed_at': None, 'survivor_chars': 1718, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 4: {'finish': 7.7153999999985095, 'closed_at': 5.917823314666748, 'survivor_chars': 991, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 4: {'finish': 7.9203999999985095, 'closed_at': None, 'survivor_chars': 1729, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+wrote shared

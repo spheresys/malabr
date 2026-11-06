@@ -1,0 +1,17 @@
+browser: Chrome/127.0.6519.0
+  [PASS] content script cannot read storage.session directly   Error: Access to storage is not allowed from this context.
+  [PASS] tab1 saves
+  [PASS] tab1 restores its own transcript
+  [PASS] tab2, SAME origin, does not get tab1's transcript
+  [PASS] tab3, other origin, does not get it
+  [PASS] the conversation id round-trips with the transcript   '0123abcd0123abcd'
+  [PASS] tab1 restores after reload
+  [PASS] chat turn with no other origin keeps the own key
+  [PASS] passing through another origin deletes nothing
+  [PASS] a save that is not a chat turn evicts nothing   3 vs 3
+  [PASS] a chat turn on B deletes this tab's A transcript, no other tab's   A 3->2, B 1->2
+  [PASS] back on A, nothing to restore
+  [PASS] closing tab1 deleted its transcript   ['malabr:122980645:http://localhost:8791', 'malabr:122980646:http://127.0.0.1:8791']
+  [PASS] tab2's transcript survives
+
+14/14 passed

@@ -1,0 +1,31 @@
+browser: Chrome/127.0.6519.0
+  B1 tabs=8 visible=last round 0: {'ttft_fg': 0.6420999999940395, 'ttft_median': 3.2511499999985096, 'ttft_p95': 5.418400000005961, 'ttft_bg_median': 3.58239999999851, 'wall': 5.753537178039551, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 1: {'ttft_fg': 0.5711000000014901, 'ttft_median': 2.9595500000007453, 'ttft_p95': 5.16410000000149, 'ttft_bg_median': 3.37510000000149, 'wall': 5.621703147888184, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 2: {'ttft_fg': 0.5798999999985098, 'ttft_median': 3.27245000000298, 'ttft_p95': 5.206200000002981, 'ttft_bg_median': 3.73, 'wall': 6.177484512329102, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 3: {'ttft_fg': 0.574, 'ttft_median': 3.26989999999851, 'ttft_p95': 5.307699999995529, 'ttft_bg_median': 3.74729999999702, 'wall': 6.177952289581299, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 4: {'ttft_fg': 0.7231000000014901, 'ttft_median': 3.8205499999970196, 'ttft_p95': 5.98189999999851, 'ttft_bg_median': 4.1332999999970195, 'wall': 6.678946256637573, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=last round 5: {'ttft_fg': 0.5867000000029803, 'ttft_median': 3.18539999999851, 'ttft_p95': 5.77539999999851, 'ttft_bg_median': 3.68589999999851, 'wall': 6.189114809036255, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=4 visible=last round 0: {'ttft_fg': 0.47619999999552964, 'ttft_median': 1.42875, 'ttft_p95': 2.651, 'ttft_bg_median': 1.77389999999851, 'wall': 3.2716307640075684, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 1: {'ttft_fg': 0.44630000000447034, 'ttft_median': 1.3647000000029803, 'ttft_p95': 2.5576000000014902, 'ttft_bg_median': 1.6838000000044704, 'wall': 3.2619168758392334, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 2: {'ttft_fg': 0.4787999999970198, 'ttft_median': 1.3891499999947845, 'ttft_p95': 2.48939999999851, 'ttft_bg_median': 1.6935999999940394, 'wall': 2.732175827026367, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 3: {'ttft_fg': 0.441, 'ttft_median': 1.3036500000022353, 'ttft_p95': 2.5007000000029804, 'ttft_bg_median': 1.5854000000059605, 'wall': 2.7321808338165283, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 4: {'ttft_fg': 0.453, 'ttft_median': 1.28710000000149, 'ttft_p95': 2.3743000000044705, 'ttft_bg_median': 1.5687000000029803, 'wall': 2.749689817428589, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=4 visible=last round 5: {'ttft_fg': 0.4453999999985099, 'ttft_median': 1.323199999999255, 'ttft_p95': 2.5495, 'ttft_bg_median': 1.6116999999955297, 'wall': 3.268653392791748, 'served': 4, 'n': 4, 'timed_out': False}
+  B1 tabs=8 visible=first round 0: {'ttft_fg': 0.48639999999850986, 'ttft_median': 3.595199999999255, 'ttft_p95': 5.74220000000298, 'ttft_bg_median': 3.91110000000149, 'wall': 6.180956602096558, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 1: {'ttft_fg': 0.4123999999985099, 'ttft_median': 3.3950999999977647, 'ttft_p95': 5.352, 'ttft_bg_median': 3.7885, 'wall': 6.188561677932739, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 2: {'ttft_fg': 0.5261000000014902, 'ttft_median': 3.49475, 'ttft_p95': 5.86060000000149, 'ttft_bg_median': 3.749, 'wall': 6.195098400115967, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 3: {'ttft_fg': 0.48489999999850986, 'ttft_median': 3.30585000000149, 'ttft_p95': 5.22869999999553, 'ttft_bg_median': 3.616, 'wall': 5.617224216461182, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 4: {'ttft_fg': 0.4856000000014901, 'ttft_median': 3.6281000000014902, 'ttft_p95': 5.74270000000298, 'ttft_bg_median': 3.98010000000149, 'wall': 6.684523582458496, 'served': 8, 'n': 8, 'timed_out': False}
+  B1 tabs=8 visible=first round 5: {'ttft_fg': 0.5497000000029802, 'ttft_median': 3.6987500000037254, 'ttft_p95': 5.78769999999553, 'ttft_bg_median': 4.025900000005961, 'wall': 6.2146155834198, 'served': 8, 'n': 8, 'timed_out': False}
+  B2 [None, 0.02566814422607422, 0.023576021194458008, 0.024338483810424805, 0.02010369300842285, 0.0231015682220459, 0.027787446975708008, 0.02433323860168457, 0.027048587799072266, 0.02860879898071289]
+  B3 b3_close 0: {'finish': 10.76169999999553, 'closed_at': 8.428062200546265, 'survivor_chars': 1045, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 0: {'finish': 11.2155, 'closed_at': None, 'survivor_chars': 1837, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 1: {'finish': 11.9575, 'closed_at': 8.830036163330078, 'survivor_chars': 1148, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 1: {'finish': 10.71819999999553, 'closed_at': None, 'survivor_chars': 1736, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 2: {'finish': 9.13739999999851, 'closed_at': 8.62936282157898, 'survivor_chars': 880, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 2: {'finish': 10.92970000000298, 'closed_at': None, 'survivor_chars': 1806, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 3: {'finish': 9.818, 'closed_at': 8.427990913391113, 'survivor_chars': 956, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 3: {'finish': 10.8325, 'closed_at': None, 'survivor_chars': 1613, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+  B3 b3_close 4: {'finish': 9.682399999998509, 'closed_at': 9.06882643699646, 'survivor_chars': 872, 'timed_out': False, 'new_tab_served': False, 'new_tab_error': True}
+  B3 b3_control 4: {'finish': 9.51469999999553, 'closed_at': None, 'survivor_chars': 1478, 'timed_out': False, 'new_tab_served': None, 'new_tab_error': None}
+wrote partitioned
