@@ -32,7 +32,7 @@ Controlled comparison: MALABR NEW and OLD, llama.cpp and Ollama all use the same
 
 ### What got worse from OLD to NEW
 
-- **W3 shared, 1 greedy tab:** small-tab TTFT 4.61 ± 0.13 → **16.70 ± 1.78 s**, about 3.6× slower. The cause is being diagnosed separately.
+- **W3 shared, 1 greedy tab:** small-tab TTFT 4.61 ± 0.13 → **16.70 ± 1.78 s**, about 3.6× slower. Diagnostic runs trace it to the order in which waiting prompts get the prefill guarantee, and a one-line fix is proposed but not applied.
 - **Shared throughput, 8 tabs:** 43.05 ± 0.87 → 35.05 ± 0.94 tok/s, about 19% lower, and makespan 11.90 → 14.61 s.
 
 ### What stayed about the same
@@ -304,11 +304,11 @@ Small-tab median TTFT, mean ± sd, n = 5. Page size is 900 tokens partitioned an
 - **Shared regressed.** At 1 greedy tab, small-tab TTFT is about 3.6× OLD's (16.70 vs 4.61 s), and small-tab turns take about 4× as long (22.29 vs 5.31 s). OLD's result here is the better one.
 - **Greedy tabs in NEW shared:** they completed 5 pages over 5 runs at 1 greedy tab, and 5 pages between both tabs at 2 greedy tabs, with no refusals.
 - **The guard isn't the visible cause.** Guard off at 2 greedy tabs gave 21.38 ± 0.25 s, about the same as 22.13 ± 0.34 s with it on.
-- **The cause is not established in this report.** It is being diagnosed separately.
+- **Cause (diagnostic, n = 2):** the prefill guarantee goes to the first-arrived prompt, so the greedy page's deep token runs in nearly every round and a short prompt gets one token per 5 rounds. See `design_doc/diagnostics_2026-11/W3_SHARED_DIAGNOSIS.md`. A one-line fix is proposed there and not applied, so these numbers are for the frozen build.
 
 ### Small pool (n_ctx 4,096, 2 greedy tabs)
 
-- **NEW shared refused every small-tab turn:** 18 of 18 in each of the 5 runs, with `the server is at capacity`. There is no TTFT to report. No failed rounds were recorded, but small tabs got no service. The two greedy tabs' soft limits (2,048 each) add up to the whole pool, which fits this result, but that hasn't been tested. This run also used the fallback calibration, so it can't be ruled out as a factor.
+- **NEW shared refused every small-tab turn:** 18 of 18 in each of the 5 runs, with `the server is at capacity`. There is no TTFT to report. No failed rounds were recorded, but small tabs got no service. The diagnosis shows why: each greedy tab holds 1,772 protected positions, and with the idle small tabs' fair shares the total exceeds the pool limit, so turns wait 20 s and are refused. This decision uses only positions, so the fallback calibration isn't the cause.
 - **NEW partitioned:** median 0.62 ± 0.08 s. One run had 2 small-tab errors and a p95 of 581 s, which is why the p95 reads 117.43 ± 259.20. That outlier hasn't been explained or rerun.
 - **llama.cpp unified:** median 1.12 ± 0.20 s, but 15 errors per run, including HTTP 500 `Context size has been exceeded`.
 - **llama.cpp partitioned and Ollama:** medians 0.58 ± 0.07 s and 0.78 ± 0.04 s, with 0 errors. Their greedy tabs were refused every time.

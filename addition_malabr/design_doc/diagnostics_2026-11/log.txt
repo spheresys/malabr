@@ -1,0 +1,15 @@
+[2026-11-06 06:28:14] start new_baseline swap 3099MB load 10.83
+[2026-11-06 06:36:37] end new_baseline rc=0
+[2026-11-06 06:36:37] start a_share_off swap 2883MB load 3.00
+[2026-11-06 06:41:57] end a_share_off rc=0
+[2026-11-06 06:41:57] start b_old_cal swap 2874MB load 3.00
+[2026-11-06 06:49:57] end b_old_cal rc=0
+[2026-11-06 06:49:57] start c_limit_4096 swap 2854MB load 3.16
+[2026-11-06 06:53:29] end c_limit_4096 rc=0
+[2026-11-06 06:53:29] start d_shortest swap 2850MB load 2.64
+[2026-11-06 06:59:12] end d_shortest rc=0
+[2026-11-06 06:59:12] start small_pool_new_g2 swap 2840MB load 3.04
+[2026-11-06 07:07:29] end small_pool_new_g2 rc=0
+[2026-11-06 07:07:29] end new set
+[2026-11-06 07:12:36] end old_baseline rc=0
+[2026-11-06 07:12:36] DONE

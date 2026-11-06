@@ -11,7 +11,7 @@ Controlled comparison: MALABR NEW and OLD, llama.cpp and Ollama all use the same
 
 ### What got worse from OLD to NEW
 
-- **W3 shared, 1 greedy tab:** small-tab TTFT 4.61 ± 0.13 → **16.70 ± 1.78 s**, about 3.6× slower. The cause is being diagnosed separately.
+- **W3 shared, 1 greedy tab:** small-tab TTFT 4.61 ± 0.13 → **16.70 ± 1.78 s**, about 3.6× slower. Diagnostic runs trace it to the order in which waiting prompts get the prefill guarantee, and a one-line fix is proposed but not applied.
 - **Shared throughput, 8 tabs:** 43.05 ± 0.87 → 35.05 ± 0.94 tok/s, about 19% lower, and makespan 11.90 → 14.61 s.
 
 ### What stayed about the same
