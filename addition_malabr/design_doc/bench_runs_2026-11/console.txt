@@ -585,3 +585,17 @@ wrote fix_malabr_partitioned_W3_g2.json (588s)
   W3 greedy=2 n_ctx=16384 run 4: small TTFT 0.8614403009414673 p95 4.58438777923584 errs 0 greedy {10: (1, 0, 0), 11: (0, 0, 0)} round_errors 0
   W3 greedy=2 n_ctx=16384 run 5: small TTFT 0.8871675729751587 p95 1.9522647857666016 errs 0 greedy {10: (1, 0, 0), 11: (0, 0, 0)} round_errors 0
 wrote fix_malabr_shared_W3_g2_guardoff.json (1080s)
+  W3 greedy=0 n_ctx=16384 run 0: small TTFT 0.7259809970855713 p95 1.3123559951782227 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 1: small TTFT 0.6439177989959717 p95 1.2471089363098145 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 2: small TTFT 0.5691941976547241 p95 1.2677645683288574 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 3: small TTFT 0.6724162101745605 p95 1.3485331535339355 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 4: small TTFT 0.6235994100570679 p95 1.208909034729004 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 5: small TTFT 0.6494176387786865 p95 1.0692718029022217 errs 0 greedy {} round_errors 0
+wrote fix_malabr_shared_W3_g0.json (92s)
+  W3 greedy=0 n_ctx=16384 run 0: small TTFT 0.7651389837265015 p95 1.5480647087097168 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 1: small TTFT 0.7957305908203125 p95 1.5222623348236084 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 2: small TTFT 0.8141697645187378 p95 1.6217787265777588 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 3: small TTFT 0.8872818946838379 p95 1.7518031597137451 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 4: small TTFT 0.8176071643829346 p95 1.544858694076538 errs 0 greedy {} round_errors 0
+  W3 greedy=0 n_ctx=16384 run 5: small TTFT 0.7678638696670532 p95 1.532083511352539 errs 0 greedy {} round_errors 0
+wrote fix_malabr_partitioned_W3_g0.json (105s)
