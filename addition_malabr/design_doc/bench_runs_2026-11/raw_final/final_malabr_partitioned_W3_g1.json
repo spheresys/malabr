@@ -1,0 +1,242 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw_final",
+   "--system",
+   "malabr",
+   "--tag",
+   "final",
+   "--mode",
+   "partitioned",
+   "--workload",
+   "W3",
+   "--greedy",
+   "1"
+  ],
+  "tag": "final",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "partitioned",
+   "kv_unified": false,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 2048,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": false,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/partitioned_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     43.741276332117,
+     35.63291175634476
+    ],
+    [
+     256,
+     38.85444610880015,
+     38.72915421730378
+    ],
+    [
+     512,
+     32.66358703207711,
+     32.39198171961762
+    ],
+    [
+     1024,
+     24.73399110435259,
+     18.978646759193797
+    ],
+    [
+     1536,
+     20.407392964310873,
+     20.244686902125153
+    ],
+    [
+     1984,
+     18.07298096529703,
+     18.05176721983641
+    ]
+   ]
+  },
+  "seconds": 351.1133017539978,
+  "finished": "2026-11-07 01:53:28",
+  "mem_available_kb": 7031312,
+  "loadavg": [
+   6.4873046875,
+   4.8916015625,
+   4.50634765625
+  ]
+ },
+ "result": {
+  "page_tokens": 900,
+  "runs": [
+   {
+    "fill_seconds": 38.79729127883911,
+    "small_turns": 18,
+    "small_ttft_median": 0.9169777631759644,
+    "small_ttft_p95": 2.5733706951141357,
+    "small_turn_median": 1.671074390411377,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 2,
+      "refused": 10,
+      "other": 0,
+      "first_refusal": {
+       "t": 38.7,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 37.79753065109253,
+    "small_turns": 18,
+    "small_ttft_median": 0.9441906213760376,
+    "small_ttft_p95": 1.65260648727417,
+    "small_turn_median": 1.7416582107543945,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 2,
+      "refused": 10,
+      "other": 0,
+      "first_refusal": {
+       "t": 37.7,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 37.79298973083496,
+    "small_turns": 18,
+    "small_ttft_median": 1.0058937072753906,
+    "small_ttft_p95": 1.5961685180664062,
+    "small_turn_median": 1.8182945251464844,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 13,
+      "ok": 2,
+      "refused": 11,
+      "other": 0,
+      "first_refusal": {
+       "t": 37.5,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 36.038240909576416,
+    "small_turns": 18,
+    "small_ttft_median": 0.8929853439331055,
+    "small_ttft_p95": 1.8017992973327637,
+    "small_turn_median": 1.7327537536621094,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 12,
+      "ok": 2,
+      "refused": 10,
+      "other": 0,
+      "first_refusal": {
+       "t": 35.8,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 42.548805236816406,
+    "small_turns": 18,
+    "small_ttft_median": 0.8460651636123657,
+    "small_ttft_p95": 2.169950485229492,
+    "small_turn_median": 1.7348625659942627,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {
+     "10": {
+      "sent": 13,
+      "ok": 2,
+      "refused": 11,
+      "other": 0,
+      "first_refusal": {
+       "t": 42.3,
+       "error": "[refused] this conversation has no room left for that message -- start a new chat or send something shorter"
+      }
+     }
+    },
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 0.9169777631759644,
+    "min": 0.8460651636123657,
+    "max": 1.0058937072753906,
+    "sd": 0.059499428416057244,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.8017992973327637,
+    "min": 1.5961685180664062,
+    "max": 2.5733706951141357,
+    "sd": 0.4099350387816664,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 1.7348625659942627,
+    "min": 1.671074390411377,
+    "max": 1.8182945251464844,
+    "sd": 0.05234991703519558,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}
