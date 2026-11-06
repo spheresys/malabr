@@ -1,0 +1,187 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw_final",
+   "--system",
+   "malabr",
+   "--tag",
+   "final",
+   "--mode",
+   "shared",
+   "--workload",
+   "W3",
+   "--greedy",
+   "0"
+  ],
+  "tag": "final",
+  "workload": "W3",
+  "system_info": {
+   "system": "malabr",
+   "mode": "shared",
+   "kv_unified": true,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 8192,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": true,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/shared_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     44.65016212865829,
+     31.564992547505828
+    ],
+    [
+     1024,
+     24.441184509808068,
+     22.833337537042286
+    ],
+    [
+     2048,
+     17.436532989701227,
+     17.371077502942786
+    ],
+    [
+     4096,
+     8.028953071177952,
+     8.02687648686314
+    ],
+    [
+     6144,
+     5.105913879946949,
+     5.104274390483488
+    ],
+    [
+     8128,
+     3.944415409479276,
+     3.934814427011108
+    ]
+   ]
+  },
+  "seconds": 93.49995923042297,
+  "finished": "2026-11-07 01:28:11",
+  "mem_available_kb": 7369728,
+  "loadavg": [
+   4.046875,
+   4.98681640625,
+   4.91552734375
+  ]
+ },
+ "result": {
+  "page_tokens": 3000,
+  "runs": [
+   {
+    "fill_seconds": 1.9073486328125e-06,
+    "small_turns": 18,
+    "small_ttft_median": 0.6944084167480469,
+    "small_ttft_p95": 1.2145476341247559,
+    "small_turn_median": 1.212636113166809,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {},
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 2.384185791015625e-06,
+    "small_turns": 18,
+    "small_ttft_median": 0.610958456993103,
+    "small_ttft_p95": 1.1609995365142822,
+    "small_turn_median": 1.2624307870864868,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {},
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 2.1457672119140625e-06,
+    "small_turns": 18,
+    "small_ttft_median": 0.6890052556991577,
+    "small_ttft_p95": 1.2033143043518066,
+    "small_turn_median": 1.381334662437439,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {},
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 2.86102294921875e-06,
+    "small_turns": 18,
+    "small_ttft_median": 0.6016466617584229,
+    "small_ttft_p95": 1.197204828262329,
+    "small_turn_median": 1.3021119832992554,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {},
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   },
+   {
+    "fill_seconds": 1.9073486328125e-06,
+    "small_turns": 18,
+    "small_ttft_median": 0.6475756168365479,
+    "small_ttft_p95": 1.2827131748199463,
+    "small_turn_median": 1.5748517513275146,
+    "small_errors": 0,
+    "small_error_samples": [],
+    "greedy": {},
+    "compactions": [],
+    "round_errors": 0,
+    "round_error_samples": []
+   }
+  ],
+  "summary": {
+   "small_ttft_median": {
+    "median": 0.6475756168365479,
+    "min": 0.6016466617584229,
+    "max": 0.6944084167480469,
+    "sd": 0.04287620599390811,
+    "n": 5
+   },
+   "small_ttft_p95": {
+    "median": 1.2033143043518066,
+    "min": 1.1609995365142822,
+    "max": 1.2827131748199463,
+    "sd": 0.044446403930445716,
+    "n": 5
+   },
+   "small_turn_median": {
+    "median": 1.3021119832992554,
+    "min": 1.212636113166809,
+    "max": 1.5748517513275146,
+    "sd": 0.14169976630026285,
+    "n": 5
+   },
+   "small_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   },
+   "round_errors": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}
