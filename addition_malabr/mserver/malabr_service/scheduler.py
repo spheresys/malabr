@@ -214,7 +214,11 @@ def build_batch(sessions, cost_curve, foreground_tab_id,
     # that share, instead of starving the prompt.
     budget = max(budget, held)
     guaranteed = False      # the held share has gone to a prompt this round
-    pending.sort(key=lambda s: s.key[1] != foreground_tab_id)
+    # Visible tab first, then the shortest waiting prompt. In arrival order a
+    # large page takes the held share every round, and a short prompt from
+    # another tab then waits MAX_PREFILL_STALLS rounds per token.
+    pending.sort(key=lambda s: (s.key[1] != foreground_tab_id,
+                                len(s.inbox_tokens) - s.prefill_offset))
     for s in pending:
         remaining_toks = len(s.inbox_tokens) - s.prefill_offset
         if remaining_toks <= 0:

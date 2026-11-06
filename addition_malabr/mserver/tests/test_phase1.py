@@ -2577,6 +2577,32 @@ def t93_aging_bound_holds_while_a_prompt_prefills():
            worst <= limit, f"worst skip {worst} rounds, limit {limit}")
 
 
+def t94_short_prompt_goes_before_a_large_page():
+    """A deep page that arrived first must not take the prefill budget from a
+    short prompt in another tab. Measured before the fix: W3 shared, small-tab
+    median TTFT 13.4 s, with one small-tab token per 5 rounds."""
+    class S:
+        def __init__(self, tab, ntok, pos):
+            self.key = ("a" * 32, tab, "https://x.test"); self.pos = pos
+            self.state = eng.SessionState.PENDING; self.cancelled = False
+            self.inbox_tokens = [1] * ntok; self.prefill_offset = 0
+            self.prefill_stalls = 0; self.rounds_excluded = 0
+            self.budget = 8192
+
+    curve = eng.CostCurve(DECODE_CURVE, PREFILL_CURVE)
+    page, short = S(10, 2500, 3500), S(1, 26, 0)
+    _, chunks, _ = eng.build_batch([page, short], curve, -1)
+    first = chunks[0][0] if chunks else None
+
+    # The visible tab still goes first, whatever its size.
+    visible = S(10, 2500, 3500)
+    _, vis_chunks, _ = eng.build_batch([S(1, 26, 0), visible], curve, 10)
+    record(94, "a short prompt goes before a large page; the visible tab before both",
+           first is short and bool(vis_chunks) and vis_chunks[0][0] is visible,
+           f"first chunk: tab {first.key[1] if first else None}; "
+           f"with tab 10 visible: tab {vis_chunks[0][0].key[1] if vis_chunks else None}")
+
+
 BROWSER_ONLY = [
     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),
     (14, "stale header visibility loses to the control-channel push"),
