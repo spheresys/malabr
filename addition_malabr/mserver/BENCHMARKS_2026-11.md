@@ -252,6 +252,11 @@ planted
 - `[2026-11-04 10:04:08] FAILED rc=143: --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-04 10:04:08] NOT COMPLETED (drive dropped 10:01, killed, no JSON; trials 0-2 in console.txt): --system malabr --tag old --mode shared --workload W4 --trials 8`
 - `[2026-11-05 02:38:53] FAILED: calibrate shared 4096 | after 2 tries, rc=1`
+- `[2026-11-07 04:14:00] FAILED: browser final test_panel_status | after 2 tries, rc=1`
+- `[2026-11-07 04:17:44] FAILED: browser final test_control_channel | after 2 tries, rc=1`
+- `[2026-11-07 04:21:11] FAILED: browser final bench partitioned | after 2 tries, rc=1`
+- `[2026-11-07 04:24:37] FAILED: browser final bench shared | after 2 tries, rc=1`
+- `[2026-11-07 04:28:04] FAILED: browser final demo check | after 2 tries, rc=1`
 
 ## Runs cut from the plan
 

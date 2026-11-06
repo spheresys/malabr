@@ -1,0 +1,19 @@
+=== page extraction, pathological DOMs (budget 4000) ===
+
+  [PASS] no block elements at all: returns text   3349 chars in 8ms
+  [PASS] no block elements at all: inside budget   3349 / 4000
+  [PASS] no block elements at all: fast enough for the send path   8ms
+  [PASS] one enormous paragraph: returns text   4000 chars in 6ms
+  [PASS] one enormous paragraph: inside budget   4000 / 4000
+  [PASS] one enormous paragraph: fast enough for the send path   6ms
+  [PASS] deeply nested tables: returns text   3994 chars in 17ms
+  [PASS] deeply nested tables: inside budget   3994 / 4000
+  [PASS] deeply nested tables: fast enough for the send path   17ms
+  [PASS] 1500 paragraphs + 200 nav links: returns text   4000 chars in 172ms
+  [PASS] 1500 paragraphs + 200 nav links: inside budget   4000 / 4000
+  [PASS] 1500 paragraphs + 200 nav links: fast enough for the send path   172ms
+  [PASS] empty body: returns nothing rather than junk   0 chars
+  [PASS] empty body: inside budget   0 / 4000
+  [PASS] empty body: fast enough for the send path   4ms
+
+15 checks, 15 passed

@@ -378,3 +378,37 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 03:46:18] saved: final: W5 (d320048f38546)
 [2026-11-07 03:46:21] start (try 1): final --mode partitioned --workload W4 | swap 0% avail 12484MB load 3.29
 [2026-11-07 04:11:19] completed: final --mode partitioned --workload W4 | try 1, 
+[2026-11-07 04:11:20] saved: final: W4 partitioned (aba1457c558c8)
+[2026-11-07 04:11:27] start (try 1): browser final test_panel_status | swap 0% avail 12561MB load 3.41
+[2026-11-07 04:12:32] run failed rc=1 (try 1): browser final test_panel_status |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:12:45] start (try 2): browser final test_panel_status | swap 0% avail 12606MB load 1.51
+[2026-11-07 04:13:50] run failed rc=1 (try 2): browser final test_panel_status |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:14:00] FAILED: browser final test_panel_status | after 2 tries, rc=1
+[2026-11-07 04:14:03] start (try 1): browser final test_transcript_keys | swap 0% avail 12610MB load 0.44
+[2026-11-07 04:14:33] completed: browser final test_transcript_keys | try 1, 
+[2026-11-07 04:14:36] start (try 1): browser final test_page_context | swap 0% avail 12577MB load 0.51
+[2026-11-07 04:14:41] run failed rc=1 (try 1): browser final test_page_context |     raise RuntimeError(f"JS threw: {desc}") RuntimeError: JS threw: TypeError: Cannot read properties of null (reading 'innerText')     at <anonymous>:1:15 
+[2026-11-07 04:14:54] start (try 2): browser final test_page_context | swap 0% avail 12569MB load 0.54
+[2026-11-07 04:14:59] completed: browser final test_page_context | try 2, 
+[2026-11-07 04:15:02] start (try 1): browser final test_page_context_patho | swap 0% avail 12534MB load 0.46
+[2026-11-07 04:15:07] completed: browser final test_page_context_patho | try 1, 
+[2026-11-07 04:15:11] start (try 1): browser final test_control_channel | swap 0% avail 12527MB load 0.50
+[2026-11-07 04:16:16] run failed rc=1 (try 1): browser final test_control_channel |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:16:29] start (try 2): browser final test_control_channel | swap 0% avail 12554MB load 0.19
+[2026-11-07 04:17:34] run failed rc=1 (try 2): browser final test_control_channel |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:17:44] FAILED: browser final test_control_channel | after 2 tries, rc=1
+[2026-11-07 04:17:47] start (try 1): browser final bench partitioned | swap 0% avail 12554MB load 0.21
+[2026-11-07 04:19:17] run failed rc=1 (try 1): browser final bench partitioned |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:19:30] start (try 2): browser final bench partitioned | swap 0% avail 12577MB load 0.04
+[2026-11-07 04:21:01] run failed rc=1 (try 2): browser final bench partitioned |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:21:11] FAILED: browser final bench partitioned | after 2 tries, rc=1
+[2026-11-07 04:21:14] start (try 1): browser final bench shared | swap 0% avail 12582MB load 0.00
+[2026-11-07 04:22:44] run failed rc=1 (try 1): browser final bench shared |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:22:57] start (try 2): browser final bench shared | swap 0% avail 12577MB load 0.00
+[2026-11-07 04:24:27] run failed rc=1 (try 2): browser final bench shared |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:24:37] FAILED: browser final bench shared | after 2 tries, rc=1
+[2026-11-07 04:24:40] start (try 1): browser final demo check | swap 0% avail 12573MB load 0.00
+[2026-11-07 04:26:11] run failed rc=1 (try 1): browser final demo check |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:26:24] start (try 2): browser final demo check | swap 0% avail 12568MB load 0.08
+[2026-11-07 04:27:54] run failed rc=1 (try 2): browser final demo check |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 04:28:04] FAILED: browser final demo check | after 2 tries, rc=1
