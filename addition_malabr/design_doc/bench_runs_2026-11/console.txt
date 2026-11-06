@@ -549,3 +549,17 @@ wrote llamacpp_shared_W3_g2_ctx4096.json (1312s)
   W3 greedy=2 n_ctx=4096 run 4: small TTFT 0.7242618799209595 p95 1.1960277557373047 errs 0 greedy {10: (0, 8, 0), 11: (0, 8, 0)} round_errors None
   W3 greedy=2 n_ctx=4096 run 5: small TTFT 0.7930256128311157 p95 1.2037522792816162 errs 0 greedy {10: (0, 8, 0), 11: (0, 8, 0)} round_errors None
 wrote ollama_W3_g2_ctx4096.json (101s)
+  W3 greedy=1 n_ctx=16384 run 0: small TTFT 0.8854967355728149 p95 1.4255053997039795 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 1: small TTFT 0.8348857164382935 p95 1.440234899520874 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 2: small TTFT 0.8000231981277466 p95 1.6646099090576172 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 3: small TTFT 0.8221460580825806 p95 1.6387438774108887 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 4: small TTFT 0.8897944688796997 p95 1.4184894561767578 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 5: small TTFT 0.7826352119445801 p95 1.515334129333496 errs 0 greedy {10: (1, 0, 0)} round_errors 0
+wrote fix_malabr_shared_W3_g1.json (1041s)
+  W3 greedy=1 n_ctx=16384 run 0: small TTFT 0.7636882066726685 p95 1.364847183227539 errs 0 greedy {10: (2, 9, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 1: small TTFT 0.8402576446533203 p95 1.4299402236938477 errs 0 greedy {10: (2, 9, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 2: small TTFT 0.7402610778808594 p95 1.4499588012695312 errs 0 greedy {10: (2, 9, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 3: small TTFT 0.6297414302825928 p95 1.417814016342163 errs 0 greedy {10: (2, 8, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 4: small TTFT 0.7654263973236084 p95 1.37225341796875 errs 0 greedy {10: (2, 9, 0)} round_errors 0
+  W3 greedy=1 n_ctx=16384 run 5: small TTFT 0.7551407814025879 p95 1.298959732055664 errs 0 greedy {10: (2, 8, 0)} round_errors 0
+wrote fix_malabr_partitioned_W3_g1.json (291s)

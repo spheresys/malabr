@@ -268,3 +268,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 04:56:58] TRIMMED runs finished
 [2026-11-06 06:27:40] reports written; git fsck --full clean; final commit
 [2026-11-06 07:20:14] W3 shared diagnosis finished (diagnostics, not results); fix proposed, not applied
+[2026-11-06 10:55:58] FIX RERUN start: build c859db3a5c2e, tag design-fix-2026-11-06; only the prefill order changed from the freeze. Calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-06 10:56:02] start (try 1): fix --mode shared --workload W3 --greedy 1 | swap 64% avail 12535MB load 1.83
+[2026-11-06 11:13:23] completed: fix --mode shared --workload W3 --greedy 1 | try 1, 
+[2026-11-06 11:13:26] start (try 1): fix --mode partitioned --workload W3 --greedy 1 | swap 64% avail 12628MB load 3.18
+[2026-11-06 11:18:22] completed: fix --mode partitioned --workload W3 --greedy 1 | try 1, 
