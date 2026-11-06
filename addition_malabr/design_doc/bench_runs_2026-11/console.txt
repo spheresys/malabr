@@ -613,3 +613,41 @@ wrote fix_malabr_shared_W3_g2_ctx4096.json (1274s)
   W3 greedy=2 n_ctx=4096 run 4: small TTFT 0.6626596450805664 p95 1.6563169956207275 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
   W3 greedy=2 n_ctx=4096 run 5: small TTFT 0.7286012172698975 p95 1.4945213794708252 errs 0 greedy {10: (0, 9, 0), 11: (0, 9, 0)} round_errors 0
 wrote fix_malabr_partitioned_W3_g2_ctx4096.json (99s)
+  W1 8 tabs, visible last run 0 (warm-up): makespan 15.3s
+  W1 8 tabs, visible last run 1: makespan 15.6s
+  W1 8 tabs, visible last run 2: makespan 15.7s
+  W1 8 tabs, visible last run 3: makespan 15.8s
+  W1 8 tabs, visible last run 4: makespan 15.6s
+  W1 8 tabs, visible last run 5: makespan 15.7s
+  W1 4 tabs, visible last run 0 (warm-up): makespan 8.1s
+  W1 4 tabs, visible last run 1: makespan 8.3s
+  W1 4 tabs, visible last run 2: makespan 7.5s
+  W1 4 tabs, visible last run 3: makespan 7.4s
+  W1 4 tabs, visible last run 4: makespan 7.4s
+  W1 4 tabs, visible last run 5: makespan 7.4s
+  W1 8 tabs, visible first (control) run 0 (warm-up): makespan 16.7s
+  W1 8 tabs, visible first (control) run 1: makespan 17.2s
+  W1 8 tabs, visible first (control) run 2: makespan 17.7s
+  W1 8 tabs, visible first (control) run 3: makespan 16.5s
+  W1 8 tabs, visible first (control) run 4: makespan 16.5s
+  W1 8 tabs, visible first (control) run 5: makespan 16.6s
+wrote fix_malabr_partitioned_W1.json (243s)
+  W1 8 tabs, visible last run 0 (warm-up): makespan 14.4s
+  W1 8 tabs, visible last run 1: makespan 14.4s
+  W1 8 tabs, visible last run 2: makespan 14.2s
+  W1 8 tabs, visible last run 3: makespan 14.0s
+  W1 8 tabs, visible last run 4: makespan 14.1s
+  W1 8 tabs, visible last run 5: makespan 14.1s
+  W1 4 tabs, visible last run 0 (warm-up): makespan 7.2s
+  W1 4 tabs, visible last run 1: makespan 7.5s
+  W1 4 tabs, visible last run 2: makespan 7.2s
+  W1 4 tabs, visible last run 3: makespan 7.2s
+  W1 4 tabs, visible last run 4: makespan 7.0s
+  W1 4 tabs, visible last run 5: makespan 7.3s
+  W1 8 tabs, visible first (control) run 0 (warm-up): makespan 14.0s
+  W1 8 tabs, visible first (control) run 1: makespan 14.1s
+  W1 8 tabs, visible first (control) run 2: makespan 14.0s
+  W1 8 tabs, visible first (control) run 3: makespan 14.8s
+  W1 8 tabs, visible first (control) run 4: makespan 17.1s
+  W1 8 tabs, visible first (control) run 5: makespan 14.8s
+wrote fix_malabr_shared_W1.json (220s)
