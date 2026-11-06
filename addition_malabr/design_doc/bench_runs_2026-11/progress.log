@@ -264,3 +264,6 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 04:56:05] completed: chrome relative2_8tabs_4 | try 2, 
 [2026-11-06 04:56:08] start (try 1): chrome relative2_8tabs_5 | swap 56% avail 12429MB load 2.34
 [2026-11-06 04:56:53] completed: chrome relative2_8tabs_5 | try 1, 
+[2026-11-06 04:56:58] saved: Chrome relative rerun, 8 tabs (842d472adfc3e)
+[2026-11-06 04:56:58] TRIMMED runs finished
+[2026-11-06 06:27:40] reports written; git fsck --full clean; final commit

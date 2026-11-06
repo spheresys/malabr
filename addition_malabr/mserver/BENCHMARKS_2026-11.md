@@ -19,6 +19,45 @@ Model for all but Chrome: Qwen3-0.6B Q8_0. MALABR runs use a calibration measure
 **Freeze includes:** admission control, the fair-share floor, per-session failure isolation, the prefill share, keyed calibration, shape-based KV sizing, and the stall fix.
 **Freeze excludes:** page segments (the page stays in the protected first turn; `proposals_2026-11/page_segments.patch`, measured re-read cost 8–327 s), joint batch cost in `CostCurve`, the compute buffer in the memory budget, some startup log fields, and any change to prefill at depth (small chunks at depth run about 6× slower than large ones).
 
+## Summary
+
+Controlled comparison: MALABR NEW and OLD, llama.cpp and Ollama all use the same Qwen3-0.6B GGUF. Chrome is a reference only, on a different model. Mean ± sd unless stated; n = 5 except where the tables say otherwise.
+
+### What improved from OLD to NEW
+
+- **Visible-tab TTFT, 8 tabs:** 2.75 ± 1.40 → 0.55 ± 0.02 s partitioned, and 1.72 ± 0.51 → 0.49 ± 0.01 s shared.
+- **Median TTFT across all tabs, 8 tabs:** 6.15 → 3.74 s partitioned, and 5.73 → 2.58 s shared.
+- **W3 partitioned, 1 greedy tab:** small-tab TTFT 14.53 ± 0.82 → 0.67 ± 0.06 s, and small-tab errors 12 per run → 0. Admission control is the main change between these builds, but this comparison doesn't isolate it.
+- **Background stalls, partitioned, 8 tabs:** 1.40 ± 0.55 → 0.
+
+### What got worse from OLD to NEW
+
+- **W3 shared, 1 greedy tab:** small-tab TTFT 4.61 ± 0.13 → **16.70 ± 1.78 s**, about 3.6× slower. The cause is being diagnosed separately.
+- **Shared throughput, 8 tabs:** 43.05 ± 0.87 → 35.05 ± 0.94 tok/s, about 19% lower, and makespan 11.90 → 14.61 s.
+
+### What stayed about the same
+
+- **W5 memory:** about 20 MB from 0 to 8 sessions on both builds.
+- **W2 partitioned speed-up:** 1.66 ± 0.04 → 1.64 ± 0.10.
+- **W4 recall, partitioned:** 20/20 on both builds.
+
+### NEW against llama.cpp and Ollama
+
+- **NEW wins on the visible tab and memory:** visible TTFT at 8 tabs is 0.49–0.55 s vs 1.23–1.94 s, and memory growth is about 2.5 MB per session vs about 135 MB.
+- **NEW wins on overflow against Ollama:** 20/20 recall vs 0/20, with Ollama's loss silent. llama.cpp reports overflow with HTTP 400 rather than compacting.
+- **NEW loses on total work:** throughput is 32–35 vs 73–79 tok/s, makespan about 2×, and median tab TTFT 2–3× longer at 8 tabs. The likely cause, not proven, is that the cost curve overprices batches.
+- **W3 partitioned is level:** small-tab TTFT at 2 greedy tabs is 0.84 ± 0.12 s vs llama.cpp 1.04 ± 0.11 s, and much better than Ollama's 6.71 ± 0.82 s.
+- **W3 shared is mixed:** at 1 greedy tab, NEW shared (16.70 s) is much slower than llama.cpp unified (3.17 s). llama.cpp unified then has 8.8 errors per run and 93.57 s small-tab turns at 2 greedy tabs, where NEW shared has 0 errors and 29.67 s turns.
+- **Small pool, shared: NEW refuses all small-tab turns** (18 of 18 per run). This is the worst single result.
+- **Isolation doesn't separate the systems:** 0 leaks in 20 trials for all of them.
+
+### Limits on these numbers
+
+- **Real-browser tab close isn't covered.** W2 closes tabs through the harness. In the real browser, closing a tab doesn't yet free its session (rebuild item 9).
+- **Cuts:** 20 planned runs were cut, including every OLD run at 2 greedy tabs or in the small pool. See "Runs cut from the plan".
+- **Fairness of the comparison:** servers have no real tabs, so "close" means cancel, and "visible" is only an arrival position. Chrome exposes no token probabilities, so it has no fidelity figure.
+
+
 ## W1: scheduling (RQ3)
 
 Mean ± sd (min–max) over the n runs; a warm-up run is discarded. Tabs arrive in tab order, 20 ms apart. 64-token cap. Servers have no visible tab: their "visible" tab is just the one that asked last (or first, in the control).
@@ -250,4 +289,49 @@ The slowdown is consistent in all 5 runs of both per-slot systems, so it is not 
 ## Memory caveats the † rule does not catch
 
 † only checks swap when a run starts. Swap went from 3% at the start of `llama.cpp unified, W3, 1 greedy tab` to 64% at the start of the Ollama run, and was about 99% full during the Ollama run (10:37, runner RSS about 10 GB, load 14.7). NEW W3 at 1 greedy tab then started at 77% (partitioned) and 70% (shared), under the 80% limit. Treat these W3 runs as possibly affected by memory pressure even though they carry no †.
+
+## W3: what the final runs show
+
+Small-tab median TTFT, mean ± sd, n = 5. Page size is 900 tokens partitioned and 3,000 tokens shared.
+
+| Greedy tabs | NEW partitioned | OLD partitioned | NEW shared | OLD shared |
+|---|---|---|---|---|
+| 0 | 0.58 ± 0.04 | 0.66 ± 0.03 | 0.56 ± 0.04 | 0.61 ± 0.06 |
+| 1 | **0.67 ± 0.06**, 0 errors | 14.53 ± 0.82, 12 errors per run | **16.70 ± 1.78**, 0 errors | 4.61 ± 0.13, 0 errors |
+| 2 | 0.84 ± 0.12, 0 errors | Cut | 22.13 ± 0.34, 0 errors | Cut |
+
+- **Partitioned improved a lot.** At 1 greedy tab, small-tab TTFT fell from 14.53 s to 0.67 s, small-tab errors from 12 per run to 0, and failed rounds from about 38,785 per run to 0.
+- **Shared regressed.** At 1 greedy tab, small-tab TTFT is about 3.6× OLD's (16.70 vs 4.61 s), and small-tab turns take about 4× as long (22.29 vs 5.31 s). OLD's result here is the better one.
+- **Greedy tabs in NEW shared:** they completed 5 pages over 5 runs at 1 greedy tab, and 5 pages between both tabs at 2 greedy tabs, with no refusals.
+- **The guard isn't the visible cause.** Guard off at 2 greedy tabs gave 21.38 ± 0.25 s, about the same as 22.13 ± 0.34 s with it on.
+- **The cause is not established in this report.** It is being diagnosed separately.
+
+### Small pool (n_ctx 4,096, 2 greedy tabs)
+
+- **NEW shared refused every small-tab turn:** 18 of 18 in each of the 5 runs, with `the server is at capacity`. There is no TTFT to report. No failed rounds were recorded, but small tabs got no service. The two greedy tabs' soft limits (2,048 each) add up to the whole pool, which fits this result, but that hasn't been tested. This run also used the fallback calibration, so it can't be ruled out as a factor.
+- **NEW partitioned:** median 0.62 ± 0.08 s. One run had 2 small-tab errors and a p95 of 581 s, which is why the p95 reads 117.43 ± 259.20. That outlier hasn't been explained or rerun.
+- **llama.cpp unified:** median 1.12 ± 0.20 s, but 15 errors per run, including HTTP 500 `Context size has been exceeded`.
+- **llama.cpp partitioned and Ollama:** medians 0.58 ± 0.07 s and 0.78 ± 0.04 s, with 0 errors. Their greedy tabs were refused every time.
+
+## Chrome relative score: does the swing disappear?
+
+**No.** With a per-run nonce and the script fixed, the 8-tab scores were 0.10, 0.61, 0.10, 0.35, 0.11 (run 0, discarded as warm-up, was 0.09). The first set was 0.60, 0.27, 0.05, 0.05, 0.05.
+
+The nonce removed the settling at 0.05, which fits a prompt-cache effect in the first set but doesn't prove it. The large run-to-run swing remains, so Chrome's relative score at 8 tabs is unstable across runs, and its cause isn't established. n = 5, on a different model. `relative2_8tabs_4` failed once with rc=2 after 5 s and passed on retry. The error text wasn't kept.
+
+## Chrome sixth session
+
+In all 4 memory runs, session 6 reported usage 0 and process-tree RSS collapsed, to 1,124, 303, 832 and 1,121 MB. **Stopped responding, cause not established.**
+
+- **Reproduced without a full swap:** `rss_3` started at 0% swap, and `rss_4` at 49%. Swap rose during `rss_3`, so memory pressure isn't completely ruled out.
+- **Kernel log:** no OOM kill, segfault or Chrome entry during the `rss_3` and `rss_4` window.
+- **chrome://crashes equivalent:** the harness profile has no `Crash Reports` folder and no recent `.dmp` files.
+- **Chrome console:** not captured. The script catches `append` errors silently and stops filling, so no error text exists.
+
+Clean memory growth (`rss_3`, `rss_4`, sessions 0→5): 1,310 ± 30 MB per session, n = 2, each session holding about 8,208 tokens. Chrome version: 153.0.8010.52.
+
+## Other run notes
+
+- **Memory:** swap was cleared by hand at about 15:15 on 2026-11-05, before NEW W3 at 2 greedy tabs. It was 29–30% at the start of NEW shared at 2 greedy tabs and guard off, and 0% at the start of the small-pool runs. No run started above the 80% limit.
+- **Interruptions:** the drive dropped from 12:39 to 14:20 on 2026-11-05, and `ollama W3 greedy 2` was redone in full. The machine rebooted during the pause that followed; the OLD tree was rebuilt and checked against `610c233`, and only llama.cpp and Ollama ran from it afterwards.
 

@@ -436,6 +436,20 @@ twins whose cells sit in separate, identically filled regions. On a
 partitioned cache it is 0.0000 with forced twins (§4c). It was never a
 shared-cache number.
 
+### November 2026 campaign (frozen build `35e90668b6d4`)
+
+Full tables and caveats are in `BENCHMARKS_2026-11.md`. Mean ± sd.
+
+| Workload | Partitioned | Shared |
+|---|---|---|
+| W3 small-tab TTFT, 1 greedy tab, n = 5 | 0.67 ± 0.06 s (OLD 14.53 ± 0.82 s) | 16.70 ± 1.78 s (OLD 4.61 ± 0.13 s): **regression** |
+| W3 small-tab TTFT, 2 greedy tabs, n = 5 | 0.84 ± 0.12 s | 22.13 ± 0.34 s |
+| W3 small pool (4,096), 2 greedy tabs, n = 5 | 0.62 ± 0.08 s; 1 outlier run | All 18 small-tab turns refused in every run (fallback calibration) |
+| W4 recall, control and overflow | 20/20, 20/20 | 8/8, 8/8 |
+| W5 growth, 0→8 sessions, n = 5 | 19.36 ± 0.38 MB | 19.94 ± 0.06 MB |
+
+The baselines grew by about 1,080 MB in W5, and Ollama lost the premise silently in W4 (0/20).
+
 ---
 
 ## 6. Open limitations

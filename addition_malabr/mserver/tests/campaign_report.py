@@ -276,6 +276,9 @@ def main():
             "`proposals_2026-11/page_segments.patch`, measured re-read cost 8–327 s), joint batch cost in `CostCurve`, "
             "the compute buffer in the memory budget, some startup log fields, and any change to prefill at depth "
             "(small chunks at depth run about 6× slower than large ones).", ""]
+    s = os.path.join(OUT, "summary.md")
+    if os.path.exists(s):
+        head += [open(s).read(), ""]
     body = w1() + w2() + w3() + w4() + w5() + r1() + chrome()
     tail = []
     fails = [x for x in LOG if "FAILED" in x or "NOT COMPLETED" in x or "NOT STARTED" in x]
