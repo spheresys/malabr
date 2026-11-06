@@ -307,3 +307,7 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 13:50:00] end browser bench partitioned rc=0
 [2026-11-06 13:50:00] start browser bench shared swap 1117MB avail 7560MB load 2.13
 [2026-11-06 13:59:21] end browser bench shared rc=0
+[2026-11-06 23:07:40] FIX RERUN 2 start: build c859db3a5c2e; W2, R1, W5, W4 partitioned, same harness and calibrations as the W1 and W3 reruns
+[2026-11-06 23:07:44] start (try 1): fix --mode partitioned --workload W2 | swap 0% avail 7141MB load 0.68
+[2026-11-06 23:11:39] completed: fix --mode partitioned --workload W2 | try 1, 
+[2026-11-06 23:11:39] STOPPED cleanly before: fix --mode shared --workload W2

@@ -651,3 +651,16 @@ wrote fix_malabr_partitioned_W1.json (243s)
   W1 8 tabs, visible first (control) run 4: makespan 17.1s
   W1 8 tabs, visible first (control) run 5: makespan 14.8s
 wrote fix_malabr_shared_W1.json (220s)
+  W2 control run 0 (warm-up): survivors 23.3s wasted None
+  W2 close run 0 (warm-up): survivors 13.0s wasted 0
+  W2 control run 1: survivors 21.9s wasted None
+  W2 close run 1: survivors 13.0s wasted 0
+  W2 control run 2: survivors 21.5s wasted None
+  W2 close run 2: survivors 13.4s wasted 0
+  W2 control run 3: survivors 21.9s wasted None
+  W2 close run 3: survivors 12.8s wasted 0
+  W2 control run 4: survivors 21.8s wasted None
+  W2 close run 4: survivors 13.4s wasted 0
+  W2 control run 5: survivors 22.6s wasted None
+  W2 close run 5: survivors 13.2s wasted 0
+wrote fix_malabr_partitioned_W2.json (230s)
