@@ -311,3 +311,14 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 23:07:44] start (try 1): fix --mode partitioned --workload W2 | swap 0% avail 7141MB load 0.68
 [2026-11-06 23:11:39] completed: fix --mode partitioned --workload W2 | try 1, 
 [2026-11-06 23:11:39] STOPPED cleanly before: fix --mode shared --workload W2
+[2026-11-06 23:11:50] saved: stopped (f4ca634bd3362)
+[2026-11-07 00:16:49] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-07 00:16:52] start (try 1): final --mode partitioned --workload W1 | swap 50% avail 9075MB load 2.43
+[2026-11-07 00:24:01] completed: final --mode partitioned --workload W1 | try 1, 
+[2026-11-07 00:24:04] start (try 1): final --mode shared --workload W1 | swap 50% avail 9022MB load 4.23
+[2026-11-07 00:31:14] completed: final --mode shared --workload W1 | try 1, 
+[2026-11-07 00:31:20] saved: final: W1 (4eccd747f1333)
+[2026-11-07 00:31:23] start (try 1): final --mode partitioned --workload W2 | swap 49% avail 8541MB load 6.68
+[2026-11-07 00:31:30] STOPPED by the user during: final --mode partitioned --workload W2 (killed midway, no result file; rerun on resume). Resume with campaign_state/overnight5.sh; finished runs are skipped.
+[2026-11-07 01:15:54] RESUME final rerun at the user's request
+[2026-11-07 01:15:54] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)

@@ -664,3 +664,41 @@ wrote fix_malabr_shared_W1.json (220s)
   W2 control run 5: survivors 22.6s wasted None
   W2 close run 5: survivors 13.2s wasted 0
 wrote fix_malabr_partitioned_W2.json (230s)
+  W1 8 tabs, visible last run 0 (warm-up): makespan 15.3s
+  W1 8 tabs, visible last run 1: makespan 18.1s
+  W1 8 tabs, visible last run 2: makespan 18.5s
+  W1 8 tabs, visible last run 3: makespan 18.3s
+  W1 8 tabs, visible last run 4: makespan 16.5s
+  W1 8 tabs, visible last run 5: makespan 19.2s
+  W1 4 tabs, visible last run 0 (warm-up): makespan 71.2s
+  W1 4 tabs, visible last run 1: makespan 16.7s
+  W1 4 tabs, visible last run 2: makespan 7.3s
+  W1 4 tabs, visible last run 3: makespan 7.5s
+  W1 4 tabs, visible last run 4: makespan 7.1s
+  W1 4 tabs, visible last run 5: makespan 7.9s
+  W1 8 tabs, visible first (control) run 0 (warm-up): makespan 17.0s
+  W1 8 tabs, visible first (control) run 1: makespan 21.1s
+  W1 8 tabs, visible first (control) run 2: makespan 19.3s
+  W1 8 tabs, visible first (control) run 3: makespan 45.3s
+  W1 8 tabs, visible first (control) run 4: makespan 79.1s
+  W1 8 tabs, visible first (control) run 5: makespan 15.3s
+wrote final_malabr_partitioned_W1.json (425s)
+  W1 8 tabs, visible last run 0 (warm-up): makespan 14.2s
+  W1 8 tabs, visible last run 1: makespan 14.8s
+  W1 8 tabs, visible last run 2: makespan 15.0s
+  W1 8 tabs, visible last run 3: makespan 15.0s
+  W1 8 tabs, visible last run 4: makespan 16.2s
+  W1 8 tabs, visible last run 5: makespan 16.1s
+  W1 4 tabs, visible last run 0 (warm-up): makespan 32.3s
+  W1 4 tabs, visible last run 1: makespan 74.8s
+  W1 4 tabs, visible last run 2: makespan 6.3s
+  W1 4 tabs, visible last run 3: makespan 6.6s
+  W1 4 tabs, visible last run 4: makespan 7.1s
+  W1 4 tabs, visible last run 5: makespan 6.9s
+  W1 8 tabs, visible first (control) run 0 (warm-up): makespan 14.5s
+  W1 8 tabs, visible first (control) run 1: makespan 15.1s
+  W1 8 tabs, visible first (control) run 2: makespan 17.4s
+  W1 8 tabs, visible first (control) run 3: makespan 15.4s
+  W1 8 tabs, visible first (control) run 4: makespan 58.1s
+  W1 8 tabs, visible first (control) run 5: makespan 79.4s
+wrote final_malabr_shared_W1.json (429s)
