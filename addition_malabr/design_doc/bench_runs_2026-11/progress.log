@@ -278,3 +278,6 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 11:36:44] completed: fix --mode shared --workload W3 --greedy 2 | try 1, 
 [2026-11-06 11:36:47] start (try 1): fix --mode partitioned --workload W3 --greedy 2 | swap 61% avail 10388MB load 3.30
 [2026-11-06 11:46:38] completed: fix --mode partitioned --workload W3 --greedy 2 | try 1, 
+[2026-11-06 11:46:40] saved: fix rerun: W3 greedy 2 (81f898c56cac9)
+[2026-11-06 11:46:43] start (try 1): fix --mode shared --workload W3 --greedy 2 --guard off | swap 61% avail 10386MB load 2.69
+[2026-11-06 11:49:56] STOPPED by the user during: fix --mode shared --workload W3 --greedy 2 --guard off (killed midway, no result file; rerun on resume). 8 fix runs left.
