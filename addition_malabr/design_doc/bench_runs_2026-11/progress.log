@@ -281,3 +281,4 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-06 11:46:40] saved: fix rerun: W3 greedy 2 (81f898c56cac9)
 [2026-11-06 11:46:43] start (try 1): fix --mode shared --workload W3 --greedy 2 --guard off | swap 61% avail 10386MB load 2.69
 [2026-11-06 11:49:56] STOPPED by the user during: fix --mode shared --workload W3 --greedy 2 --guard off (killed midway, no result file; rerun on resume). 8 fix runs left.
+[2026-11-06 12:39:04] FIX RERUN start: build c859db3a5c2e, tag design-fix-2026-11-06; only the prefill order changed from the freeze. Calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
