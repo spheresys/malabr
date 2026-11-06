@@ -322,3 +322,8 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 00:31:30] STOPPED by the user during: final --mode partitioned --workload W2 (killed midway, no result file; rerun on resume). Resume with campaign_state/overnight5.sh; finished runs are skipped.
 [2026-11-07 01:15:54] RESUME final rerun at the user's request
 [2026-11-07 01:15:54] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-07 01:15:56] saved: final: W1 (740ea1078572c)
+[2026-11-07 01:16:00] start (try 1): final --mode partitioned --workload W2 | swap 17% avail 6774MB load 8.69
+[2026-11-07 01:20:55] completed: final --mode partitioned --workload W2 | try 1, 
+[2026-11-07 01:20:58] start (try 1): final --mode shared --workload W2 | swap 24% avail 6837MB load 5.18
+[2026-11-07 01:24:44] completed: final --mode shared --workload W2 | try 1, 

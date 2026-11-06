@@ -702,3 +702,29 @@ wrote final_malabr_partitioned_W1.json (425s)
   W1 8 tabs, visible first (control) run 4: makespan 58.1s
   W1 8 tabs, visible first (control) run 5: makespan 79.4s
 wrote final_malabr_shared_W1.json (429s)
+  W2 control run 0 (warm-up): survivors 37.4s wasted None
+  W2 close run 0 (warm-up): survivors 20.9s wasted 0
+  W2 control run 1: survivors 38.5s wasted None
+  W2 close run 1: survivors 18.8s wasted 0
+  W2 control run 2: survivors 30.4s wasted None
+  W2 close run 2: survivors 17.9s wasted 0
+  W2 control run 3: survivors 29.5s wasted None
+  W2 close run 3: survivors 16.2s wasted 0
+  W2 control run 4: survivors 25.8s wasted None
+  W2 close run 4: survivors 16.4s wasted 0
+  W2 control run 5: survivors 24.0s wasted None
+  W2 close run 5: survivors 15.1s wasted 0
+wrote final_malabr_partitioned_W2.json (295s)
+  W2 control run 0 (warm-up): survivors 23.3s wasted None
+  W2 close run 0 (warm-up): survivors 12.2s wasted 0
+  W2 control run 1: survivors 24.1s wasted None
+  W2 close run 1: survivors 12.9s wasted 0
+  W2 control run 2: survivors 23.6s wasted None
+  W2 close run 2: survivors 12.4s wasted 0
+  W2 control run 3: survivors 24.5s wasted None
+  W2 close run 3: survivors 13.1s wasted 0
+  W2 control run 4: survivors 23.7s wasted None
+  W2 close run 4: survivors 12.7s wasted 0
+  W2 control run 5: survivors 23.1s wasted None
+  W2 close run 5: survivors 12.5s wasted 0
+wrote final_malabr_shared_W2.json (220s)

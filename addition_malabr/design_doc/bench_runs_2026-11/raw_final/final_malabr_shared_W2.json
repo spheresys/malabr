@@ -1,0 +1,174 @@
+{
+ "meta": {
+  "argv": [
+   "--out",
+   "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/raw_final",
+   "--system",
+   "malabr",
+   "--tag",
+   "final",
+   "--mode",
+   "shared",
+   "--workload",
+   "W2"
+  ],
+  "tag": "final",
+  "workload": "W2",
+  "system_info": {
+   "system": "malabr",
+   "mode": "shared",
+   "kv_unified": true,
+   "n_ctx": 16384,
+   "n_seq_max": 8,
+   "threads": 3,
+   "budget_per_session": 8192,
+   "guard": "on",
+   "calibration_key": {
+    "model": "Qwen3-0.6B-Q8_0.gguf",
+    "model_bytes": 639446688,
+    "shared_kv": true,
+    "kv_type": "f16",
+    "n_ctx": 16384,
+    "n_seq_max": 8,
+    "n_threads": 3
+   },
+   "calibration_file": "/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4/shared_16384x8_t3.json",
+   "decode_curve": [
+    [
+     32,
+     44.65016212865829,
+     31.564992547505828
+    ],
+    [
+     1024,
+     24.441184509808068,
+     22.833337537042286
+    ],
+    [
+     2048,
+     17.436532989701227,
+     17.371077502942786
+    ],
+    [
+     4096,
+     8.028953071177952,
+     8.02687648686314
+    ],
+    [
+     6144,
+     5.105913879946949,
+     5.104274390483488
+    ],
+    [
+     8128,
+     3.944415409479276,
+     3.934814427011108
+    ]
+   ]
+  },
+  "seconds": 220.27027940750122,
+  "finished": "2026-11-07 01:24:39",
+  "mem_available_kb": 7160784,
+  "loadavg": [
+   4.7861328125,
+   5.46728515625,
+   4.9990234375
+  ]
+ },
+ "result": {
+  "close": [
+   {
+    "survivors_finish": 12.925573513999552,
+    "wasted_after_close": 0,
+    "closed_at": 3.624021554999672,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 12.427624310000283,
+    "wasted_after_close": 0,
+    "closed_at": 3.3475633340003697,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 13.072555556000225,
+    "wasted_after_close": 0,
+    "closed_at": 3.4956437680002637,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 12.738332745999287,
+    "wasted_after_close": 0,
+    "closed_at": 3.640818486999706,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 12.53387911200025,
+    "wasted_after_close": 0,
+    "closed_at": 3.250037983000766,
+    "survivor_tokens": 384
+   }
+  ],
+  "control": [
+   {
+    "survivors_finish": 24.072348809000687,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 23.58286999699976,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 24.485025790999316,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 23.72100558300008,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   },
+   {
+    "survivors_finish": 23.091395440999804,
+    "wasted_after_close": null,
+    "closed_at": null,
+    "survivor_tokens": 384
+   }
+  ],
+  "summary": {
+   "survivors_finish_close": {
+    "median": 12.738332745999287,
+    "min": 12.427624310000283,
+    "max": 13.072555556000225,
+    "sd": 0.2669724099893044,
+    "n": 5
+   },
+   "survivors_finish_control": {
+    "median": 23.72100558300008,
+    "min": 23.091395440999804,
+    "max": 24.485025790999316,
+    "sd": 0.524044773328609,
+    "n": 5
+   },
+   "speed_up": {
+    "median": 1.862381486046107,
+    "min": 1.842318346511857,
+    "max": 1.8976169063964266,
+    "sd": 0.020162196716252204,
+    "n": 5
+   },
+   "wasted_after_close": {
+    "median": 0,
+    "min": 0,
+    "max": 0,
+    "sd": 0.0,
+    "n": 5
+   }
+  }
+ }
+}
