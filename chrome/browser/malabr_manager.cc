@@ -517,10 +517,10 @@ void MalabrManager::OnTabStripModelChanged(
         continue;
       }
 
-      int tab_id = removed.session_id.has_value()
-                       ? removed.session_id->id()
-                       : sessions::SessionTabHelper::IdForTab(removed.contents)
-                             .id();
+      // Always the tab's own id: removed.session_id names the "recently closed"
+      // history entry, which the server has never seen.
+      int tab_id =
+          sessions::SessionTabHelper::IdForTab(removed.contents).id();
 
       // Tells the server to cancel any generation and free the slot.
       //

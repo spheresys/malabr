@@ -616,14 +616,34 @@ class Engine:
         return sum(max(self._fair_share, o.pos + self._outstanding(o))
                    for o in self._live() if o is not s)
 
-    def _reclaimable(self, s, floor):
-        """Tokens compact(s, floor=floor) could free, keeping the recent turn."""
+    def _reclaimable(self, s, floor, keep_recent=True):
+        """Tokens compact(s, keep_recent, floor=floor) could free."""
         pos, freed = s.pos, 0
-        for turn in s.turn_boundaries[1:-1]:
+        for turn in s.turn_boundaries[1:-1] if keep_recent else s.turn_boundaries[1:]:
             n = turn.end - turn.start
             if n > 0 and pos - n >= floor:
                 pos -= n; freed += n
         return freed
+
+    def _fits_within_share(self, s, need, limit):
+        """A turn that keeps s inside its fair share: does it fit what the pool
+        really holds? Idle sessions above the floor pay for it, latest turn last.
+        Nothing is dropped unless dropping it is enough."""
+        short = s.pos + need - limit + sum(o.pos + self._outstanding(o)
+                                           for o in self._live() if o is not s)
+        if short <= 0:
+            return True
+        idle = sorted((o for o in self._live() if o is not s and o.pos > self._floor
+                       and o.state == SessionState.IDLE),
+                      key=lambda o: o.pos, reverse=True)
+        if sum(self._reclaimable(o, self._floor, keep_recent=False) for o in idle) < short:
+            return False
+        for keep_recent in (True, False):
+            for o in idle:
+                if short > 0:
+                    short -= self.compact(o, keep_recent=keep_recent, target=short,
+                                          floor=self._floor)
+        return short <= 0
 
     def _admit(self, s, need):
         """Does a turn needing `need` more positions fit now?
@@ -648,6 +668,10 @@ class Engine:
         limit = self._n_ctx - self._agg_margin
         short = s.pos + need + self._claims_of_others(s) - limit
         if short <= 0:
+            return None
+        # Reservations protect a small session from greedy ones. They must not
+        # lock out a session that is itself still inside its fair share.
+        if s.pos + need <= self._fair_share and self._fits_within_share(s, need, limit):
             return None
         victims = sorted((o for o in self._live()
                           if o is not s and o.pos > self._floor),

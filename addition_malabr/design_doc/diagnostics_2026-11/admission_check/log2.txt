@@ -1,0 +1,6 @@
+[2026-11-06 23:30:50] start small_pool_g2
+[2026-11-06 23:37:32] end small_pool_g2 rc=0
+[2026-11-06 23:37:32] start prod_g1
+[2026-11-06 23:43:51] end prod_g1 rc=0
+[2026-11-06 23:43:51] start prod_g2
+[2026-11-06 23:50:12] end prod_g2 rc=0

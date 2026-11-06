@@ -2603,6 +2603,60 @@ def t94_short_prompt_goes_before_a_large_page():
            f"with tab 10 visible: tab {vis_chunks[0][0].key[1] if vis_chunks else None}")
 
 
+def t95_a_session_within_its_share_is_not_locked_out():
+    """Small pool, shared: two idle large-page tabs plus other tabs' unused fair
+    shares used to exceed the limit, so every small turn waited 20 s and was
+    refused (18 of 18 per run). Reservations still bind a session above its
+    share, a generating session is never cut, and a session is never cut below
+    the floor."""
+    fix = Fixture(n_seq_max=8, n_ctx=4096, kv_unified=True)     # fair share 512
+    try:
+        _, e = fix.new_engine(shared_kv=True)
+        limit = fix.n_ctx - e._agg_margin
+        greedy = []
+        for tab in (10, 11):
+            _, g = _sess(e, fix, tab)
+            force_turn(e, g, "Read this page.", _text_of_tokens(fix, 850))
+            force_turn(e, g, "And this one.", _text_of_tokens(fix, 850))
+            greedy.append(g)
+        small = [_sess(e, fix, t)[1] for t in (1, 2, 3)]
+        held = [g.pos for g in greedy]
+
+        # Room exists: admitted, and nothing is dropped to do it.
+        a = e._admit(small[0], 90)
+        untouched = [g.pos for g in greedy] == held
+
+        # An over-share turn is still bound by the others' reservations.
+        _, mid = _sess(e, fix, 4)
+        force_turn(e, mid, "Hello.", _text_of_tokens(fix, 280))
+        over = e._admit(mid, 300)
+
+        # Generating sessions are never cut, so a turn that doesn't fit waits.
+        for s in small:
+            force_turn(e, s, "Hi.", _text_of_tokens(fix, 30))
+        mid_before = mid.pos
+        for g in greedy:
+            g.state = eng.SessionState.GENERATING
+        before = [g.pos for g in greedy]
+        cut_generating = [e._admit(small[1], 400), [g.pos for g in greedy] == before]
+        for g in greedy:
+            g.state = eng.SessionState.IDLE
+
+        # Idle: the largest above the floor pays, down to the floor and no further.
+        paid = e._admit(small[1], 400)
+        total = sum(x.pos for x in e._live()) + 400
+        ok = (a is None and untouched and over == eng.WAIT
+              and cut_generating == [eng.WAIT, True] and paid is None
+              and all(g.pos >= e._floor for g in greedy) and total <= limit
+              and mid.pos == mid_before and all(s.pos > 0 for s in small))
+        record(95, "a session within its fair share isn't locked out by idle reservations",
+               ok, f"small {a}; over-share {over}; generating {cut_generating}; idle paid {paid}; "
+                   f"greedy {held} -> {[g.pos for g in greedy]} (floor {e._floor}); "
+                   f"pool {total}/{limit}")
+    finally:
+        fix.close()
+
+
 BROWSER_ONLY = [
     (11, "crash-then-reconnect surfaces 'connection lost' in the tab"),
     (14, "stale header visibility loses to the control-channel push"),

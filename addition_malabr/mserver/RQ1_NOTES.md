@@ -467,3 +467,6 @@ The same list is in `design_doc/session_handoff_v7.md` §4 and the audit,
    and nothing was freed. Use `SessionTabHelper::IdForTab(removed.contents)`
    always. Until then a closed idle tab keeps its slot until the server exits
    (test 80, case 2b).
+   **Source changed 2026-11-07, not built yet:** it passes a syntax check with the
+   build's flags, but the running browser is the 2026-08-28 build, so test 80's
+   case 2b still fails until a rebuild.

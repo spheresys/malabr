@@ -876,6 +876,13 @@ prompt plus the largest reply cap from its position on. Two checks:
    the turn WAITS (Engine._try_begin) rather than being refused at once,
    because in shared mode a shortfall is usually transient.
 
+   Exception (2026-11-07): a turn that keeps the session inside its fair share is
+   judged by what the pool really holds, not by others' reservations. Two idle
+   large-page tabs plus idle tabs' fair shares otherwise exceeded a small pool, and
+   every small turn was refused. If it still doesn't fit, idle sessions above the
+   floor pay, latest turn last, as the guard's last resort already does; generating
+   sessions are never cut. A session above its share still sees the reservations.
+
 The floor protects a session from OTHERS. Compacting its own history to
 make room for its own turn is allowed (and is what partitioned mode relies
 on: there every session is always "at its fair share").

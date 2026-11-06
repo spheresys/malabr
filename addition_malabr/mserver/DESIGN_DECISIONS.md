@@ -1436,6 +1436,8 @@ before it reaches a decode.
 - *Let compaction deal with it.* Rejected: compaction can't help one prompt
   bigger than the whole budget (§8).
 
+**Changed 2026-11-07: a session inside its fair share isn't locked out.** In a 4,096 pool with two idle large-page tabs, reservations for idle tabs refused every small turn, although the pool had room. Such a turn is now judged by what the pool really holds, and idle sessions above the floor give up room if needed. See `NOTES.md`, `engine.Engine._admit`.
+
 **Changed 2026-11-03: admission control** (`engine.Engine._admit`, called
 from `_begin_turn`). A turn needs `prompt + the largest reply cap from its
 position on` more positions (`OutputCap.bound_from`).
