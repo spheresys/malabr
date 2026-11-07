@@ -1,0 +1,16 @@
+browser: Chrome/127.0.6519.0
+  [PASS] 0. control connection established
+  [PASS] 1. activating a tab moves the server's foreground to it   tab ids A=1692597387 B=1692597388; FOREGROUND after A: [1692597387], after B: [1692597388]
+  [PASS] 2c. a refused turn is not kept in the stored transcript   refused prompt stored=False; a served one stored=True
+  [PASS] 2a. with both slots held, a third tab is refused   "ingle word DELTA.\nMALABR\nno free session slots -- close another tab's chat and try again (not saved)"
+  [FAIL] 2b. closing a tab frees its slot: the third tab is served   tab C id=1692597389; server: '_registry.cc(39)] Registering function: storage.set\n[140823:140823:1107/084054.651661:INFO:extension_function_registry.cc(39)] Registering function: storage.set'
+
+4/5 passed   (log: /tmp/malabr_controlchannel.log)
+browser: Chrome/127.0.6519.0
+  [PASS] 0. control connection established
+  [PASS] 1. activating a tab moves the server's foreground to it   tab ids A=1980232732 B=1980232733; FOREGROUND after A: [1980232732], after B: [1980232733]
+  [PASS] 2c. a refused turn is not kept in the stored transcript   refused prompt stored=False; a served one stored=True
+  [PASS] 2a. with both slots held, a third tab is refused   "ingle word DELTA.\nMALABR\nno free session slots -- close another tab's chat and try again (not saved)"
+  [FAIL] 2b. closing a tab frees its slot: the third tab is served   tab C id=1980232734; server: '_registry.cc(39)] Registering function: storage.set\n[141457:141457:1107/084143.557328:INFO:extension_function_registry.cc(39)] Registering function: storage.set'
+
+4/5 passed   (log: /tmp/malabr_controlchannel.log)

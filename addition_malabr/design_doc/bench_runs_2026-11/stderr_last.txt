@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/test_panel_status.py", line 340, in <module>
-    sys.exit(main())
-  File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/test_panel_status.py", line 230, in main
-    ver = http_json(CDP, "/json/version", timeout=60)
-  File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json
-    raise RuntimeError(f"devtools endpoint never came up on {port}: {last}")
-RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused>

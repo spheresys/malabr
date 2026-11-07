@@ -432,3 +432,30 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 08:35:26] run failed rc=1 (try 2): browser final test_panel_status |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
 [2026-11-07 08:35:36] FAILED: browser final test_panel_status | after 2 tries, rc=1
 [2026-11-07 08:35:36] STOPPED cleanly before: browser final test_control_channel
+[2026-11-07 08:35:37] saved: stopped (41d0f53243c06)
+[2026-11-07 08:35:53] CORRECTION to the 08:3x RESUME note: the session restart was not the cause. run_malabr.sh refused to launch: chrome binary (2026-08-28) is older than MALABR sources (2026-11-06 23:12)
+[2026-11-07 08:38:36] RESUME browser steps with ALLOW_STALE=1 at the user's request: results use the chrome binary built 2026-08-28, without the C++ changes of 2026-11-06
+[2026-11-07 08:38:36] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-07 08:38:37] saved: final: W1 (3a8d799fe1ba5)
+[2026-11-07 08:38:39] saved: final: W2 (ec2e8d552522f)
+[2026-11-07 08:38:40] saved: final: R1 (49f6c8b01fd1c)
+[2026-11-07 08:38:42] saved: final: W3 greedy 0 (2297fc09242ad)
+[2026-11-07 08:38:43] saved: final: W3 greedy 1 (409451d8412ef)
+[2026-11-07 08:38:45] saved: final: W3 greedy 2 (8b772f7d49af0)
+[2026-11-07 08:38:46] saved: final: W3 guard off (34fb9435e9816)
+[2026-11-07 08:38:47] saved: final: W3 small pool (7096e1d664085)
+[2026-11-07 08:38:49] saved: final: W5 (8ee610ff8daaf)
+[2026-11-07 08:38:50] saved: final: W4 partitioned (d1a5afe12e5a8)
+[2026-11-07 08:38:57] start (try 1): browser final test_panel_status | swap 0% avail 9368MB load 2.24
+[2026-11-07 08:40:17] completed: browser final test_panel_status | try 1, 
+[2026-11-07 08:40:20] start (try 1): browser final test_control_channel | swap 0% avail 9729MB load 1.46
+[2026-11-07 08:41:00] run failed rc=1 (try 1): browser final test_control_channel | 
+[2026-11-07 08:41:13] start (try 2): browser final test_control_channel | swap 0% avail 9771MB load 1.12
+[2026-11-07 08:41:48] run failed rc=1 (try 2): browser final test_control_channel | 
+[2026-11-07 08:41:58] FAILED: browser final test_control_channel | after 2 tries, rc=1
+[2026-11-07 08:42:01] start (try 1): browser final bench partitioned | swap 0% avail 9569MB load 1.37
+[2026-11-07 08:52:12] completed: browser final bench partitioned | try 1, 
+[2026-11-07 08:52:15] start (try 1): browser final bench shared | swap 0% avail 9768MB load 3.12
+[2026-11-07 09:01:41] completed: browser final bench shared | try 1, 
+[2026-11-07 09:01:45] start (try 1): browser final demo check | swap 0% avail 9826MB load 1.54
+[2026-11-07 09:04:45] completed: browser final demo check | try 1, 

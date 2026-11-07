@@ -1,0 +1,11 @@
+browser: Chrome/127.0.6519.0
+  [PASS] a program that is not the browser is refused
+  [PASS] 1. reload: conversation redrawn   'Remember the codeword PELICAN. Reply with OK only.\nMALABR\n\nOK\n\nrestored after reload'
+  [PASS] 2. back/forward cache: stale panel cleared   'this conversation ended on the server while you were away'
+  [PASS] server restarted (opt-out on, and it warned)   see /tmp/malabr_panelstatus.log
+  [PASS] 3a. restart mid-page: earlier turns dropped, the new turn kept   'the model no longer has the earlier messages in this chat — only the latest exchange is kept\nReply with the single word DONE.\nMALABR\n\nDONE'
+  [PASS] 3b. ...and a reload redraws exactly what the new server holds   'Reply with the single word DONE.\nMALABR\n\nDONE\n\nrestored after reload'
+  [PASS] 4. restart then reload: nothing redrawn   'the previous conversation ended on the server, so it was not restored'
+  [PASS] 5. browser killed: its server exits too   server pid 140555 exited after the browser was killed
+
+8/8 passed   (log: /tmp/malabr_panelstatus.log)
