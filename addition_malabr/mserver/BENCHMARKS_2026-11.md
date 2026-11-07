@@ -257,6 +257,7 @@ planted
 - `[2026-11-07 04:21:11] FAILED: browser final bench partitioned | after 2 tries, rc=1`
 - `[2026-11-07 04:24:37] FAILED: browser final bench shared | after 2 tries, rc=1`
 - `[2026-11-07 04:28:04] FAILED: browser final demo check | after 2 tries, rc=1`
+- `[2026-11-07 08:35:36] FAILED: browser final test_panel_status | after 2 tries, rc=1`
 
 ## Runs cut from the plan
 

@@ -412,3 +412,23 @@ malabr:   turn done (eos) produced~3B pos=6987
 [2026-11-07 04:26:24] start (try 2): browser final demo check | swap 0% avail 12568MB load 0.08
 [2026-11-07 04:27:54] run failed rc=1 (try 2): browser final demo check |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
 [2026-11-07 04:28:04] FAILED: browser final demo check | after 2 tries, rc=1
+[2026-11-07 04:28:05] saved: final: real browser (e840337f4939d)
+[2026-11-07 04:28:05] FINAL RERUN finished
+[2026-11-07 08:32:42] RESUME browser steps at the user's request: earlier attempts could not start Chrome (desktop session restarted 02:26); no code changed
+[2026-11-07 08:32:42] FINAL RERUN start: build 168686012c17, tag design-final-2026-11-07; calibrations reused from the freeze (/media/chaitu/chaitanya/malabr/src/addition_malabr/design_doc/bench_runs_2026-11/calibrations/chaitu-11thGenIntelRCoreTMi5113_35e90668b6d4)
+[2026-11-07 08:32:44] saved: final: W1 (bc8ef08391f8d)
+[2026-11-07 08:32:45] saved: final: W2 (ce59004ae5235)
+[2026-11-07 08:32:47] saved: final: R1 (882a629c21b49)
+[2026-11-07 08:32:48] saved: final: W3 greedy 0 (e6aab4faca7f7)
+[2026-11-07 08:32:49] saved: final: W3 greedy 1 (65a606e604fec)
+[2026-11-07 08:32:51] saved: final: W3 greedy 2 (5e1ad78be5e3f)
+[2026-11-07 08:32:52] saved: final: W3 guard off (b05aaa5e66957)
+[2026-11-07 08:32:54] saved: final: W3 small pool (4d33cf10cf89f)
+[2026-11-07 08:32:55] saved: final: W5 (4bf61d99f0a09)
+[2026-11-07 08:32:56] saved: final: W4 partitioned (43e004c0d7ea3)
+[2026-11-07 08:33:03] start (try 1): browser final test_panel_status | swap 0% avail 9583MB load 0.83
+[2026-11-07 08:34:08] run failed rc=1 (try 1): browser final test_panel_status |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 08:34:21] start (try 2): browser final test_panel_status | swap 0% avail 9808MB load 0.63
+[2026-11-07 08:35:26] run failed rc=1 (try 2): browser final test_panel_status |   File "/media/chaitu/chaitanya/malabr/src/addition_malabr/scripts/nano_cdp.py", line 23, in http_json     raise RuntimeError(f"devtools endpoint never came up on {port}: {last}") RuntimeError: devtools endpoint never came up on 9351: <urlopen error [Errno 111] Connection refused> 
+[2026-11-07 08:35:36] FAILED: browser final test_panel_status | after 2 tries, rc=1
+[2026-11-07 08:35:36] STOPPED cleanly before: browser final test_control_channel
