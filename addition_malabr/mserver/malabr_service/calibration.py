@@ -399,6 +399,8 @@ def load(path, key=None):
         return None
     if not data.get("decode_curve"):
         return None
+    if data.get("fallback"):            # saved by an older version; retry instead
+        return None
     if key is not None and key_mismatch(data, key):
         return None
     return data
@@ -478,6 +480,11 @@ def run(cfg, min_cap, absolute_ceiling, quick=False, ctx=None, model=None):
             cp.n_seq_max = cfg.n_seq_max
             cp.n_batch = cfg.n_batch
             cp.n_threads = threads["chosen"]
+            # Same KV layout as the engine (app.build). Without it llama.cpp
+            # splits n_ctx into n_seq_max slices, and the shared-mode probe,
+            # which goes budget-deep in one sequence, fails with rc=1.
+            if getattr(cfg, "shared_kv", False) and hasattr(cp, "kv_unified"):
+                cp.kv_unified = True
             ctx = C.llama_init_from_model(model, cp)
             if not ctx:
                 raise CalibrationError("context creation failed")
@@ -526,6 +533,10 @@ def load_or_run(cfg, min_cap, absolute_ceiling, quick=False, force=False):
                      f"not version {CALIBRATION_VERSION})"])
     result = run(cfg, min_cap, absolute_ceiling, quick=quick)
     result["recalibrated_because"] = why
+    if result.get("fallback"):
+        # Never cache a failed calibration: the key would match on every later
+        # start, so the fallback would be reused silently instead of retried.
+        return result, True
     try:
         save(result, cfg.calibration_path)
     except OSError:
