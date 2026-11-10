@@ -239,7 +239,12 @@
   }
 
   // ---- page text -------------------------------------------------...  [notes: content.js hashStr]
+  // pageHash is over the WHOLE extracted page, so asking a different question
+  // about an unchanged page does not count as a change. sentParas holds the
+  // paragraphs this conversation already carries, so follow-ups add only new ones.
   let pageHash = null;
+  let sentParas = new Set();
+  function resetPageCtx() { pageHash = null; sentParas = new Set(); }
   function hashStr(s) {
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -345,25 +350,54 @@
     return parts;
   }
 
+  // Rarity weighting, computed over this page only: a term in every
+  // paragraph separates nothing, so it should not decide what is kept.
+  function docFreq(paras, qt) {
+    const df = new Map();
+    for (const w of qt) {
+      df.set(w, paras.filter((p) => p.toLowerCase().includes(w)).length || 1);
+    }
+    return df;
+  }
+
+  function scoreParas(paras, qt, df) {
+    return paras.map((p, i) => {
+      const low = p.toLowerCase();
+      let sc = 0;
+      for (const w of qt) if (low.includes(w)) sc += Math.log(paras.length / df.get(w)) + 1;
+      return { i, p, sc: sc / Math.sqrt(Math.max(p.length, 1)) };
+    });
+  }
+
+  // Follow-up on a page already in context: only paragraphs that bear on the
+  // new question and are not in the conversation yet, best first, within a
+  // small budget, re-emitted in document order. No lead and no filler, so an
+  // unchanged page is not prefilled again on every turn.
+  const FOLLOWUP_PAGE_CHARS = 1500;
+  function selectNew(text, question, budget) {
+    const paras = paragraphs(text);
+    const qt = terms(question);
+    if (paras.length < 2 || !qt.length) return [];
+    const picked = [];
+    let used = 0;
+    for (const s of scoreParas(paras, qt, docFreq(paras, qt)).sort((a, b) => b.sc - a.sc)) {
+      if (s.sc <= 0) break;
+      if (sentParas.has(hashStr(s.p))) continue;
+      if (used + s.p.length > budget) continue;
+      picked.push(s); used += s.p.length + 2;
+    }
+    return picked.sort((a, b) => a.i - b.i).map((s) => s.p);
+  }
+
   function selectRelevant(text, question, budget) {
     const paras = paragraphs(text);
     if (paras.length < 2) return text.slice(0, budget);
     const qt = terms(question);
     if (!qt.length) return text.slice(0, budget);
 
-    // Rarity weighting, computed over this page only: a term in every
-    // paragraph separates nothing, so it should not decide what is kept.
-    const df = new Map();
-    for (const w of qt) {
-      df.set(w, paras.filter((p) => p.toLowerCase().includes(w)).length || 1);
-    }
+    const df = docFreq(paras, qt);
 
-    const scored = paras.map((p, i) => {
-      const low = p.toLowerCase();
-      let sc = 0;
-      for (const w of qt) if (low.includes(w)) sc += Math.log(paras.length / df.get(w)) + 1;
-      return { i, p, sc: sc / Math.sqrt(Math.max(p.length, 1)) };
-    });
+    const scored = scoreParas(paras, qt, df);
 
     const chosen = new Set();
     let used = 0;
@@ -401,10 +435,47 @@
     return out.join("\n\n");
   }
 
-  function pageText(question) {
-    const t = extractArticle();
-    if (t.length <= MAX_PAGE_CHARS) return t;
-    return selectRelevant(t, question, MAX_PAGE_CHARS);
+  // First turn on a long page: a short lead, so the model knows what the page
+  // is, plus the paragraphs that bear on the question. No filler: follow-ups
+  // add what they need (selectNew), and a smaller first block means a shorter
+  // wait for the first answer. Returns null when nothing on the page matches
+  // the question ("summarise this", vague or paraphrased questions); the
+  // caller then falls back to the broad selection.
+  const FIRST_PAGE_CHARS = 2500;
+  const LEAD_CHARS = 800;
+  function selectFirst(text, question) {
+    const paras = paragraphs(text);
+    const qt = terms(question);
+    if (paras.length < 2 || !qt.length) return null;
+    const scored = scoreParas(paras, qt, docFreq(paras, qt));
+    if (!scored.some((s) => s.sc > 0)) return null;
+
+    const chosen = new Set();
+    let used = 0;
+    for (const s of scored) {                        // the lead, in order
+      // The opening paragraph may run a little past LEAD_CHARS on its own.
+      if (used + s.p.length > (chosen.size ? LEAD_CHARS : LEAD_CHARS * 1.5)) break;
+      chosen.add(s.i); used += s.p.length + 2;
+    }
+    for (const s of [...scored].sort((a, b) => b.sc - a.sc)) {
+      if (s.sc <= 0) break;
+      if (chosen.has(s.i) || used + s.p.length > FIRST_PAGE_CHARS) continue;
+      chosen.add(s.i); used += s.p.length + 2;
+    }
+
+    const out = [];
+    let prev = -1;
+    for (const i of [...chosen].sort((a, b) => a - b)) {
+      if (prev !== -1 && i !== prev + 1) out.push("[...]");
+      out.push(paras[i]);
+      prev = i;
+    }
+    return out.join("\n\n");
+  }
+
+  function pageText(full, question) {
+    if (full.length <= MAX_PAGE_CHARS) return full;
+    return selectFirst(full, question) ?? selectRelevant(full, question, MAX_PAGE_CHARS);
   }
 
   // ---- streaming ----------------------------------------------------------
@@ -573,7 +644,7 @@
         // forget a page attached with it (the model never saw that page).
         note(s.turn, error.slice(REFUSED.length) + " (not saved)", "err");
         if (transcript[s.tIndex]?.who === "you") transcript.splice(s.tIndex, 1);
-        pageHash = s.hashBefore;
+        pageHash = s.hashBefore; sentParas = s.sentBefore;
         save();
         live.delete(id);
         if (inFlight === id) { inFlight = null; setBusy(false); }
@@ -711,18 +782,32 @@
 
     let prompt = typed;
     let chip = null;
-    const hashBefore = pageHash;
+    const hashBefore = pageHash, sentBefore = new Set(sentParas);
     if (usePage.checked) {
-      const body = pageText(typed);
+      const full = extractArticle();
       // Send the page ONCE per session  [notes: content.js clear]
-      const h = body ? hashStr(body) : null;
-      if (body && h !== pageHash) {
+      const h = full ? hashStr(full) : null;
+      if (full && h !== pageHash) {
+        const body = pageText(full, typed);
         prompt = `Here is the text of the page the user is viewing (${location.href}):\n\n`
                + body + `\n\n---\nUser question: ${typed}`;
         chip = `page ${pageHash === null ? "attached" : "re-attached (changed)"} (${body.length} chars)`;
         pageHash = h;
-      } else if (body) {
-        chip = "page already in context";
+        sentParas = new Set(paragraphs(body).map(hashStr));
+      } else if (full) {
+        // Same page. A short page went in whole; a long one may have parts
+        // that bear on this question and were not sent yet.
+        const extra = full.length <= MAX_PAGE_CHARS ? []
+                    : selectNew(full, typed, FOLLOWUP_PAGE_CHARS);
+        if (extra.length) {
+          const add = extra.join("\n\n");
+          prompt = `More text from the same page, relevant to this question:\n\n`
+                 + add + `\n\n---\nUser question: ${typed}`;
+          extra.forEach((p) => sentParas.add(hashStr(p)));
+          chip = `page in context, +${add.length} chars`;
+        } else {
+          chip = "page already in context";
+        }
       }
     }
 
@@ -741,10 +826,11 @@
       sending = false; clearTimeout(sendingGuard);
       if (chrome.runtime.lastError) {
         note(turn, chrome.runtime.lastError.message, "err");
+        pageHash = hashBefore; sentParas = sentBefore;   // the server never saw it
         inFlight = null; setBusy(false); return;
       }
       live.set(id, { turn, bodyEl: turn.querySelector(".body"), thinkEl: null,
-                     raw: "", raf: 0, tIndex, hashBefore });
+                     raw: "", raf: 0, tIndex, hashBefore, sentBefore });
       inFlight = id;
     });
   }
@@ -767,7 +853,7 @@
   $(".clear").addEventListener("click", async () => {
     // §3: a real teardown, not a display clear  [notes: content.js STYLES]
     abandonLive();
-    log.innerHTML = ""; transcript = []; convId = null; save(); pageHash = null;
+    log.innerHTML = ""; transcript = []; convId = null; save(); resetPageCtx();
     inFlight = null; sending = false; restoring = false;
     let acked = false;
     try { const r = await meta("new"); acked = !!(r && r.ok); } catch (e) {}
@@ -784,7 +870,7 @@
     if (!e.persisted || !transcript.length) return;
     if (!lostOnServer(await serverStatus(), convId)) return;
     abandonLive();
-    log.innerHTML = ""; transcript = []; convId = null; save(); pageHash = null;
+    log.innerHTML = ""; transcript = []; convId = null; save(); resetPageCtx();
     inFlight = null; sending = false; setBusy(false);
     note(log, "this conversation ended on the server while you were away", "note");
   });
